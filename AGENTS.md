@@ -61,6 +61,10 @@ grep CCTEST /tmp/cargo-match.log
 | `-ccShotDir 目录`、`-ccShotEvery 秒` | 窗口运行时定时截图，用来检查画面 |
 | `-ccSmashScale 倍数` | 临时改砸货时间，用来比较平衡 |
 | `-ccPort 端口` | 同时跑多局时避开端口冲突 |
+| `-ccUseUi` | 通过真实的菜单按钮走流程（练习、建房、加入、准备、开始） |
+| `-ccAgain` | 结算后点“再来一局”或“回大厅”，测重新进入的流程 |
+| `-ccForceCoCarry` | 每个半场强制两名正方合搬大件，第二个半场放在货车附近，测运送得分 |
+| `-ccWaitHostLeave` | 客户端等主机退出，测回到主菜单和提示 |
 
 agent 只能验证规则和流程。手感和两人联机必须由人来测：在 Multiplayer Play Mode 里开两个玩家，确认两边都看到倒地、货掉在同一个位置、冷却时间一致，再合并。
 

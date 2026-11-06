@@ -129,6 +129,13 @@ namespace CargoClash
                 return;
             }
 
+            PlayerAvatar threat = FindThreatToCarrier();
+            if (threat != null && self.RamReady)
+            {
+                ChaseAndRam(threat);
+                return;
+            }
+
             target = PickCargoForCollector();
             if (target == null)
             {
@@ -251,6 +258,21 @@ namespace CargoClash
                 }
             }
             return best;
+        }
+
+        /// <summary>An enemy closing in on a teammate who carries valuable cargo. Free collectors escort them.</summary>
+        private PlayerAvatar FindThreatToCarrier()
+        {
+            foreach (PlayerAvatar mate in PlayerAvatar.All)
+            {
+                if (mate == self || mate.Team != self.Team) continue;
+                CargoItem carried = mate.CarriedCargo;
+                if (carried == null || carried.Definition.size == CargoSize.Small) continue;
+                if (Vector3.Distance(mate.transform.position, self.transform.position) > 16f) continue;
+                PlayerAvatar enemy = NearestEnemyTo(mate.transform.position, 8f);
+                if (enemy != null && !enemy.IsImmune && !enemy.IsKnockedDown) return enemy;
+            }
+            return null;
         }
 
         private PlayerAvatar NearestEnemyTo(Vector3 position, float range)

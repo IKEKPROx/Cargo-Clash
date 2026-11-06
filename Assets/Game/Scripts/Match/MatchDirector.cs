@@ -205,6 +205,7 @@ namespace CargoClash
         public void ServerOnRescued(CargoItem cargo, List<PlayerAvatar> carriers)
         {
             int value = cargo.Definition.value;
+            AutoPilot.Log($"RESCUED {cargo.Definition.size} carriers={string.Join("+", carriers.ConvertAll(c => c.DisplayName))}");
             AddScore(TeamOn(Side.Collector), value);
             halfRescued += value;
             float share = carriers.Count > 0 ? (float)value / carriers.Count : 0f;

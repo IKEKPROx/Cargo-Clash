@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using Unity.Netcode;
 using UnityEngine;
@@ -28,6 +29,7 @@ namespace CargoClash
         private bool useUi;
         private bool again;
         private bool waitHostLeave;
+        private bool forceCoCarry;
         private int errorCount;
         private int shotNumber;
 
@@ -65,6 +67,7 @@ namespace CargoClash
                     case "-ccUseUi": useUi = true; break;
                     case "-ccAgain": again = true; break;
                     case "-ccWaitHostLeave": waitHostLeave = true; break;
+                    case "-ccForceCoCarry": forceCoCarry = true; break;
                 }
             }
         }
@@ -95,6 +98,7 @@ namespace CargoClash
             RoomService rooms = RoomService.Instance;
             NetworkManager net = NetworkManager.Singleton;
             if (!string.IsNullOrEmpty(shotDirectory) && mode != "menu") StartCoroutine(TakeScreenshots());
+            if (forceCoCarry) StartCoroutine(ForceCoCarry());
 
             if (useUi)
             {
@@ -189,6 +193,75 @@ namespace CargoClash
             bool timedOut = Time.realtimeSinceStartup - startedAt >= timeoutSeconds;
             Log($"DONE errors={errorCount} timedOut={timedOut}");
             if (quitAtEnd) Application.Quit(errorCount > 0 || timedOut ? 1 : 0);
+        }
+
+        /// <summary>
+        /// Puts two collectors on a large item each half, people before bots, so the co-carry path
+        /// is exercised every run instead of only when bots happen to choose it.
+        /// </summary>
+        private IEnumerator ForceCoCarry()
+        {
+            int lastHalf = 0;
+            while (true)
+            {
+                MatchDirector director = MatchDirector.Instance;
+                if (director == null || !director.IsSpawned || !director.IsServer ||
+                    director.Phase.Value != MatchPhase.Playing || director.Half.Value == lastHalf)
+                {
+                    yield return null;
+                    continue;
+                }
+
+                lastHalf = director.Half.Value;
+                yield return new WaitForSeconds(0.5f);
+
+                List<PlayerAvatar> collectors = new List<PlayerAvatar>();
+                foreach (PlayerAvatar avatar in PlayerAvatar.All)
+                {
+                    if (avatar.Side != Side.Collector) continue;
+                    if (avatar.IsBotVar.Value) collectors.Add(avatar);
+                    else collectors.Insert(0, avatar);
+                }
+
+                CargoItem large = null;
+                foreach (CargoItem cargo in CargoItem.All)
+                {
+                    if (cargo.Definition.requiredCarriers > 1 && cargo.State.Value == CargoState.Ground) large = cargo;
+                }
+                if (large == null || collectors.Count < 2)
+                {
+                    Log($"COCARRY half={lastHalf} skipped large={large != null} collectors={collectors.Count}");
+                    continue;
+                }
+
+                PlayerAvatar a = collectors[0];
+                PlayerAvatar b = collectors[1];
+                a.ServerStopActions();
+                b.ServerStopActions();
+
+                // The second half starts next to the truck, so the delivery itself gets tested every run.
+                if (lastHalf == 2)
+                {
+                    LevelLayout layout = LevelLayout.Instance;
+                    Vector3 nearTruck = layout.ClosestTruckZonePoint(Vector3.zero) + new Vector3(-10f, 0.55f, 0f);
+                    large.transform.SetPositionAndRotation(nearTruck, Quaternion.identity);
+                }
+
+                Vector3 ground = large.transform.position;
+                ground.y = 0f;
+                a.TeleportRpc(ground + Vector3.left * 2f, Quaternion.identity);
+                b.TeleportRpc(ground + Vector3.right * 2f, Quaternion.identity);
+                yield return new WaitForSeconds(0.5f);
+
+                bool grabbedA = large.ServerTryGrab(a);
+                bool grabbedB = large.ServerTryGrab(b);
+                Vector3 start = large.transform.position;
+                Log($"COCARRY half={lastHalf} a={a.DisplayName} b={b.DisplayName} grabbed={grabbedA},{grabbedB} start={start}");
+                yield return new WaitForSeconds(2.5f);
+                Shot();
+                yield return new WaitForSeconds(2.5f);
+                Log($"COCARRY half={lastHalf} moved={Vector3.Distance(start, large.transform.position):0.0}m state={large.State.Value} a={a.transform.position} slotGap={Vector3.Distance(a.transform.position, b.transform.position):0.0}");
+            }
         }
 
         /// <summary>Goes through the real title and lobby buttons, the way a player would.</summary>
