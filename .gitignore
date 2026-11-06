@@ -1,0 +1,43 @@
+# Unity generated
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Bb]uilds/
+/[Bb]uild/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# IDE and generated project files
+.vs/
+.vscode/
+.idea/
+*.csproj
+*.sln
+*.slnx
+*.suo
+*.user
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Crash reports and capture output
+sysinfo.txt
+crashlytics-build.properties
+*.apk
+*.aab
+*.unitypackage
+
+# Source art backups
+*.blend1
+*.blend2
+
+# OS and local agent settings
+.DS_Store
+Thumbs.db
+.claude/settings.local.json

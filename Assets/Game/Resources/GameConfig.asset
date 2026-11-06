@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33918036b07e4457e999a6db1b74c9c6, type: 3}
+  m_Name: GameConfig
+  m_EditorClassIdentifier: CargoClash::CargoClash.GameConfig
+  titleScene: CargoRover
+  levelScene: Level01
+  maxPlayers: 6
+  teamSize: 3
+  halfSeconds: 180
+  halfIntroSeconds: 4
+  halfOutroSeconds: 3
+  runSpeed: 6.5
+  turnDegreesPerSecond: 900
+  ramCooldown: 3
+  ramCooldownSmallTeam: 2
+  ramDuration: 0.28
+  ramSpeed: 15
+  ramHitRadius: 1.5
+  knockdownSeconds: 1.5
+  immuneSeconds: 2
+  knockbackSpeed: 8
+  pickupRange: 1.6
+  smashRange: 1.8
+  headHeight: 1.55
+  smashTimeMultiplier: 1
+  cargo:
+  - {fileID: 11400000, guid: 876bb7093f40c4959838604a550ac5f3, type: 2}
+  - {fileID: 11400000, guid: 7cc3b4df918164904b9b5fabdc34326b, type: 2}
+  - {fileID: 11400000, guid: cea4e5b047a4c4c26a2035932a2080ad, type: 2}
+  avatarPrefab: {fileID: 8527078935949222500, guid: 56431d22dc7a04cf186d37d695d3134e, type: 3}
+  directorPrefab: {fileID: 8093289547608941666, guid: 763d9ad70174c4ee18bdfca4092122d6, type: 3}
+  rosterPrefab: {fileID: 7409588860359389063, guid: e77346b59518f4d5aa28358c6222b129, type: 3}
+  orangeMaterial: {fileID: 2100000, guid: f6e161e164a334496bb98c5d6effcee5, type: 2}
+  blueMaterial: {fileID: 2100000, guid: 901690c7193774528bd1bb361af0a848, type: 2}
+  particleMaterial: {fileID: 2100000, guid: bb6d5452cc759429f8069b880df78f3f, type: 2}
+  inputActions: {fileID: -944628639613478452, guid: 992837e6f683f4108a30bde5bba7f371, type: 3}

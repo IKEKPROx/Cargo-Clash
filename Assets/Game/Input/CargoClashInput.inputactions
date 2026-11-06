@@ -1,0 +1,67 @@
+{
+    "name": "CargoClashInput",
+    "maps": [
+        {
+            "name": "Gameplay",
+            "id": "6f0e6a3e-2c1b-4d5a-9a57-0c1f6b6f7d01",
+            "actions": [
+                {
+                    "name": "Move",
+                    "type": "Value",
+                    "id": "1a1b5c3d-0d1e-4a6f-8b21-5c8e7d6f1101",
+                    "expectedControlType": "Vector2",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                },
+                {
+                    "name": "Interact",
+                    "type": "Button",
+                    "id": "1a1b5c3d-0d1e-4a6f-8b21-5c8e7d6f1102",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Ram",
+                    "type": "Button",
+                    "id": "1a1b5c3d-0d1e-4a6f-8b21-5c8e7d6f1103",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Smash",
+                    "type": "Button",
+                    "id": "1a1b5c3d-0d1e-4a6f-8b21-5c8e7d6f1104",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                { "name": "WASD", "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2201", "path": "2DVector", "interactions": "", "processors": "", "groups": "", "action": "Move", "isComposite": true, "isPartOfComposite": false },
+                { "name": "up", "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2202", "path": "<Keyboard>/w", "interactions": "", "processors": "", "groups": "", "action": "Move", "isComposite": false, "isPartOfComposite": true },
+                { "name": "down", "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2203", "path": "<Keyboard>/s", "interactions": "", "processors": "", "groups": "", "action": "Move", "isComposite": false, "isPartOfComposite": true },
+                { "name": "left", "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2204", "path": "<Keyboard>/a", "interactions": "", "processors": "", "groups": "", "action": "Move", "isComposite": false, "isPartOfComposite": true },
+                { "name": "right", "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2205", "path": "<Keyboard>/d", "interactions": "", "processors": "", "groups": "", "action": "Move", "isComposite": false, "isPartOfComposite": true },
+                { "name": "Arrows", "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2206", "path": "2DVector", "interactions": "", "processors": "", "groups": "", "action": "Move", "isComposite": true, "isPartOfComposite": false },
+                { "name": "up", "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2207", "path": "<Keyboard>/upArrow", "interactions": "", "processors": "", "groups": "", "action": "Move", "isComposite": false, "isPartOfComposite": true },
+                { "name": "down", "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2208", "path": "<Keyboard>/downArrow", "interactions": "", "processors": "", "groups": "", "action": "Move", "isComposite": false, "isPartOfComposite": true },
+                { "name": "left", "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2209", "path": "<Keyboard>/leftArrow", "interactions": "", "processors": "", "groups": "", "action": "Move", "isComposite": false, "isPartOfComposite": true },
+                { "name": "right", "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2210", "path": "<Keyboard>/rightArrow", "interactions": "", "processors": "", "groups": "", "action": "Move", "isComposite": false, "isPartOfComposite": true },
+                { "name": "", "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2211", "path": "<Gamepad>/leftStick", "interactions": "", "processors": "", "groups": "", "action": "Move", "isComposite": false, "isPartOfComposite": false },
+                { "name": "", "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2212", "path": "<Keyboard>/e", "interactions": "", "processors": "", "groups": "", "action": "Interact", "isComposite": false, "isPartOfComposite": false },
+                { "name": "", "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2213", "path": "<Gamepad>/buttonSouth", "interactions": "", "processors": "", "groups": "", "action": "Interact", "isComposite": false, "isPartOfComposite": false },
+                { "name": "", "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2214", "path": "<Keyboard>/space", "interactions": "", "processors": "", "groups": "", "action": "Ram", "isComposite": false, "isPartOfComposite": false },
+                { "name": "", "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2215", "path": "<Gamepad>/buttonEast", "interactions": "", "processors": "", "groups": "", "action": "Ram", "isComposite": false, "isPartOfComposite": false },
+                { "name": "", "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2216", "path": "<Keyboard>/f", "interactions": "", "processors": "", "groups": "", "action": "Smash", "isComposite": false, "isPartOfComposite": false },
+                { "name": "", "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2217", "path": "<Gamepad>/buttonWest", "interactions": "", "processors": "", "groups": "", "action": "Smash", "isComposite": false, "isPartOfComposite": false }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}
