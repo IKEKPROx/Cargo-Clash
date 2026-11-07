@@ -4,7 +4,7 @@
 
 ## 技术栈
 
-- Unity **6000.6.8f1**，URP，Input System。不要升级版本。
+- Unity **6000.6.1f1**，URP，Input System。不要升级版本。
 - 联网用 **Netcode for GameObjects 2.13.x**。NGO 3.x 要 Unity 6.7，不能用。
 - 开房用 Multiplayer Services 的 Sessions 和 Relay。工程没连 Unity Cloud 时退回局域网房间，房间码是主机 IP。
 - 不新增包，除非先和大家确认。包版本以 `Packages/packages-lock.json` 为准。
@@ -40,7 +40,7 @@
 改完代码，至少编译通过并跑一局机器人对局。先退出打开这个工程的 Unity，再运行：
 
 ```bash
-"/Applications/Unity/Hub/Editor/6000.6.8f1/Unity.app/Contents/MacOS/Unity" -batchmode -quit -projectPath . -executeMethod CargoClashPlayerBuild.Mac -logFile /tmp/cargo-build.log
+"/Applications/Unity/Hub/Editor/6000.6.1f1/Unity.app/Contents/MacOS/Unity" -batchmode -quit -projectPath . -executeMethod CargoClashPlayerBuild.Mac -logFile /tmp/cargo-build.log
 ```
 
 ```bash

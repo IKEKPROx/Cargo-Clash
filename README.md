@@ -8,7 +8,7 @@
 
 1. 安装 Git LFS（只需一次）：`brew install git-lfs`，然后运行 `git lfs install`。Windows 从 [git-lfs.com](https://git-lfs.com) 安装。
 2. 克隆仓库：`git clone https://github.com/IKEKPROx/Cargo-Clash.git`
-3. 用 Unity Hub 安装 **6000.6.8f1**：打开 `unityhub://6000.6.8f1/237b6593792b`。Mac 上要勾选 Windows Build Support (Mono)，才能出 Windows 包。
+3. 用 Unity Hub 安装 **6000.6.1f1**：打开 `unityhub://6000.6.1f1/7efac9f6c10e`。Mac 上要勾选 Windows Build Support (Mono)，才能出 Windows 包。
 4. 在 Unity Hub 里添加并打开工程，打开场景 `Assets/CargoRover/Scenes/CargoRover.unity`，按 Play。
 
 全组用同一个 Unity 版本，不要各自升级。
