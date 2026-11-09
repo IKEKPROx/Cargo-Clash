@@ -20,6 +20,10 @@ namespace CargoClash
         public const int Level = 10;
         /// <summary>Vehicles and other models that get an outline but aren't characters or cargo.</summary>
         public const int Outlined = 11;
+        /// <summary>The hands and held cargo. A second camera draws this layer on top of everything.</summary>
+        public const int ViewModel = 12;
+        /// <summary>Bits of broken cargo. They only collide with the level.</summary>
+        public const int Debris = 13;
         public static int LevelMask => 1 << Level;
     }
 

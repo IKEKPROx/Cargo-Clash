@@ -14,11 +14,14 @@ namespace CargoClash
         private const int UpperCarry = 1;
         private const int UpperSmash = 2;
         private const int UpperToss = 3;
+        private const int UpperCarryBig = 4;
         private const int MoodCheer = 1;
         private const int MoodGrumble = 2;
 
         /// <summary>Where the hammer lands in the Smash clip, as a fraction of its length.</summary>
         private const float SmashHitTime = 0.55f;
+        /// <summary>Where the hammer starts coming down, for the sound of it going through the air.</summary>
+        private const float SmashSwingTime = 0.36f;
         private const float TossSeconds = 0.36f;
         private const float KnockedClipSeconds = 1.5f;
 
@@ -43,6 +46,8 @@ namespace CargoClash
         public GameObject collectorHat;
         public GameObject interrupterHat;
         public GameObject hammer;
+        public Transform handLeft;
+        public Transform handRight;
 
         [Header("Face")]
         public Transform eyeLeft;
@@ -67,7 +72,18 @@ namespace CargoClash
         private float lastSmashCycle;
         private bool colorsApplied;
         private bool wasKnockedDown;
+        private bool bodyHidden;
         private CargoItem lastCarried;
+
+        /// <summary>How far through a hammer swing the character is, from 0 to 1. The first-person hammer follows this.</summary>
+        public float SmashCycle { get; private set; }
+
+        /// <summary>Where held cargo goes for anyone watching: between the hands, against the belly.</summary>
+        public Vector3 CarryPoint(float cargoHalfDepth)
+        {
+            Vector3 hands = (handLeft.position + handRight.position) * 0.5f;
+            return hands + transform.forward * (cargoHalfDepth - 0.05f);
+        }
 
         private void Awake()
         {
@@ -125,7 +141,7 @@ namespace CargoClash
             if (!knockedDown)
             {
                 if (avatar.Smashing.Value) pose = UpperSmash;
-                else if (carried != null && !coCarrying) pose = UpperCarry;
+                else if (carried != null && !coCarrying) pose = carried.Definition.size == CargoSize.Small ? UpperCarry : UpperCarryBig;
                 else if (Time.time < tossUntil) pose = UpperToss;
             }
             if (pose != 0) animator.SetInteger(UpperPoseParam, pose);
@@ -135,8 +151,15 @@ namespace CargoClash
             upperWeight = Mathf.MoveTowards(upperWeight, target, speed * deltaTime);
             animator.SetLayerWeight(UpperBodyLayer, upperWeight);
 
-            if (pose == UpperSmash) CheckSmashHit();
-            else lastSmashCycle = 0f;
+            if (pose == UpperSmash)
+            {
+                CheckSmashHit();
+            }
+            else
+            {
+                lastSmashCycle = 0f;
+                SmashCycle = 0f;
+            }
         }
 
         /// <summary>Sound and debris happen when the hammer lands, not whenever durability ticks down.</summary>
@@ -145,16 +168,27 @@ namespace CargoClash
             AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(UpperBodyLayer);
             if (state.shortNameHash != SmashState) return;
             float cycle = Mathf.Repeat(state.normalizedTime, 1f);
+            SmashCycle = cycle;
+            if (lastSmashCycle < SmashSwingTime && cycle >= SmashSwingTime) GameAudio.PlayAt("swing", transform.position, 0.5f);
             bool landed = lastSmashCycle < SmashHitTime && cycle >= SmashHitTime;
             lastSmashCycle = cycle;
             if (!landed) return;
 
             squash = Mathf.Max(squash, 0.35f);
-            CargoItem target = CargoItem.FindSmashable(transform.position, config.smashRange);
-            if (target == null) return;
-            target.Bump();
-            GameAudio.PlayThrottled("smash", 0.08f);
-            FxBurst.Play(target.transform.position + Vector3.up * target.Height * 0.5f, new Color(0.75f, 0.55f, 0.3f), 7);
+            CargoItem target = avatar.SmashTarget;
+            if (target == null || target.State.Value != CargoState.Ground) return;
+
+            // On the side of the cargo facing the hammer, so the flash isn't hidden inside it.
+            Vector3 toHammer = transform.position - target.transform.position;
+            toHammer.y = 0f;
+            Vector3 away = toHammer.sqrMagnitude > 0.001f ? toHammer.normalized : transform.forward;
+            Vector3 hit = target.transform.position + Vector3.up * (target.Height * 0.3f) + away * target.Radius;
+            target.Bump(-away);
+            GameAudio.PlayAt("smash", hit);
+            FxBurst.Play(hit, target.Definition.chipColor, 8);
+            FxBurst.PlayFlash(hit + Vector3.up * 0.1f, Color.white, 0.75f);
+            if (avatar == PlayerAvatar.Local) FollowCamera.Kick(1.6f);
+            FollowCamera.Shake(hit, avatar == PlayerAvatar.Local ? 0.42f : 0.18f);
         }
 
         private int CurrentMood()
@@ -174,10 +208,23 @@ namespace CargoClash
         {
             if (!avatar.IsSpawned) return;
             ApplyTeamColor();
+            UpdateBodyHidden();
             UpdatePivot();
             UpdateGear();
             UpdateFace();
             UpdateBlink();
+        }
+
+        /// <summary>In first person your own body would be in the way, but it still casts its shadow.</summary>
+        private void UpdateBodyHidden()
+        {
+            bool hide = avatar == PlayerAvatar.Local && FollowCamera.HidesLocalBody;
+            if (hide == bodyHidden) return;
+            bodyHidden = hide;
+            UnityEngine.Rendering.ShadowCastingMode mode = hide
+                ? UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly
+                : UnityEngine.Rendering.ShadowCastingMode.On;
+            foreach (Renderer part in allRenderers) part.shadowCastingMode = mode;
         }
 
         /// <summary>A little extra life on top of the clips: lean into turns, stretch in a ram, squash on impacts.</summary>

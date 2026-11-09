@@ -49,6 +49,20 @@ namespace CargoClash
         [Header("Movement")]
         public float runSpeed = 6.5f;
         public float turnDegreesPerSecond = 900f;
+        [Tooltip("People closer than this ease apart, so no one's view ends up inside someone else.")]
+        public float personalSpace = 0.95f;
+        public float personalSpacePush = 3.5f;
+
+        [Header("Looking around")]
+        public float eyeHeight = 1.28f;
+        [Tooltip("Degrees the view turns for each pixel the mouse moves. Each player scales this in the pause menu.")]
+        public float lookDegreesPerPixel = 0.1f;
+        [Tooltip("How fast the arrow keys and the right stick turn the view.")]
+        public float keyTurnDegreesPerSecond = 150f;
+        public float maxLookUp = 70f;
+        public float maxLookDown = 78f;
+        [Tooltip("How far off the middle of the view cargo can be and still count as being aimed at, measured sideways. The size of the cargo adds to this.")]
+        public float aimDegrees = 34f;
 
         [Header("Ram")]
         public float ramCooldown = 3f;
@@ -66,12 +80,21 @@ namespace CargoClash
         [Header("Interaction")]
         public float pickupRange = 1.6f;
         public float smashRange = 1.8f;
-        public float headHeight = 1.46f;
+        [Tooltip("Allowance when the host checks a reach, because it sees people slightly later than their owners do.")]
+        public float reachTolerance = 0.6f;
         [Tooltip("Scales every cargo type's smash time. Playtesting tunes this before individual values.")]
         public float smashTimeMultiplier = 1f;
+        [Tooltip("One hammer swing. Should match the Smash clip's length in make_character.py.")]
+        public float smashSwingSeconds = 0.5f;
+        [Tooltip("From starting to swing until the first hit. Should match where the Smash clip's hammer lands.")]
+        public float smashFirstHitSeconds = 0.275f;
 
         [Header("Cargo")]
         public CargoDefinition[] cargo;
+        [Tooltip("Cargo looks damaged once its durability falls to this.")]
+        public float damagedBelow = 0.67f;
+        [Tooltip("Cargo looks nearly destroyed once its durability falls to this.")]
+        public float wreckedBelow = 0.34f;
 
         [Header("Prefabs")]
         public GameObject avatarPrefab;
@@ -82,6 +105,8 @@ namespace CargoClash
         public Material orangeMaterial;
         public Material blueMaterial;
         public Material particleMaterial;
+        public Material puffMaterial;
+        public Material flashMaterial;
 
         [Header("Input")]
         public InputActionAsset inputActions;

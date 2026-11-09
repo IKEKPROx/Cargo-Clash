@@ -19,17 +19,19 @@
 | 机器人 | 主机拥有，走和玩家一样的代码 | `BotBrain` 实现 `ICharacterInput` |
 | 冲撞判定、倒地、掉货 | 主机 | `PlayerAvatar.ServerCheckRamHit`、`ServerKnockDown` |
 | 地上的货物物理 | 主机（NetworkRigidbody） | `CargoItem` |
-| 一人搬的货 | 主机定谁在搬，各电脑在本地把货贴到搬运者头上 | `CargoItem.LateUpdate` |
+| 瞄准 | 拥有者算出准星对着哪件货，把货的 ID 发给主机；主机只查距离和状态 | `PlayerAvatar.UpdateAim`、`InteractRpc`、`SetSmashingRpc` |
+| 一人搬的货 | 主机定谁在搬。各电脑在本地摆放：自己搬的在手里（`FirstPersonRig`），别人搬的抱在胸前（`CharacterVisual.CarryPoint`） | `CargoItem.LateUpdate` |
 | 两人合搬的大件 | 主机取两人输入的平均方向并移动大件，角色跟着抓取点走 | `CargoItem.MoveWithCarriers`、`PlayerAvatar.TickCoCarry` |
-| 砸货耐久、倒计时、比分、称号 | 主机 | `CargoItem`、`MatchDirector` |
+| 砸货耐久、倒计时、比分、称号 | 主机。耐久按锤子落下扣，每挥一下扣一次（`PlayerAvatar.ServerSwingHammer`），总时间仍是 `CargoDefinition.smashSeconds` | `CargoItem`、`MatchDirector` |
 | 直升机吊走货箱的结尾 | 主机只同步到达时间，各电脑自己播放动画 | `MatchDirector.HelicopterArrivesAt`、`HelicopterExtraction` |
 | 角色动作 | 各电脑按同步下来的状态自己播放，不影响规则 | `CharacterVisual` |
+| 第一人称的手、货物裂开和碎块 | 只在本地播放，不影响规则，也不走网络 | `FirstPersonRig`、`CargoItem`、`CargoPieces` |
 
 改联网逻辑时，先想清楚这段代码在哪台电脑上跑。写 `NetworkVariable` 和判定规则都只在主机上做。
 
 ## 写代码的规则
 
-- 角色不要直接读键盘，统一通过 `ICharacterInput`。这样机器人和自动测试才能用。
+- 角色不要直接读键盘，统一通过 `ICharacterInput`。这样机器人和自动测试才能用。人的 `Move` 是相对视线的，机器人的 `Move` 是世界方向（看 `LooksAround`）。
 - 数值放 `GameConfig` 和 `CargoDefinition`，不要写死在代码里。玩家看到的文字放 `GameText`。
 - 特效和音效不能影响规则，它们只在收到状态变化或 RPC 后播放。
 - 所有联网物体都是从预制体动态生成的，场景里不放 NetworkObject。新增的联网预制体要在 `RoomService.Awake` 里注册。
@@ -47,7 +49,7 @@
 /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup --python Tools/blender/make_character.py
 ```
 
-其他模型把脚本换成 `make_cargo.py`、`make_truck.py`、`make_helicopter.py`、`make_scenery.py`，开始页面的 Logo、按钮和卡片图用 `make_ui.py`。末尾加 `-- --sheet 文件夹` 可以同时渲染检查图（直升机是 `-- --preview 图片.png`）。运行之后，还要运行上面的生成脚本才会进入游戏。
+其他模型把脚本换成 `make_cargo.py`、`make_hands.py`、`make_truck.py`、`make_helicopter.py`、`make_scenery.py`，开始页面的 Logo、按钮、卡片图和比赛界面的图标用 `make_ui.py`。末尾加 `-- --sheet 文件夹` 可以同时渲染检查图（直升机是 `-- --preview 图片.png`）。运行之后，还要运行上面的生成脚本才会进入游戏。
 
 场景的每个模型是一个 FBX，`make_scenery.py` 加 `-- --only Rock_A,Barn` 只重做这几个。生成脚本把它们做成 `Assets/Game/Prefabs/Scenery` 里的预制体，再摆进关卡（`CargoClashBuilder` 的 `AddTrees` 到 `AddOutskirts`）。模型本身没有碰撞，挡人的是单独的 `Blocker` 子物体，所以换模型不影响玩法和寻路。放进可玩区域的新东西，要么加 `Blocker`，要么矮到走过去也不奇怪（比如草和花）。
 
@@ -69,7 +71,21 @@
 
 Animator 有两层：`Base` 管全身，`UpperBody` 只管上半身，这样搬货和砸货时腿还能继续跑。
 
-描边是 URP 渲染器上的 `ModelOutline` 功能，会描 Player、Cargo 和 Outlined 三个层上的模型。要描别的东西，把它放到 Outlined 层。方块这类有硬边的模型描出来会断开，要先换成圆角模型。场景模型里名字以 `Plain` 开头的部分（电线、广告牌文字）不描边，草、花和云也不描。
+描边是 URP 渲染器上的 `ModelOutline` 功能，会描 Player、Cargo、Outlined、ViewModel 和 Debris 这些层上的模型。线条的屏幕宽度不变，太远的东西会变成一团黑线，所以 `Outline.shader` 让它随距离淡出（`_FadeStart`、`_FadeEnd`）。要描别的东西，把它放到 Outlined 层。方块这类有硬边的模型描出来会断开，要先换成圆角模型。场景模型里名字以 `Plain` 开头的部分（电线、广告牌文字）不描边，草、花和云也不描。
+
+## 第一人称
+
+默认是第一人称，按 V 切到肩后第三人称（`FollowCamera`，选择存在 `GameSettings`）。比赛时鼠标被锁住，打开暂停菜单或结算才放开（`MatchHud.UpdateCursor`）。自动测试不锁鼠标，也不保存设置。
+
+**两台相机。** 主相机不画 `ViewModel` 层。它上面叠了一台 Overlay 相机，只画 `ViewModel` 层：手、锤子和自己手里的货。这台相机会先清深度，所以手和货不会插进墙里。自己手里的货由 `CargoItem.SetOnViewLayer` 换层。两台相机的视野一样，货从地上进到手里时才不会跳。
+
+**手是代码摆的，不是 Animator。** `make_hands.py` 输出 `FirstPersonHands.fbx`，里面每只手和每条袖子都是一个不变形的物体，原点在手腕。`FirstPersonRig` 每帧算它们的位置，因为手要跟着货物的大小走。锤子的关键帧（`SwingPoses`）跟着角色 `Smash` 动画的进度（`CharacterVisual.SmashCycle`），所以手、声音和碎屑是同一时刻。改 `Smash` 动画的长度，要同时改 `GameConfig.smashSwingSeconds` 和 `smashFirstHitSeconds`。自己的身体只投影子（`ShadowsOnly`），别人看到的还是 Animator 动作。
+
+**货物的损坏。** `make_cargo.py` 给每种货多输出两个文件：`_Damaged` 里是两个受损的箱体（`Body_D1`、`Body_D2`，按 `GameConfig.damagedBelow` 和 `wreckedBelow` 切换），`_Pieces` 里是碎掉之后的各个碎块，每块是一个物体，起始位置就在完整模型的对应位置。生成脚本给碎块加碰撞和刚体，放在 `Debris` 层，只和 `Level` 层碰撞（`GameBoot`）。
+
+**界面。** 比赛界面在 `BuildHud`，用的是开始页面那套控件。小地图是 `MiniMap`，地图范围和底图在 `LevelLayout.mapArea`、`mapPicture`，做新关卡要填这两个。`MatchHud` 里的距离和大小都是屏幕上的固定值，改的时候在 1600×900 和别的窗口比例下都看一看。
+
+**别把 SSAO 加回渲染器。** 它在手部相机上会变成一片噪点，而且慢。也不能只把它停用：停用后打包时它的资源会被剔除，游戏每帧报错并且什么都画不出来，这时 `-ccUncapped` 测出来的帧率还特别高，看起来像变快了。要用就先解决手部相机的问题。
 
 ## 开始页面和关卡列表
 
@@ -83,7 +99,7 @@ Animator 有两层：`Base` 管全身，`UpperBody` 只管上半身，这样搬�
 
 开局时主机把选的关卡放进 `SessionRoster.Level`，加载场景都从这里取，不要再写死场景名。
 
-界面的颜色和做法集中在 `CargoClashBuilder.Title.cs` 的 `UiButton`、`UiPanel`、`UiText`。一个控件放在 `PopSlot` 里，弹入的动画缩放外层，鼠标悬停的动画缩放里层，这两个不能放在同一个物体上。图片要先在 `UiSprite` 里设好导入方式。所有字用 `Assets/Game/UI` 里的 Lilita One，它只有拉丁字母，以后要显示中文得另外配字体。比赛里的界面（`BuildHud`）还是旧样式，没有用这套控件。
+界面的颜色和做法集中在 `CargoClashBuilder.Title.cs` 的 `UiButton`、`UiPanel`、`UiText`。一个控件放在 `PopSlot` 里，弹入的动画缩放外层，鼠标悬停的动画缩放里层，这两个不能放在同一个物体上。图片要先在 `UiSprite` 里设好导入方式。所有字用 `Assets/Game/UI` 里的 Lilita One，它只有拉丁字母，以后要显示中文得另外配字体。
 
 背景的公路、田地、树是一条无限循环的带子：`TitleScenery` 把落到车后面的东西挪到前面。一组东西的循环长度要比镜头能看到的范围长，否则会当着玩家的面跳过去；越远的一组看到的范围越宽，所以循环越长。电线杆都一样高，并埋进地里一点，否则电线接不上。
 
@@ -105,6 +121,8 @@ grep CCTEST /tmp/cargo-match.log
 
 结果要看到 `RESULT` 和 `DONE errors=0 timedOut=False`。无窗口运行时帧率限制在 60，这样测出来的机器人表现才接近真实对局。
 
+**无窗口运行不渲染，所以渲染的问题查不出来。** 改了渲染器、相机或材质，还要窗口运行一局（加 `-ccShotDir 目录`），`errors` 要是 0，并且看一眼截图。
+
 `AutoPilot` 的其他参数：
 
 | 参数 | 作用 |
@@ -119,8 +137,11 @@ grep CCTEST /tmp/cargo-match.log
 | `-ccAgain` | 结算后点“再来一局”或“回大厅”，测重新进入的流程 |
 | `-ccForceCoCarry` | 每个半场强制两名正方合搬大件，第二个半场放在货车附近，测运送得分 |
 | `-ccWaitHostLeave` | 客户端等主机退出，测回到主菜单和提示 |
-| `-ccCameraZoom 倍数` | 把镜头拉近，比如 0.42，截图时看清角色 |
-| `-ccTour "x,z;x,z"` | 镜头依次看这些位置并截图（要配合 `-ccShotDir`），用来检查场景的每个角落 |
+| `-ccDriveInput` | 用真实的键盘和鼠标事件玩一局：转视角、走路、拿货送到货车、抡锤砸货，并检查 V、方向键、Esc 和灵敏度滑块。最后要看到 `CHECK ok`，这是测 `HumanInput` 和按键绑定的唯一办法 |
+| `-ccView first` / `third` | 这一局用第一人称或肩后视角，不保存 |
+| `-ccEyeTour "x,z,yaw;x,z,yaw"` | 站在这些位置平视并截图，用来检查场景从地面看是什么样 |
+| `-ccTour "x,z;x,z"` | 用老的高空镜头依次看这些位置并截图（要配合 `-ccShotDir`），用来检查场景的每个角落 |
+| `-ccCameraZoom 倍数` | 把上面那个高空镜头拉近，比如 0.42 |
 | `-ccUncapped` | 窗口运行时不限帧率，每 5 秒记一次帧率，用来比较两个版本哪个更卡 |
 
 agent 只能验证规则和流程。手感和两人联机必须由人来测：在 Multiplayer Play Mode 里开两个玩家，确认两边都看到倒地、货掉在同一个位置、冷却时间一致，再合并。

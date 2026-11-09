@@ -186,6 +186,11 @@ class MeshPart:
             rings.append(section(point, u, v, radius, radius, 2.0, points))
         self.loft(rings, material)
 
+    def displace(self, function):
+        """Moves everything added so far, to dent or crush a finished shape. `function` maps a position to a new one."""
+        for vert in self.bm.verts:
+            vert.co = function(vert.co.copy())
+
     def to_object(self, materials, location=(0, 0, 0)):
         bmesh.ops.recalc_face_normals(self.bm, faces=self.bm.faces)
         mesh = bpy.data.meshes.new(self.name)

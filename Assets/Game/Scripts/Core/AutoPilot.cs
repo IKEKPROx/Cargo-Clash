@@ -4,7 +4,10 @@ using System.Collections.Generic;
 using System.IO;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.UI;
 
 namespace CargoClash
@@ -22,6 +25,12 @@ namespace CargoClash
         public static bool LocalIsBot;
         public static float CameraZoom;
 
+        /// <summary>A test is running. It leaves the mouse pointer alone, because someone may be using the computer.</summary>
+        public static bool Active;
+
+        /// <summary>A test is sending real key and mouse events, so the window doesn't need to be in front.</summary>
+        public static bool DrivesInput;
+
         private string mode;
         private string address = "127.0.0.1";
         private string shotDirectory;
@@ -36,6 +45,9 @@ namespace CargoClash
         private bool uncapped;
         private bool hideUi;
         private string tourSpots;
+        private string eyeTourSpots;
+        private bool driveInput;
+        private string startView;
         private int errorCount;
         private int shotNumber;
 
@@ -48,6 +60,7 @@ namespace CargoClash
         {
             string[] args = Environment.GetCommandLineArgs();
             if (Array.IndexOf(args, "-ccMode") < 0) return;
+            Active = true;
             AutoPilot pilot = rig.AddComponent<AutoPilot>();
             pilot.Parse(args);
 
@@ -86,6 +99,9 @@ namespace CargoClash
                     case "-ccForceCoCarry": forceCoCarry = true; break;
                     case "-ccUncapped": uncapped = true; break;
                     case "-ccTour": tourSpots = next; break;
+                    case "-ccEyeTour": eyeTourSpots = next; break;
+                    case "-ccDriveInput": driveInput = true; break;
+                    case "-ccView": startView = next; break;
                     case "-ccHideUi": hideUi = true; break;
                 }
             }
@@ -120,6 +136,9 @@ namespace CargoClash
             if (forceCoCarry) StartCoroutine(ForceCoCarry());
             if (uncapped) StartCoroutine(MeasureFrames());
             if (!string.IsNullOrEmpty(tourSpots)) StartCoroutine(TourTheLevel());
+            if (!string.IsNullOrEmpty(eyeTourSpots)) StartCoroutine(TourAtEyeLevel());
+            if (driveInput) StartCoroutine(DriveWithKeysAndMouse());
+            if (!string.IsNullOrEmpty(startView)) GameSettings.FirstPerson = startView != "third";
 
             if (useUi)
             {
@@ -180,7 +199,7 @@ namespace CargoClash
                         {
                             again = false;
                             bool backToLobby = !RoomService.Instance.IsPractice;
-                            if (MatchHud.Instance.againButton.gameObject.activeSelf)
+                            if (MatchHud.Instance.againButton.gameObject.activeInHierarchy)
                                 MatchHud.Instance.againButton.onClick.Invoke();
                             yield return new WaitForSeconds(4f);
                             lastPhase = MatchPhase.Loading;
@@ -231,6 +250,302 @@ namespace CargoClash
                 yield return new WaitForSeconds(0.2f);
             }
             FollowCamera.TestFocus = null;
+        }
+
+        /// <summary>Stands at eye height at each "x,z,yaw" spot and takes a picture, to check what the level looks like from the ground.</summary>
+        private IEnumerator TourAtEyeLevel()
+        {
+            while (MatchDirector.Instance == null || !MatchDirector.Instance.IsSpawned || MatchDirector.Instance.Phase.Value != MatchPhase.Playing)
+                yield return null;
+            foreach (string spot in eyeTourSpots.Split(';'))
+            {
+                string[] parts = spot.Split(',');
+                FollowCamera.TestEye = new Vector3(float.Parse(parts[0]), float.Parse(parts[1]), float.Parse(parts[2]));
+                yield return new WaitForSeconds(0.8f);
+                Shot();
+                yield return new WaitForSeconds(0.2f);
+            }
+            FollowCamera.TestEye = null;
+        }
+
+        /// <summary>
+        /// Plays the local character the way a person would, with real key and mouse events going through
+        /// the Input System, so the bindings, the mouse look and aiming at cargo all get tested. It carries
+        /// cargo to the truck as a collector, smashes it as an interrupter, and tries the other keys along the way.
+        /// </summary>
+        private IEnumerator DriveWithKeysAndMouse()
+        {
+            DrivesInput = true;
+            InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+            foreach (InputDevice device in InputSystem.devices) InputSystem.DisableDevice(device);
+            Keyboard keyboard = InputSystem.AddDevice<Keyboard>("TestKeyboard");
+            Mouse mouse = InputSystem.AddDevice<Mouse>("TestMouse");
+            keyboard.MakeCurrent();
+            mouse.MakeCurrent();
+
+            GameConfig config = GameConfig.Get();
+            NavMeshPath path = new NavMeshPath();
+            float nextPathAt = 0f;
+            CargoItem target = null;
+            CargoItem carrying = null;
+            bool testedKeys = false;
+            bool pressedInteract = false;
+            bool pressedRam = false;
+            int grabs = 0;
+            int delivered = 0;
+            int hits = 0;
+            int broken = 0;
+            int rams = 0;
+            float turned = 0f;
+            float walked = 0f;
+            float lastYaw = 0f;
+            Vector3 lastPosition = Vector3.zero;
+            float lastDurability = 1f;
+            float nextRamAt = 12f;
+            float startedPlaying = -1f;
+            bool first = true;
+
+            while (true)
+            {
+                MatchDirector director = MatchDirector.Instance;
+                PlayerAvatar local = PlayerAvatar.Local;
+                if (director == null || !director.IsSpawned || local == null || director.Phase.Value == MatchPhase.Results)
+                {
+                    if (director != null && director.IsSpawned && director.Phase.Value == MatchPhase.Results) break;
+                    SendKeys(keyboard);
+                    SendMouse(mouse, Vector2.zero, false, false);
+                    yield return null;
+                    continue;
+                }
+
+                if (director.Phase.Value != MatchPhase.Playing)
+                {
+                    SendKeys(keyboard);
+                    SendMouse(mouse, Vector2.zero, false, false);
+                    target = null;
+                    first = true;
+                    yield return null;
+                    continue;
+                }
+
+                if (startedPlaying < 0f) startedPlaying = Time.time;
+                if (first)
+                {
+                    first = false;
+                    lastYaw = local.LookYaw;
+                    lastPosition = local.transform.position;
+                }
+                turned += Mathf.Abs(Mathf.DeltaAngle(lastYaw, local.LookYaw));
+                lastYaw = local.LookYaw;
+                walked += Vector3.Distance(lastPosition, local.transform.position);
+                lastPosition = local.transform.position;
+
+                // The other keys, once, a little way in.
+                if (!testedKeys && Time.time - startedPlaying > 6f)
+                {
+                    testedKeys = true;
+                    yield return TestOtherKeys(keyboard, mouse, local);
+                    lastPosition = local.transform.position;
+                    continue;
+                }
+
+                CargoItem carried = local.CarriedCargo;
+                if (carried != carrying)
+                {
+                    if (carried != null) grabs++;
+                    if (carrying != null && carried == null && carrying.State.Value == CargoState.Rescued) delivered++;
+                    carrying = carried;
+                }
+
+                Vector3 goal = local.transform.position;
+                bool go = false;
+                bool wantGrab = false;
+                bool wantSmash = false;
+                if (carried != null)
+                {
+                    goal = LevelLayout.Instance.ClosestTruckZonePoint(local.transform.position);
+                    go = true;
+                }
+                else
+                {
+                    bool interrupter = local.Side == Side.Interrupter;
+                    if (target == null || target.State.Value != CargoState.Ground || !target.IsSpawned)
+                    {
+                        if (target != null && interrupter && target.State.Value == CargoState.Destroyed) broken++;
+                        target = NearestCargoFor(local);
+                        lastDurability = 1f;
+                    }
+                    if (target != null)
+                    {
+                        goal = target.transform.position;
+                        go = target.EdgeDistance(local.transform.position) > (interrupter ? config.smashRange : config.pickupRange) * 0.55f;
+                        if (interrupter)
+                        {
+                            wantSmash = local.AimedSmash == target;
+                            if (target.Durability.Value < lastDurability)
+                            {
+                                hits++;
+                                lastDurability = target.Durability.Value;
+                            }
+                        }
+                        else
+                        {
+                            wantGrab = local.AimedGrab == target;
+                        }
+                    }
+                }
+
+                if (Time.time >= nextPathAt)
+                {
+                    nextPathAt = Time.time + 0.4f;
+                    NavMesh.SamplePosition(local.transform.position, out NavMeshHit from, 3f, NavMesh.AllAreas);
+                    NavMesh.SamplePosition(goal, out NavMeshHit to, 4f, NavMesh.AllAreas);
+                    NavMesh.CalculatePath(from.position, to.position, NavMesh.AllAreas, path);
+                }
+                Vector3 toward = goal;
+                if (path.corners.Length > 1 && (path.corners[1] - local.transform.position).sqrMagnitude > 0.3f) toward = path.corners[1];
+                else if (path.corners.Length > 2) toward = path.corners[2];
+                Vector3 direction = toward - local.transform.position;
+                direction.y = 0f;
+
+                float wantYaw = direction.sqrMagnitude > 0.001f ? Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg : local.LookYaw;
+                float degrees = Mathf.Clamp(Mathf.DeltaAngle(local.LookYaw, wantYaw), -9f, 9f);
+                float perPixel = config.lookDegreesPerPixel * GameSettings.LookSpeed;
+                Vector2 delta = new Vector2(degrees / perPixel, (local.LookPitch - 16f) * 0.15f / perPixel);
+                bool facing = Mathf.Abs(Mathf.DeltaAngle(local.LookYaw, wantYaw)) < 35f;
+
+                // A key only counts as pressed if it was up the frame before.
+                bool interact = wantGrab && !pressedInteract;
+                pressedInteract = interact;
+                bool ram = Time.time - startedPlaying > nextRamAt && !pressedRam && carried == null && local.RamCooldown01 <= 0f;
+                pressedRam = ram;
+                if (ram)
+                {
+                    rams++;
+                    nextRamAt = Time.time - startedPlaying + 7f;
+                }
+
+                SendKeys(keyboard, go && facing ? Key.W : Key.None, interact ? Key.E : Key.None);
+                SendMouse(mouse, delta, wantSmash, ram);
+                yield return null;
+            }
+
+            Log($"DRIVEN turned={turned:0} walked={walked:0} grabs={grabs} delivered={delivered} hits={hits} broken={broken} rams={rams}");
+            Expect(turned > 90f, "the mouse turned the view");
+            Expect(walked > 10f, "W walked the character forward, whichever way it was looking");
+            Expect(grabs > 0, "E picked up the cargo being aimed at");
+            // Forced onto a big chest, there may be no time left to carry anything else.
+            if (!forceCoCarry) Expect(delivered > 0, "cargo carried by hand reached the truck");
+            Expect(hits > 0, "holding the mouse button landed hammer hits");
+            Expect(broken > 0, "hammer hits broke cargo");
+        }
+
+        private IEnumerator TestOtherKeys(Keyboard keyboard, Mouse mouse, PlayerAvatar local)
+        {
+            bool wasFirstPerson = GameSettings.FirstPerson;
+            SendKeys(keyboard, Key.V);
+            SendMouse(mouse, Vector2.zero, false, false);
+            yield return null;
+            yield return null;
+            SendKeys(keyboard);
+            yield return null;
+            yield return null;
+            Expect(GameSettings.FirstPerson != wasFirstPerson, "V switches the view");
+            SendKeys(keyboard, Key.V);
+            yield return null;
+            yield return null;
+            SendKeys(keyboard);
+            yield return null;
+            Expect(GameSettings.FirstPerson == wasFirstPerson, "V switches the view back");
+
+            // A real mouse sends nothing while it's still, and the view has to stop turning when it does.
+            SendMouse(mouse, new Vector2(60f, 0f), false, false);
+            yield return null;
+            yield return null;
+            float yawAfterMove = local.LookYaw;
+            for (int i = 0; i < 5; i++) yield return null;
+            Expect(Mathf.Abs(Mathf.DeltaAngle(yawAfterMove, local.LookYaw)) < 0.01f, "the view stops turning when the mouse stops");
+
+            // Turning with the arrow keys, for anyone without a mouse.
+            float yawBefore = local.LookYaw;
+            for (int i = 0; i < 12; i++)
+            {
+                SendKeys(keyboard, Key.RightArrow);
+                yield return null;
+            }
+            SendKeys(keyboard);
+            yield return null;
+            Expect(Mathf.DeltaAngle(yawBefore, local.LookYaw) > 1f, "the right arrow key turns the view");
+
+            // With the pause menu open, the game ignores the keys and the mouse.
+            SendKeys(keyboard, Key.Escape);
+            yield return null;
+            yield return null;
+            SendKeys(keyboard);
+            yield return null;
+            Expect(MatchHud.Instance.MenuOpen, "Esc opens the pause menu");
+            Expect(!MatchHud.Instance.WantsCursorLocked, "the pointer is free for the pause menu");
+            yield return new WaitForSeconds(0.9f);
+            yield return ShotThenWait();
+            yawBefore = local.LookYaw;
+            Vector3 positionBefore = local.transform.position;
+            for (int i = 0; i < 10; i++)
+            {
+                SendKeys(keyboard, Key.W);
+                SendMouse(mouse, new Vector2(40f, 0f), false, false);
+                yield return null;
+            }
+            SendKeys(keyboard);
+            SendMouse(mouse, Vector2.zero, false, false);
+            yield return null;
+            Expect(Mathf.Abs(Mathf.DeltaAngle(yawBefore, local.LookYaw)) < 0.01f, "the view doesn't turn behind the pause menu");
+            Expect(Vector3.Distance(positionBefore, local.transform.position) < 0.3f, "the character doesn't walk behind the pause menu");
+            float speedBefore = GameSettings.LookSpeed;
+            MatchHud.Instance.lookSpeedSlider.value = 1.5f;
+            Expect(Mathf.Approximately(GameSettings.LookSpeed, 1.5f), "the slider sets the look speed");
+            GameSettings.LookSpeed = speedBefore;
+            MatchHud.Instance.lookSpeedSlider.SetValueWithoutNotify(speedBefore);
+
+            SendKeys(keyboard, Key.Escape);
+            yield return null;
+            yield return null;
+            SendKeys(keyboard);
+            yield return null;
+            Expect(!MatchHud.Instance.MenuOpen, "Esc closes the pause menu");
+        }
+
+        private static void SendKeys(Keyboard keyboard, Key first = Key.None, Key second = Key.None)
+        {
+            KeyboardState state = first != Key.None && second != Key.None ? new KeyboardState(first, second)
+                : first != Key.None ? new KeyboardState(first)
+                : second != Key.None ? new KeyboardState(second)
+                : new KeyboardState();
+            InputSystem.QueueStateEvent(keyboard, state);
+        }
+
+        private static void SendMouse(Mouse mouse, Vector2 delta, bool left, bool right)
+        {
+            MouseState state = new MouseState { delta = delta, position = new Vector2(400f, 300f) };
+            if (left) state = state.WithButton(UnityEngine.InputSystem.LowLevel.MouseButton.Left);
+            if (right) state = state.WithButton(UnityEngine.InputSystem.LowLevel.MouseButton.Right);
+            InputSystem.QueueStateEvent(mouse, state);
+        }
+
+        private static CargoItem NearestCargoFor(PlayerAvatar local)
+        {
+            CargoItem best = null;
+            float bestDistance = float.MaxValue;
+            foreach (CargoItem cargo in CargoItem.All)
+            {
+                if (cargo.State.Value != CargoState.Ground || cargo.Definition.requiredCarriers > 1) continue;
+                float distance = cargo.EdgeDistance(local.transform.position);
+                if (distance < bestDistance)
+                {
+                    best = cargo;
+                    bestDistance = distance;
+                }
+            }
+            return best;
         }
 
         /// <summary>Logs the frame rate every few seconds, to compare how heavy two builds are.</summary>

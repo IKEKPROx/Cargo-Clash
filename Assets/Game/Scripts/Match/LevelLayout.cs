@@ -23,6 +23,11 @@ namespace CargoClash
         public Transform bedOrigin;
         public Vector2 bedHalfSize = new Vector2(1.4f, 2f);
 
+        [Header("Map")]
+        [Tooltip("The part of the world the map shows, in world X and Z.")]
+        public Rect mapArea = new Rect(-23f, -49f, 46f, 98f);
+        public Texture mapPicture;
+
         private int bedCount;
 
         private void Awake()

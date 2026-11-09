@@ -17,6 +17,8 @@ namespace CargoClash
         private static readonly Vector3 MouthCarried = new Vector3(1.35f, 1.8f, 1f);
         private static readonly Vector3 EyesScared = new Vector3(1.25f, 1.35f, 1f);
         private static readonly Vector3 MouthScared = new Vector3(0.9f, 3.2f, 1f);
+        private static readonly Vector3 EyesWorried = new Vector3(1.1f, 1.18f, 1f);
+        private static readonly Vector3 MouthWorried = new Vector3(0.8f, 1.7f, 1f);
         private static readonly Vector3 EyesHappy = new Vector3(1.08f, 0.25f, 1f);
         private static readonly Vector3 MouthHappy = new Vector3(1.5f, 2.6f, 1f);
 
@@ -58,6 +60,12 @@ namespace CargoClash
                     {
                         eyeTarget = EyesScared;
                         mouthTarget = MouthScared;
+                    }
+                    else if (cargo.Durability.Value < 1f)
+                    {
+                        // It remembers.
+                        eyeTarget = EyesWorried;
+                        mouthTarget = MouthWorried;
                     }
                     break;
             }

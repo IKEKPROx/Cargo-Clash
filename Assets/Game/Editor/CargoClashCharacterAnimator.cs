@@ -13,7 +13,7 @@ public static class CargoClashCharacterAnimator
 
     private static readonly HashSet<string> LoopingClips = new HashSet<string>
     {
-        "Idle", "Run", "Carry", "CoCarryIdle", "CoCarryWalk", "Smash", "Cheer", "Grumble",
+        "Idle", "Run", "Carry", "CarryBig", "CoCarryIdle", "CoCarryWalk", "Smash", "Cheer", "Grumble",
     };
 
     public static void ConfigureImport(string modelPath)
@@ -55,7 +55,7 @@ public static class CargoClashCharacterAnimator
         {
             if (asset is AnimationClip clip && !clip.name.StartsWith("__preview__")) clips[clip.name] = clip;
         }
-        foreach (string needed in new[] { "Idle", "Run", "Carry", "CoCarryIdle", "CoCarryWalk", "Ram", "Knocked", "Smash", "Toss", "Cheer", "Grumble" })
+        foreach (string needed in new[] { "Idle", "Run", "Carry", "CarryBig", "CoCarryIdle", "CoCarryWalk", "Ram", "Knocked", "Smash", "Toss", "Cheer", "Grumble" })
         {
             if (!clips.ContainsKey(needed)) Debug.LogError($"[Builder] The character model has no {needed} clip.");
         }
@@ -126,11 +126,13 @@ public static class CargoClashCharacterAnimator
         AnimatorState carry = ClipState(machine, "Carry", clips["Carry"]);
         AnimatorState smash = ClipState(machine, "Smash", clips["Smash"]);
         AnimatorState toss = ClipState(machine, "Toss", clips["Toss"]);
+        AnimatorState carryBig = ClipState(machine, "CarryBig", clips["CarryBig"]);
         machine.defaultState = carry;
 
         AnyTransition(machine, carry, 0.08f).AddCondition(AnimatorConditionMode.Equals, 1, "UpperPose");
         AnyTransition(machine, smash, 0.08f).AddCondition(AnimatorConditionMode.Equals, 2, "UpperPose");
         AnyTransition(machine, toss, 0.04f).AddCondition(AnimatorConditionMode.Equals, 3, "UpperPose");
+        AnyTransition(machine, carryBig, 0.08f).AddCondition(AnimatorConditionMode.Equals, 4, "UpperPose");
     }
 
     /// <summary>The spine, head and arms. The face stays with the base layer, so its expressions keep playing.</summary>

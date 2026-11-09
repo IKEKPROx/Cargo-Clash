@@ -324,9 +324,9 @@ namespace CargoClash
         private void CargoEventRpc(Vector3 position, int value, Team team, bool rescued)
         {
             MatchHud hud = MatchHud.Instance;
-            if (hud != null) hud.ShowPopup(position, "+" + value, team.ToColor());
-            GameAudio.Play(rescued ? "rescue" : "break");
-            if (!rescued) FxBurst.Play(position, new Color(0.75f, 0.55f, 0.3f), 24);
+            if (hud != null) hud.ShowPopup(position, GameText.CargoValue(value), team.ToColor());
+            if (rescued) GameAudio.Play("rescue");
+            else GameAudio.PlayAt("break", position);
         }
 
         [Rpc(SendTo.Everyone)]

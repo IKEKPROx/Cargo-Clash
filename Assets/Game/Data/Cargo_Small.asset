@@ -19,3 +19,6 @@ MonoBehaviour:
   carrySpeedMultiplier: 0.9
   requiredCarriers: 1
   fullCount: 12
+  piecesPrefab: {fileID: 5826815515391313963, guid: 707c15bb8093b4a9f90b006f9856e3ef, type: 3}
+  chipColor: {r: 0.82, g: 0.66, b: 0.42, a: 1}
+  breakSound: crack

@@ -23,5 +23,15 @@ namespace CargoClash
 
         [Tooltip("How many spawn in a 3v3 match. Fewer players scale this down.")]
         public int fullCount = 12;
+
+        [Header("Show")]
+        [Tooltip("What's left when it breaks. Comes from Tools/blender/make_cargo.py.")]
+        public GameObject piecesPrefab;
+
+        [Tooltip("The colour of the bits that fly off when the hammer lands.")]
+        public Color chipColor = new Color(0.75f, 0.55f, 0.3f);
+
+        [Tooltip("Played when it breaks, on top of the usual sound.")]
+        public string breakSound = "crack";
     }
 }

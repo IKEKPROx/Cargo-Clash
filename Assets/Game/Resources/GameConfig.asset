@@ -47,6 +47,14 @@ MonoBehaviour:
   helicopterLeaveSeconds: 2.3
   runSpeed: 6.5
   turnDegreesPerSecond: 900
+  personalSpace: 0.95
+  personalSpacePush: 3.5
+  eyeHeight: 1.28
+  lookDegreesPerPixel: 0.1
+  keyTurnDegreesPerSecond: 150
+  maxLookUp: 70
+  maxLookDown: 78
+  aimDegrees: 34
   ramCooldown: 3
   ramCooldownSmallTeam: 2
   ramDuration: 0.28
@@ -57,16 +65,22 @@ MonoBehaviour:
   knockbackSpeed: 8
   pickupRange: 1.6
   smashRange: 1.8
-  headHeight: 1.46
+  reachTolerance: 0.6
   smashTimeMultiplier: 1
+  smashSwingSeconds: 0.5
+  smashFirstHitSeconds: 0.275
   cargo:
   - {fileID: 11400000, guid: 876bb7093f40c4959838604a550ac5f3, type: 2}
   - {fileID: 11400000, guid: 7cc3b4df918164904b9b5fabdc34326b, type: 2}
   - {fileID: 11400000, guid: cea4e5b047a4c4c26a2035932a2080ad, type: 2}
+  damagedBelow: 0.67
+  wreckedBelow: 0.34
   avatarPrefab: {fileID: 8527078935949222500, guid: 56431d22dc7a04cf186d37d695d3134e, type: 3}
   directorPrefab: {fileID: 8093289547608941666, guid: 763d9ad70174c4ee18bdfca4092122d6, type: 3}
   rosterPrefab: {fileID: 7409588860359389063, guid: e77346b59518f4d5aa28358c6222b129, type: 3}
   orangeMaterial: {fileID: 2100000, guid: f6e161e164a334496bb98c5d6effcee5, type: 2}
   blueMaterial: {fileID: 2100000, guid: 901690c7193774528bd1bb361af0a848, type: 2}
   particleMaterial: {fileID: 2100000, guid: bb6d5452cc759429f8069b880df78f3f, type: 2}
+  puffMaterial: {fileID: 2100000, guid: aa5c7ec3dd19648fe8ee103bdddc91ef, type: 2}
+  flashMaterial: {fileID: 2100000, guid: 0b48f458ff7594d31afd0a9284136cbe, type: 2}
   inputActions: {fileID: -944628639613478452, guid: 992837e6f683f4108a30bde5bba7f371, type: 3}

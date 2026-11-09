@@ -47,14 +47,7 @@ public static partial class CargoClashBuilder
     {
         Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         AddDaylight();
-        // The far distance fades into the bottom of the sky picture.
-        Color haze = new Color(0.8f, 0.91f, 0.96f);
-        RenderSettings.skybox = SkyMaterial();
-        RenderSettings.fog = true;
-        RenderSettings.fogMode = FogMode.Linear;
-        RenderSettings.fogColor = haze;
-        RenderSettings.fogStartDistance = 90f;
-        RenderSettings.fogEndDistance = 320f;
+        AddCountrySky();
 
         GameObject cameraObject = new GameObject("Main Camera");
         cameraObject.tag = "MainCamera";
@@ -602,7 +595,7 @@ public static partial class CargoClashBuilder
         Rect(flow.statusText.gameObject, panel, left, new Vector2(columnX, -320f), new Vector2(560f, 80f));
         flow.statusText.horizontalOverflow = HorizontalWrapMode.Wrap;
 
-        RectTransform keys = PopSlot(panel, "Keys", AnchorBottom, new Vector2(170f, 56f), new Vector2(1130f, 66f), 0.25f);
+        RectTransform keys = PopSlot(panel, "Keys", AnchorBottom, new Vector2(240f, 56f), new Vector2(1320f, 66f), 0.25f);
         Image back = UiImage(keys, "Back", uiRound, new Color(UiNavy.r, UiNavy.g, UiNavy.b, 0.82f), 1.8f);
         Fill(back.rectTransform);
         Text hint = UiText(keys, "Hint", GameText.KeysHint, 26, UiCream);

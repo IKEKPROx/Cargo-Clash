@@ -19,3 +19,6 @@ MonoBehaviour:
   carrySpeedMultiplier: 0.5
   requiredCarriers: 2
   fullCount: 2
+  piecesPrefab: {fileID: 7481265819821349798, guid: 62a972daf755b420d861fe0fbda3aa57, type: 3}
+  chipColor: {r: 0.47, g: 0.26, b: 0.72, a: 1}
+  breakSound: coins

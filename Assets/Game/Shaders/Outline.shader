@@ -6,6 +6,8 @@ Shader "CargoClash/Outline"
     {
         _Color ("Color", Color) = (0.1, 0.08, 0.09, 1)
         _Width ("Width (fraction of screen height)", Float) = 0.0026
+        _FadeStart ("Full width out to this distance", Float) = 26
+        _FadeEnd ("Gone by this distance", Float) = 150
     }
 
     SubShader
@@ -27,6 +29,8 @@ Shader "CargoClash/Outline"
             CBUFFER_START(UnityPerMaterial)
                 half4 _Color;
                 float _Width;
+                float _FadeStart;
+                float _FadeEnd;
             CBUFFER_END
 
             struct Attributes
@@ -50,8 +54,11 @@ Shader "CargoClash/Outline"
                 float aspect = _ScreenParams.y / _ScreenParams.x;
                 float2 direction = normalize(normalCS + 0.00001);
                 direction.x *= aspect;
+                // The line stays the same width on screen, so far away things would turn into nothing but
+                // outline. It fades before that happens.
+                float fade = saturate((_FadeEnd - output.positionCS.w) / (_FadeEnd - _FadeStart));
                 // Twice the width, because clip space runs from -1 to 1 across the screen.
-                output.positionCS.xy += direction * _Width * 2.0 * output.positionCS.w;
+                output.positionCS.xy += direction * _Width * fade * 2.0 * output.positionCS.w;
                 return output;
             }
 

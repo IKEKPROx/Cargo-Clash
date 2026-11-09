@@ -671,7 +671,129 @@ def make_icons():
         write_png(FOLDER / "Icon_Truck.png", with_outline(icon, 6))
 
 
+def make_ring():
+    """The crosshair when it's on something."""
+    size = 128
+    xs, ys = grid(size, size)
+    image = blank(size, size)
+    image[..., 3] = cover(np.abs(circle(xs, ys, 64, 64, 54)) - 6.5)
+    return image
+
+
+def star_radius(angle, sector, outer, inner):
+    """How far out a star's straight edge is at each angle, with a point in the middle of every sector."""
+    phi = np.abs(np.mod(angle, sector) - sector * 0.5)
+    half = sector * 0.5
+    bx, by = inner * math.cos(half), inner * math.sin(half)
+    return (outer * by) / np.maximum(by * np.cos(phi) - (bx - outer) * np.sin(phi), 1e-4)
+
+
+def star_distance(xs, ys, cx, cy, outer, inner, points, turn=0.0):
+    """Roughly how far outside a star each pixel is."""
+    angle = np.arctan2(ys - cy, xs - cx) + turn
+    return np.hypot(xs - cx, ys - cy) - star_radius(angle, math.tau / points, outer, inner)
+
+
+def make_star():
+    """The stars you see when you're knocked over."""
+    size = 128
+    xs, ys = grid(size, size)
+    image = blank(size, size, YELLOW)
+    shape = star_distance(xs, ys, 64, 64, 60, 27, 5, 0.31)
+    paint(image, NAVY, cover(shape))
+    paint(image, YELLOW, cover(shape + 7.0))
+    return image
+
+
+def make_pow():
+    """A comic impact flash. White, so the game can tint it, with a darker rim."""
+    size = 256
+    xs, ys = grid(size, size)
+    image = blank(size, size)
+    rng = np.random.RandomState(7)
+    points = 11
+    angle = np.arctan2(ys - 128, xs - 128)
+    sector = math.tau / points
+    index = np.floor(np.mod(angle, math.tau) / sector).astype(np.int32) % points
+    outer = 94.0 + rng.uniform(0.0, 30.0, points)[index]
+    shape = np.hypot(xs - 128, ys - 128) - star_radius(angle, sector, outer, 52.0)
+    image[..., :3] = np.where(shape[..., None] > -9.0, 0.72, 1.0)
+    image[..., 3] = cover(shape)
+    return image
+
+
+def make_chevron():
+    """A chunky arrow pointing up, for things off the edge of the screen."""
+    size = 128
+    xs, ys = grid(size, size)
+    image = blank(size, size)
+    shape = np.minimum(segment(xs, ys, 64, 30, 24, 88, 15), segment(xs, ys, 64, 30, 104, 88, 15))
+    paint(image, NAVY, cover(shape - 7.0))
+    paint(image, WHITE, cover(shape))
+    return image
+
+
+def make_diamond():
+    """A marker for something worth finding. White, so the game can tint it."""
+    size = 128
+    xs, ys = grid(size, size)
+    image = blank(size, size)
+    shape = (np.abs(xs - 64) + np.abs(ys - 64) - 50) / 1.414 - 6.0
+    paint(image, NAVY, cover(shape - 7.0))
+    paint(image, WHITE, cover(shape))
+    return image
+
+
+def make_dot():
+    """A blip on the map. White with a dark edge, so the game can tint it."""
+    size = 64
+    xs, ys = grid(size, size)
+    image = blank(size, size)
+    shape = circle(xs, ys, 32, 32, 22)
+    paint(image, NAVY, cover(shape - 8.0))
+    paint(image, WHITE, cover(shape))
+    return image
+
+
+def make_vignette():
+    """Dark at the corners and clear in the middle, tinted by the game. It stretches over the whole screen."""
+    size = 256
+    xs, ys = grid(size, size)
+    distance = np.hypot((xs - 128) / 128, (ys - 128) / 128)
+    image = blank(size, size)
+    image[..., 3] = smoothstep(0.55, 1.35, distance) ** 1.4
+    return image
+
+
+def make_speed_lines():
+    """Streaks rushing past the edges of the view during a ram."""
+    size = 512
+    xs, ys = grid(size, size)
+    rng = np.random.RandomState(11)
+    angle = np.mod(np.arctan2(ys - 256, xs - 256), math.tau)
+    radius = np.hypot(xs - 256, ys - 256) / 256
+    count = 72
+    index = np.floor(angle / math.tau * count).astype(np.int32) % count
+    centre = (index + 0.5) * math.tau / count
+    width = rng.uniform(0.15, 0.42, count)[index]
+    start = rng.uniform(0.5, 0.82, count)[index]
+    keep = rng.uniform(0.0, 1.0, count)[index] > 0.34
+    across = np.abs(angle - centre) * count / math.tau * 2.0
+    streak = smoothstep(width, width * 0.4, across) * smoothstep(start, start + 0.3, radius) * keep
+    image = blank(size, size)
+    image[..., 3] = streak * 0.9
+    return image
+
+
 def make_sprites():
+    write_png(FOLDER / "UI_Ring.png", make_ring())
+    write_png(FOLDER / "UI_Star.png", make_star())
+    write_png(FOLDER / "UI_Pow.png", make_pow())
+    write_png(FOLDER / "UI_Chevron.png", make_chevron())
+    write_png(FOLDER / "UI_Diamond.png", make_diamond())
+    write_png(FOLDER / "UI_Dot.png", make_dot())
+    write_png(FOLDER / "UI_Vignette.png", make_vignette())
+    write_png(FOLDER / "UI_SpeedLines.png", make_speed_lines())
     write_png(FOLDER / "UI_Round.png", make_round())
     write_png(FOLDER / "UI_Circle.png", make_circle())
     write_png(FOLDER / "UI_Frame.png", make_frame())

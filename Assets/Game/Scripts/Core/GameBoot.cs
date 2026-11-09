@@ -11,6 +11,9 @@ namespace CargoClash
         {
             // Characters walk through cargo; only the level blocks them.
             Physics.IgnoreLayerCollision(GameLayers.Player, GameLayers.Cargo, true);
+            // Bits of broken cargo land on the level and pass through everything else.
+            for (int layer = 0; layer < 32; layer++)
+                Physics.IgnoreLayerCollision(GameLayers.Debris, layer, layer != GameLayers.Level);
             Application.runInBackground = true;
             if (!Application.isBatchMode) QualitySettings.vSyncCount = 1;
 

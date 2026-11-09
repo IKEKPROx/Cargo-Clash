@@ -50,6 +50,9 @@ namespace CargoClash
         }
 
         public Vector2 Move => move;
+        public bool LooksAround => false;
+        public Vector2 Look => Vector2.zero;
+        public bool SwitchViewPressed => false;
         public bool InteractPressed => interact;
         public bool RamPressed => ram;
         public bool SmashHeld => smash;

@@ -664,21 +664,30 @@ def run(u):
     )
 
 
-def carry(u):
-    """Upper body only. Cargo rides on the head, with both arms up to steady it."""
+def hold_pose(u, x, y, z):
+    """Upper body only. Cargo is hugged against the belly, with a hand on each side of it."""
     a = TAU * u
     return Pose(
         hands_in_body=1.0,
-        hand_l=(0.47, -0.03, 1.235 + 0.012 * math.sin(a)),
-        hand_r=(-0.47, -0.03, 1.235 + 0.012 * math.sin(a + 1.4)),
-        elbow_l=(1.0, 0.25, -0.1),
-        elbow_r=(-1.0, 0.25, -0.1),
-        spine=(-2.0, 1.5 * math.sin(a), 0),
-        chest=(-2.0 + math.sin(2 * a), 1.5 * math.sin(a + 0.6), 0),
-        head=(3.0, -2.0 * math.sin(a + 1.0), 0),
+        hand_l=(x, y, z + 0.012 * math.sin(a)),
+        hand_r=(-x, y, z + 0.012 * math.sin(a + 1.4)),
+        elbow_l=(1.0, 0.3, -0.45),
+        elbow_r=(-1.0, 0.3, -0.45),
+        spine=(-5.0, 1.5 * math.sin(a), 0),
+        chest=(-4.0 + math.sin(2 * a), 1.5 * math.sin(a + 0.6), 0),
+        head=(5.0, -2.0 * math.sin(a + 1.0), 0),
         mouth=0.8,
         brow_tilt=-8.0,
     )
+
+
+def carry(u):
+    return hold_pose(u, 0.33, -0.5, 0.6)
+
+
+def carry_big(u):
+    """The crate is wider than the arms can properly reach, so the hands hold its near corners."""
+    return hold_pose(u, 0.53, -0.46, 0.6)
 
 
 def co_carry_pose(a):
@@ -826,8 +835,8 @@ smash = keyed([
 TOSS_SECONDS = 0.36
 toss = keyed([
     (0.00, carry(0.0)),
-    (0.14, Pose(hands_in_body=1.0, hand_l=(0.24, -0.50, 1.02), hand_r=(-0.24, -0.50, 1.02), elbow_l=(1.0, 0.3, 0.0), elbow_r=(-1.0, 0.3, 0.0),
-                spine=(6.0, 0, 0), chest=(12.0, 0, 0), head=(-4.0, 0, 0), mouth=2.2)),
+    (0.14, Pose(hands_in_body=1.0, hand_l=(0.26, -0.5, 0.92), hand_r=(-0.26, -0.5, 0.92), elbow_l=(1.0, 0.3, -0.2), elbow_r=(-1.0, 0.3, -0.2),
+                spine=(6.0, 0, 0), chest=(12.0, 0, 0), head=(-6.0, 0, 0), mouth=2.2)),
     (0.36, Pose(hands_in_body=1.0, hand_l=(0.50, -0.05, 0.46), hand_r=(-0.50, -0.05, 0.46))),
 ], TOSS_SECONDS)
 
@@ -883,6 +892,7 @@ CLIPS = [
     ("Idle", 2.0, idle),
     ("Run", 0.8, run),
     ("Carry", 1.0, carry),
+    ("CarryBig", 1.0, carry_big),
     ("CoCarryIdle", 1.2, co_carry_idle),
     ("CoCarryWalk", 0.8, co_carry_walk),
     ("Ram", 0.34, ram),

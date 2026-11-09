@@ -10,12 +10,15 @@ RUNNING THE GAME
    is needed. The other levels are locked for now.
 
 CONTROLS
-WASD or arrow keys   Move
+WASD                 Move
+Mouse                Look around (the arrow keys turn too)
 E                    Pick up / put down cargo
-Space                Ram
-Hold F               Smash cargo (Interrupters only)
+Space or right-click Ram
+Hold left-click or F Smash cargo (Interrupters only)
+V                    Switch between first person and over the shoulder
+Esc                  Pause menu, where you can change the look speed
 Alt+Enter            Full screen on / off
-A gamepad also works: left stick to move, A / B / X to pick up, ram and smash.
+A gamepad also works: left stick to move, right stick to look, A / B / X to pick up, ram and smash.
 
 PLAYING TOGETHER ON A LOCAL NETWORK
 One player clicks CREATE ROOM and chooses a level. The room code is that computer's IP address.

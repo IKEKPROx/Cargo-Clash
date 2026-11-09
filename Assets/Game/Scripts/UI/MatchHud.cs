@@ -6,15 +6,28 @@ using UnityEngine.UI;
 
 namespace CargoClash
 {
-    /// <summary>Timer, scores, banners, results, and the labels drawn over the game world.</summary>
+    /// <summary>
+    /// Everything drawn over the game: the scoreboard, crosshair and prompts, markers on things worth
+    /// finding, what happens on screen when you're hit, and the results and pause screens.
+    /// </summary>
     public sealed class MatchHud : MonoBehaviour
     {
-        private static readonly Vector2 BannerInPlay = new Vector2(0f, 250f);
+        private static readonly Vector2 BannerInPlay = new Vector2(0f, 330f);
         private static readonly Vector2 BannerUnderShot = new Vector2(0f, -455f);
+        private static readonly Color CargoGold = new Color(1f, 0.82f, 0.2f);
+        private static readonly Color AimGrab = new Color(0.38f, 0.95f, 0.5f);
+        private static readonly Color AimSmash = new Color(1f, 0.32f, 0.22f);
+        private static readonly Color TruckGreen = new Color(0.4f, 1f, 0.5f);
+
+        private const float CargoLabelRange = 20f;
+        private const float NameLabelRange = 38f;
+        private const float ThreatRange = 10f;
+        private const float MarkerHideWithin = 13f;
 
         private sealed class Popup
         {
             public Text Label;
+            public Vector3 World;
             public float Age;
             public float Scale;
         }
@@ -28,15 +41,38 @@ namespace CargoClash
         public Text blueScoreText;
         public Text orangeRoleText;
         public Text blueRoleText;
+        public GameObject orangeYou;
+        public GameObject blueYou;
+        public Text roleChip;
+        public Image roleChipBack;
 
         [Header("Centre")]
         public Text bannerText;
+        public GameObject introCard;
+        public Text introHeading;
+        public Text introGoal;
+        public Text introCount;
+        public Text introSwap;
+
+        [Header("Crosshair")]
+        public Image crosshairDot;
+        public Image crosshairRing;
+        public HudPrompt promptA;
+        public HudPrompt promptB;
+        public GameObject targetBar;
+        public Image targetFill;
 
         [Header("Bottom")]
-        [Tooltip("The ram bar and key hints, hidden while the helicopter sequence plays.")]
+        [Tooltip("The ram bar and everything else that's hidden while the helicopter sequence plays.")]
         public GameObject playHud;
         public Image ramFill;
         public Text ramLabel;
+
+        [Header("Being hit")]
+        public Image speedLines;
+        public Image vignette;
+        public Image hitArrow;
+        public RectTransform dizzyStars;
 
         [Header("Transitions")]
         public Image screenFade;
@@ -44,6 +80,9 @@ namespace CargoClash
         [Header("World overlays")]
         public RectTransform overlayRoot;
         public Font overlayFont;
+        public Sprite roundSprite;
+        public Sprite diamondSprite;
+        public Sprite chevronSprite;
 
         [Header("Results")]
         public GameObject resultsPanel;
@@ -59,14 +98,15 @@ namespace CargoClash
         public GameObject pausePanel;
         public Button pauseResumeButton;
         public Button pauseLeaveButton;
+        public Slider lookSpeedSlider;
 
         private readonly List<Text> labelPool = new List<Text>();
         private readonly List<Image> barPool = new List<Image>();
-        private readonly List<Image> arrowPool = new List<Image>();
+        private readonly List<Image> markerPool = new List<Image>();
         private readonly List<Popup> popups = new List<Popup>();
         private int labelsUsed;
         private int barsUsed;
-        private int arrowsUsed;
+        private int markersUsed;
         private Camera worldCamera;
         private bool resultsShown;
         private string timedBanner = "";
@@ -74,6 +114,18 @@ namespace CargoClash
         private bool finalStretchAnnounced;
         private bool helicopterAnnounced;
         private MatchPhase lastPhase = MatchPhase.Loading;
+        private Vector3 hitFrom;
+        private float hitAt = -100f;
+        private float dashAmount;
+        private float knockedAmount;
+
+        /// <summary>True while the pointer should be free for clicking, and looking around should stop.</summary>
+        public bool MenuOpen => pausePanel.activeSelf || resultsShown;
+
+        /// <summary>True while the mouse should be steering the view rather than moving a pointer.</summary>
+        public bool WantsCursorLocked => !MenuOpen && Application.isFocused && PlayerAvatar.Local != null;
+
+        private float CanvasScale => overlayRoot.lossyScale.x;
 
         private void Awake()
         {
@@ -85,40 +137,63 @@ namespace CargoClash
             pausePanel.SetActive(false);
             pauseResumeButton.onClick.AddListener(() => pausePanel.SetActive(false));
             pauseLeaveButton.onClick.AddListener(() => RoomService.Instance.Leave());
+            lookSpeedSlider.minValue = GameSettings.MinLookSpeed;
+            lookSpeedSlider.maxValue = GameSettings.MaxLookSpeed;
+            lookSpeedSlider.SetValueWithoutNotify(GameSettings.LookSpeed);
+            lookSpeedSlider.onValueChanged.AddListener(value => GameSettings.LookSpeed = value);
+            introCard.SetActive(false);
+            promptA.Hide();
+            promptB.Hide();
+            targetBar.SetActive(false);
         }
 
         private void OnDestroy()
         {
             if (Instance == this) Instance = null;
             GameAudio.SetMusic(null);
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
         }
 
         private void Update()
         {
+            UpdateCursor();
             MatchDirector director = MatchDirector.Instance;
             if (director == null || !director.IsSpawned) return;
 
             UpdateTopBar(director);
             UpdateBanner(director);
+            UpdateIntroCard(director);
             UpdateRamBar();
             UpdateMusic(director);
             UpdateResults(director);
             UpdatePopups();
             UpdatePause();
             UpdateFade(director);
+            UpdateHitEffects();
 
             bool inPlay = director.Phase.Value == MatchPhase.Playing || director.Phase.Value == MatchPhase.HalfIntro;
             if (playHud.activeSelf != inPlay) playHud.SetActive(inPlay);
+            UpdateCrosshair(director);
 
             BeginOverlays();
             if (inPlay)
             {
                 DrawCargoOverlays();
                 DrawPlayerOverlays();
-                DrawPrompt(director);
-                DrawArrows();
+                DrawMarkers();
+                DrawThreats();
             }
             EndOverlays();
+        }
+
+        private void UpdateCursor()
+        {
+            if (AutoPilot.Active) return;
+            bool locked = WantsCursorLocked;
+            CursorLockMode mode = locked ? CursorLockMode.Locked : CursorLockMode.None;
+            if (Cursor.lockState != mode) Cursor.lockState = mode;
+            if (Cursor.visible == locked) Cursor.visible = !locked;
         }
 
         private void UpdateTopBar(MatchDirector director)
@@ -129,16 +204,24 @@ namespace CargoClash
                 : phase == MatchPhase.HalfIntro || phase == MatchPhase.Loading ? GameConfig.Get().EffectiveHalfSeconds : 0f;
             int whole = Mathf.CeilToInt(seconds);
             timerText.text = $"{whole / 60}:{whole % 60:00}";
-            timerText.color = seconds <= GameConfig.Get().finalStretchSeconds && phase == MatchPhase.Playing
-                ? new Color(1f, 0.35f, 0.25f)
-                : Color.white;
+            bool hurry = seconds <= GameConfig.Get().finalStretchSeconds && phase == MatchPhase.Playing;
+            timerText.color = hurry ? new Color(1f, 0.42f, 0.3f) : Color.white;
 
-            halfText.text = "HALF " + director.Half.Value;
+            halfText.text = GameText.Halftime + director.Half.Value;
             orangeScoreText.text = director.OrangeScore.Value.ToString();
             blueScoreText.text = director.BlueScore.Value.ToString();
             bool orangeCollects = director.CollectorTeam.Value == Team.Orange;
-            orangeRoleText.text = orangeCollects ? "COLLECTORS" : "INTERRUPTERS";
-            blueRoleText.text = orangeCollects ? "INTERRUPTERS" : "COLLECTORS";
+            orangeRoleText.text = orangeCollects ? GameText.Collectors : GameText.Interrupters;
+            blueRoleText.text = orangeCollects ? GameText.Interrupters : GameText.Collectors;
+
+            PlayerAvatar local = PlayerAvatar.Local;
+            if (local == null) return;
+            bool orange = local.Team == Team.Orange;
+            if (orangeYou.activeSelf != orange) orangeYou.SetActive(orange);
+            if (blueYou.activeSelf == orange) blueYou.SetActive(!orange);
+            bool collector = local.Side == Side.Collector;
+            roleChip.text = collector ? GameText.CollectorGoal : GameText.InterrupterGoal;
+            roleChipBack.color = local.Team.ToColor();
         }
 
         private void UpdateBanner(MatchDirector director)
@@ -160,13 +243,6 @@ namespace CargoClash
 
             switch (phase)
             {
-                case MatchPhase.HalfIntro:
-                    string goal = PlayerAvatar.Local != null && PlayerAvatar.Local.Side == Side.Interrupter
-                        ? GameText.InterrupterGoal
-                        : GameText.CollectorGoal;
-                    string prefix = director.Half.Value > 1 ? GameText.SidesSwapped + "\n" : "";
-                    bannerText.text = prefix + goal + "\n" + Mathf.CeilToInt(director.SecondsLeft);
-                    break;
                 case MatchPhase.HalfOutro:
                     float sinceArrival = (float)(director.Now - director.HelicopterArrivesAt.Value);
                     bool lifting = sinceArrival >= config.helicopterLowerSeconds + config.helicopterClipSeconds;
@@ -191,6 +267,22 @@ namespace CargoClash
                     bannerText.text = "";
                     break;
             }
+        }
+
+        private void UpdateIntroCard(MatchDirector director)
+        {
+            bool show = director.Phase.Value == MatchPhase.HalfIntro && PlayerAvatar.Local != null;
+            if (introCard.activeSelf != show) introCard.SetActive(show);
+            if (!show) return;
+
+            PlayerAvatar local = PlayerAvatar.Local;
+            bool collector = local.Side == Side.Collector;
+            introHeading.text = collector ? GameText.CollectorRole : GameText.InterrupterRole;
+            introHeading.color = local.Team.ToColor();
+            introGoal.text = collector ? GameText.CollectorGoal : GameText.InterrupterGoal;
+            introCount.text = Mathf.CeilToInt(director.SecondsLeft).ToString();
+            bool swapped = director.Half.Value > 1;
+            if (introSwap.gameObject.activeSelf != swapped) introSwap.gameObject.SetActive(swapped);
         }
 
         private void ShowTimedBanner(string message)
@@ -220,9 +312,10 @@ namespace CargoClash
             PlayerAvatar local = PlayerAvatar.Local;
             if (local == null) return;
             float cooldown = local.RamCooldown01;
-            ramFill.fillAmount = 1f - cooldown;
-            ramFill.color = cooldown <= 0f ? new Color(0.35f, 0.9f, 0.45f) : new Color(0.75f, 0.75f, 0.75f);
-            ramLabel.text = cooldown <= 0f ? "RAM READY" : "RAM";
+            // The sliced picture needs some width, or its rounded ends turn inside out.
+            ramFill.rectTransform.anchorMax = new Vector2(Mathf.Lerp(0.09f, 1f, 1f - cooldown), 1f);
+            ramFill.color = cooldown <= 0f ? new Color(0.35f, 0.85f, 0.42f) : new Color(0.6f, 0.65f, 0.75f);
+            ramLabel.text = cooldown <= 0f ? GameText.RamReady : GameText.RamCooling;
         }
 
         private void UpdateMusic(MatchDirector director)
@@ -244,13 +337,14 @@ namespace CargoClash
         {
             if (resultsShown || director.Results == null) return;
             resultsShown = true;
+            pausePanel.SetActive(false);
             resultsPanel.SetActive(true);
             GameAudio.Play("fanfare");
 
             int orange = director.OrangeScore.Value;
             int blue = director.BlueScore.Value;
-            resultsHeading.text = orange == blue ? "DRAW!" : (orange > blue ? "ORANGE WINS!" : "BLUE WINS!");
-            resultsHeading.color = orange == blue ? Color.white : (orange > blue ? Team.Orange.ToColor() : Team.Blue.ToColor());
+            resultsHeading.text = orange == blue ? GameText.Draw : (orange > blue ? GameText.OrangeWins : GameText.BlueWins);
+            resultsHeading.color = orange == blue ? new Color(0.09f, 0.12f, 0.24f) : (orange > blue ? Team.Orange.ToColor() : Team.Blue.ToColor());
             resultsScore.text = $"{orange}  :  {blue}";
 
             StringBuilder lines = new StringBuilder();
@@ -260,8 +354,8 @@ namespace CargoClash
 
             bool isHost = Unity.Netcode.NetworkManager.Singleton.IsServer;
             bool practice = RoomService.Instance.IsPractice;
-            againButton.gameObject.SetActive(isHost);
-            againLabel.text = practice ? "PLAY AGAIN" : "BACK TO LOBBY";
+            againButton.transform.parent.gameObject.SetActive(isHost);
+            againLabel.text = practice ? GameText.PlayAgain : GameText.BackToLobby;
             resultsWaiting.gameObject.SetActive(!isHost);
         }
 
@@ -280,41 +374,178 @@ namespace CargoClash
             else roster.ServerBackToLobby();
         }
 
+        // ---- Crosshair and prompts ----
+
+        private void UpdateCrosshair(MatchDirector director)
+        {
+            PlayerAvatar local = PlayerAvatar.Local;
+            bool playing = director.Phase.Value == MatchPhase.Playing && local != null && !local.IsKnockedDown;
+            if (crosshairDot.enabled != playing) crosshairDot.enabled = playing;
+            if (!playing)
+            {
+                crosshairRing.enabled = false;
+                promptA.Hide();
+                promptB.Hide();
+                if (targetBar.activeSelf) targetBar.SetActive(false);
+                return;
+            }
+
+            CargoItem carried = local.CarriedCargo;
+            CargoItem target = null;
+            if (carried != null)
+            {
+                ShowCarryPrompts(local, carried);
+            }
+            else
+            {
+                bool interrupter = local.Side == Side.Interrupter;
+                target = interrupter && local.AimedSmash != null ? local.AimedSmash : local.AimedGrab;
+                ShowAimPrompts(local, interrupter);
+            }
+
+            crosshairRing.enabled = target != null;
+            if (target != null)
+            {
+                float sinceHit = Time.time - target.LastHurtTime;
+                float punch = sinceHit < 0.16f ? 1f - sinceHit / 0.16f : 0f;
+                crosshairRing.rectTransform.localScale = Vector3.one * (1f + punch * 0.45f);
+                crosshairRing.color = local.Side == Side.Interrupter && local.AimedSmash != null ? AimSmash : AimGrab;
+            }
+
+            bool showBar = target != null && target.State.Value == CargoState.Ground && (target.Durability.Value < 1f || local.Smashing.Value);
+            if (targetBar.activeSelf != showBar) targetBar.SetActive(showBar);
+            if (showBar)
+            {
+                float durability = target.Durability.Value;
+                targetFill.rectTransform.anchorMax = new Vector2(Mathf.Lerp(0.05f, 1f, durability), 1f);
+                targetFill.color = Color.Lerp(new Color(1f, 0.25f, 0.2f), new Color(0.35f, 0.85f, 0.42f), durability);
+            }
+        }
+
+        private void ShowCarryPrompts(PlayerAvatar local, CargoItem carried)
+        {
+            bool large = carried.Definition.requiredCarriers > 1;
+            bool waiting = large && carried.HasFreeSlot;
+            promptA.Show(GameText.KeyInteract, large ? GameText.PromptLetGo : GameText.PromptDrop);
+            if (waiting) promptB.Show(null, GameText.PromptWaiting);
+            else if (large) promptB.Show(null, GameText.PromptTogether);
+            else if (local.Side == Side.Collector) promptB.Show(null, GameText.PromptToTruck);
+            else promptB.Hide();
+        }
+
+        private void ShowAimPrompts(PlayerAvatar local, bool interrupter)
+        {
+            CargoItem grab = local.AimedGrab;
+            CargoItem smash = local.AimedSmash;
+            if (interrupter && smash != null)
+            {
+                promptA.Show(GameText.KeySmash, GameText.PromptSmash);
+                if (grab != null) promptB.Show(GameText.KeyInteract, GameText.PromptCarry);
+                else promptB.Hide();
+                return;
+            }
+
+            promptB.Hide();
+            if (grab == null)
+            {
+                promptA.Hide();
+                return;
+            }
+            string words;
+            if (grab.State.Value == CargoState.Carried) words = GameText.PromptHelp;
+            else if (grab.Definition.requiredCarriers > 1) words = GameText.PromptLarge;
+            else words = GameText.PromptPickUp;
+            promptA.Show(GameText.KeyInteract, words);
+        }
+
+        // ---- Being hit ----
+
+        /// <summary>Shows which way a hit came from, as a direction in the world.</summary>
+        public void ShowHitFrom(Vector3 direction)
+        {
+            hitFrom = direction;
+            hitAt = Time.time;
+        }
+
+        private void UpdateHitEffects()
+        {
+            PlayerAvatar local = PlayerAvatar.Local;
+            bool dashing = local != null && local.IsDashing && FollowCamera.ShowsHands;
+            bool knocked = local != null && local.IsKnockedDown;
+            dashAmount = Mathf.MoveTowards(dashAmount, dashing ? 1f : 0f, Time.deltaTime * (dashing ? 14f : 4f));
+            knockedAmount = Mathf.MoveTowards(knockedAmount, knocked ? 1f : 0f, Time.deltaTime * (knocked ? 9f : 3f));
+
+            speedLines.color = new Color(1f, 1f, 1f, dashAmount * 0.75f);
+            if (speedLines.enabled != dashAmount > 0f) speedLines.enabled = dashAmount > 0f;
+            vignette.color = new Color(0.09f, 0.06f, 0.14f, knockedAmount * 0.85f);
+            if (vignette.enabled != knockedAmount > 0f) vignette.enabled = knockedAmount > 0f;
+
+            float sinceHit = Time.time - hitAt;
+            bool showArrow = sinceHit < 1f && WorldCamera() != null;
+            if (hitArrow.enabled != showArrow) hitArrow.enabled = showArrow;
+            if (showArrow)
+            {
+                Transform eye = WorldCamera().transform;
+                float angle = Mathf.DeltaAngle(eye.eulerAngles.y, Mathf.Atan2(hitFrom.x, hitFrom.z) * Mathf.Rad2Deg) * Mathf.Deg2Rad;
+                hitArrow.rectTransform.anchoredPosition = new Vector2(Mathf.Sin(angle), Mathf.Cos(angle)) * 230f;
+                hitArrow.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -angle * Mathf.Rad2Deg);
+                hitArrow.color = new Color(1f, 0.25f, 0.2f, Mathf.Clamp01((1f - sinceHit) * 2.5f));
+            }
+
+            bool starsShow = knocked && FollowCamera.ShowsHands;
+            if (dizzyStars.gameObject.activeSelf != starsShow) dizzyStars.gameObject.SetActive(starsShow);
+            if (starsShow) SpinStars();
+        }
+
+        private void SpinStars()
+        {
+            int count = dizzyStars.childCount;
+            for (int i = 0; i < count; i++)
+            {
+                float angle = Time.time * 3.4f + i * Mathf.PI * 2f / count;
+                RectTransform star = (RectTransform)dizzyStars.GetChild(i);
+                star.anchoredPosition = new Vector2(Mathf.Cos(angle) * 240f, Mathf.Sin(angle) * 62f);
+                star.localScale = Vector3.one * (0.8f + Mathf.Sin(angle) * 0.25f);
+                star.localRotation = Quaternion.Euler(0f, 0f, angle * 70f);
+            }
+        }
+
         // ---- Popups ----
 
         public void ShowPopup(Vector3 worldPosition, string text, Color color, float scale = 1f)
         {
-            Camera view = WorldCamera();
-            if (view == null) return;
-            Vector3 screen = view.WorldToScreenPoint(worldPosition + Vector3.up * 1.2f);
-            if (screen.z <= 0f) return;
-
-            Popup popup = new Popup { Label = NewLabel("Popup"), Scale = scale };
+            Popup popup = new Popup { Label = NewLabel("Popup"), Scale = scale, World = worldPosition + Vector3.up * 1.2f };
             popup.Label.text = text;
             popup.Label.color = color;
-            popup.Label.fontSize = 34;
-            popup.Label.rectTransform.position = screen;
-            popup.Label.gameObject.SetActive(true);
+            popup.Label.fontSize = 46;
             popups.Add(popup);
         }
 
         private void UpdatePopups()
         {
+            Camera view = WorldCamera();
             for (int i = popups.Count - 1; i >= 0; i--)
             {
                 Popup popup = popups[i];
                 popup.Age += Time.deltaTime;
                 float t = popup.Age / 0.9f;
-                if (t >= 1f)
+                if (t >= 1f || view == null)
                 {
                     Destroy(popup.Label.gameObject);
                     popups.RemoveAt(i);
                     continue;
                 }
-                float pop = popup.Scale * (1f + 0.5f * Mathf.Sin(Mathf.Min(t * 6f, Mathf.PI)));
+
+                // It stays over the place it happened, so it can be read while the view turns.
+                Vector3 screen = view.WorldToScreenPoint(popup.World + Vector3.up * (t * 0.9f));
+                bool visible = screen.z > 0f;
+                if (popup.Label.enabled != visible) popup.Label.enabled = visible;
+                float distance = Mathf.Max(screen.z, 0.1f);
+                float size = Mathf.Clamp(14f / distance, 0.45f, 1.5f);
+                float pop = popup.Scale * size * (1f + 0.5f * Mathf.Sin(Mathf.Min(t * 6f, Mathf.PI)));
                 RectTransform rect = popup.Label.rectTransform;
+                rect.position = screen;
                 rect.localScale = Vector3.one * pop;
-                rect.position += Vector3.up * (70f * Time.deltaTime);
                 Color color = popup.Label.color;
                 color.a = 1f - t * t;
                 popup.Label.color = color;
@@ -333,7 +564,7 @@ namespace CargoClash
         {
             labelsUsed = 0;
             barsUsed = 0;
-            arrowsUsed = 0;
+            markersUsed = 0;
         }
 
         private void EndOverlays()
@@ -342,30 +573,43 @@ namespace CargoClash
                 if (labelPool[i].gameObject.activeSelf) labelPool[i].gameObject.SetActive(false);
             for (int i = barsUsed; i < barPool.Count; i++)
                 if (barPool[i].gameObject.activeSelf) barPool[i].gameObject.SetActive(false);
-            for (int i = arrowsUsed; i < arrowPool.Count; i++)
-                if (arrowPool[i].gameObject.activeSelf) arrowPool[i].gameObject.SetActive(false);
+            for (int i = markersUsed; i < markerPool.Count; i++)
+                if (markerPool[i].gameObject.activeSelf) markerPool[i].gameObject.SetActive(false);
+        }
+
+        /// <summary>Things shrink with distance on screen, and so do their labels, but not so far they can't be read.</summary>
+        private static float LabelScale(float distance, float fullSizeWithin)
+        {
+            return Mathf.Clamp(fullSizeWithin / Mathf.Max(distance, 0.1f), 0.5f, 1.1f);
         }
 
         private void DrawCargoOverlays()
         {
             Camera view = WorldCamera();
-            if (view == null) return;
+            PlayerAvatar local = PlayerAvatar.Local;
+            if (view == null || local == null) return;
+            CargoItem aimed = local.Side == Side.Interrupter && local.AimedSmash != null ? local.AimedSmash : local.AimedGrab;
+            CargoItem held = local.CarriedCargo;
             foreach (CargoItem cargo in CargoItem.All)
             {
                 CargoState state = cargo.State.Value;
-                if (state == CargoState.Destroyed || state == CargoState.Rescued) continue;
+                if (state == CargoState.Destroyed || state == CargoState.Rescued || cargo == held) continue;
 
-                Vector3 screen = view.WorldToScreenPoint(cargo.transform.position + Vector3.up * (cargo.Height * 0.5f + 0.35f));
-                if (screen.z <= 0f) continue;
+                Vector3 world = cargo.transform.position + Vector3.up * (cargo.Height * 0.5f + 0.3f);
+                Vector3 screen = view.WorldToScreenPoint(world);
+                if (screen.z <= 0f || screen.z > CargoLabelRange) continue;
 
+                float scale = LabelScale(screen.z, 6f);
                 Text label = PoolLabel();
                 label.text = cargo.Definition.value.ToString();
-                label.color = new Color(1f, 0.93f, 0.35f);
-                label.fontSize = cargo.Definition.size == CargoSize.Large ? 30 : cargo.Definition.size == CargoSize.Medium ? 22 : 16;
+                label.color = cargo == aimed ? Color.white : CargoGold;
+                label.fontSize = 34;
                 label.rectTransform.position = screen;
+                label.rectTransform.localScale = Vector3.one * (cargo == aimed ? scale * 1.25f : scale);
 
-                if (state == CargoState.Ground && cargo.Durability.Value < 1f)
-                    DrawBar(screen + Vector3.up * 24f, cargo.Durability.Value);
+                // What you're aiming at has a bigger bar under the crosshair.
+                if (state == CargoState.Ground && cargo.Durability.Value < 1f && cargo != aimed)
+                    DrawBar(screen + Vector3.up * (30f * scale * CanvasScale), cargo.Durability.Value, scale);
             }
         }
 
@@ -373,112 +617,147 @@ namespace CargoClash
         {
             Camera view = WorldCamera();
             if (view == null) return;
+            PlayerAvatar local = PlayerAvatar.Local;
             foreach (PlayerAvatar avatar in PlayerAvatar.All)
             {
-                // Names sit at the feet so they never cover the value of carried cargo.
-                Vector3 screen = view.WorldToScreenPoint(avatar.transform.position);
-                if (screen.z <= 0f) continue;
+                if (avatar == local) continue;
+                Vector3 screen = view.WorldToScreenPoint(avatar.transform.position + Vector3.up * 1.82f);
+                if (screen.z <= 0f || screen.z > NameLabelRange) continue;
 
                 Text label = PoolLabel();
-                bool isLocal = avatar == PlayerAvatar.Local;
-                label.text = isLocal ? "YOU" : avatar.DisplayName;
+                label.text = avatar.DisplayName;
                 label.color = avatar.Team.ToColor();
-                label.fontSize = isLocal ? 22 : 18;
-                label.rectTransform.position = screen + Vector3.down * 18f;
+                label.fontSize = 30;
+                label.rectTransform.position = screen;
+                label.rectTransform.localScale = Vector3.one * LabelScale(screen.z, 7f);
             }
         }
 
-        /// <summary>Tells new players what they can do with the cargo next to them.</summary>
-        private void DrawPrompt(MatchDirector director)
+        /// <summary>The truck and the big chests, on screen or pointing from the edge. These are what you navigate by.</summary>
+        private void DrawMarkers()
         {
+            Camera view = WorldCamera();
             PlayerAvatar local = PlayerAvatar.Local;
-            Camera view = WorldCamera();
-            if (local == null || view == null || director.Phase.Value != MatchPhase.Playing || local.IsKnockedDown) return;
-
-            string message;
-            Vector3 anchor;
-            CargoItem carried = local.CarriedCargo;
-            if (carried != null)
-            {
-                bool waiting = carried.Definition.requiredCarriers > 1 && carried.HasFreeSlot;
-                if (!waiting && local.Side != Side.Collector) return;
-                message = waiting ? GameText.PromptWaiting : GameText.PromptToTruck;
-                anchor = local.transform.position;
-            }
-            else
-            {
-                GameConfig config = GameConfig.Get();
-                CargoItem nearby = CargoItem.FindGrabbable(local.transform.position, config.pickupRange);
-                if (nearby == null) return;
-                if (local.Side == Side.Interrupter && nearby.State.Value == CargoState.Ground) message = GameText.PromptSmash;
-                else message = nearby.Definition.requiredCarriers > 1 ? GameText.PromptLarge : GameText.PromptPickUp;
-                // Below the cargo, so it doesn't cover its face.
-                anchor = nearby.transform.position + Vector3.back * nearby.Radius;
-            }
-
-            Vector3 screen = view.WorldToScreenPoint(anchor);
-            if (screen.z <= 0f) return;
-            Text label = PoolLabel();
-            label.text = message;
-            label.color = Color.white;
-            label.fontSize = 20;
-            label.rectTransform.position = screen + Vector3.down * 44f;
-        }
-
-        private void DrawArrows()
-        {
-            Camera view = WorldCamera();
-            if (view == null) return;
+            if (view == null || local == null) return;
 
             foreach (CargoItem cargo in CargoItem.All)
             {
                 if (cargo.Definition.size != CargoSize.Large) continue;
                 CargoState state = cargo.State.Value;
-                if (state == CargoState.Destroyed || state == CargoState.Rescued) continue;
-                DrawEdgeArrow(view, cargo.transform.position, new Color(1f, 0.82f, 0.2f));
+                if (state == CargoState.Destroyed || state == CargoState.Rescued || local.CarriedCargo == cargo) continue;
+                DrawMarker(view, cargo.transform.position + Vector3.up * 1.5f, CargoGold, cargo.Definition.value.ToString(), 0.7f);
             }
 
-            PlayerAvatar local = PlayerAvatar.Local;
             LevelLayout layout = LevelLayout.Instance;
-            if (local != null && layout != null && local.Side == Side.Collector)
-                DrawEdgeArrow(view, layout.truckZone.position, new Color(0.4f, 1f, 0.5f));
+            if (layout == null) return;
+            bool collector = local.Side == Side.Collector;
+            bool delivering = collector && local.CarriedCargo != null;
+            float pulse = delivering ? 1f + Mathf.Sin(Time.time * 6f) * 0.12f : 0.85f;
+            Color color = TruckGreen;
+            color.a = collector ? 1f : 0.55f;
+            // Standing next to it, you don't need telling where it is.
+            Vector3 truck = layout.truckZone.position + Vector3.up * 3.6f;
+            if ((truck - local.transform.position).sqrMagnitude > MarkerHideWithin * MarkerHideWithin)
+                DrawMarker(view, truck, color, GameText.MarkerTruck, pulse);
         }
 
-        private void DrawEdgeArrow(Camera view, Vector3 worldPosition, Color color)
+        private void DrawMarker(Camera view, Vector3 world, Color color, string text, float scale)
         {
-            Vector3 viewport = view.WorldToViewportPoint(worldPosition);
-            bool onScreen = viewport.z > 0f && viewport.x > 0.03f && viewport.x < 0.97f && viewport.y > 0.03f && viewport.y < 0.97f;
-            if (onScreen) return;
+            Vector3 viewport = view.WorldToViewportPoint(world);
+            bool onScreen = viewport.z > 0f && viewport.x > 0.04f && viewport.x < 0.96f && viewport.y > 0.07f && viewport.y < 0.93f;
+            int metres = Mathf.RoundToInt(Vector3.Distance(view.transform.position, world));
+            Vector3 place;
+            if (onScreen)
+            {
+                // Under the scoreboard, not behind it.
+                place = new Vector3(viewport.x * Screen.width, Mathf.Min(viewport.y, 0.82f) * Screen.height, 0f);
+                Image diamond = PoolMarker(diamondSprite);
+                diamond.color = color;
+                diamond.rectTransform.position = place;
+                diamond.rectTransform.localRotation = Quaternion.identity;
+                diamond.rectTransform.localScale = Vector3.one * (0.62f * scale);
+            }
+            else
+            {
+                place = PlaceOnEdge(view, world, out float angle);
+                Image arrow = PoolMarker(chevronSprite);
+                arrow.color = color;
+                arrow.rectTransform.position = place;
+                arrow.rectTransform.localRotation = Quaternion.Euler(0f, 0f, angle);
+                arrow.rectTransform.localScale = Vector3.one * (0.8f * scale);
+            }
 
-            Vector2 centre = new Vector2(0.5f, 0.5f);
-            Vector2 direction = new Vector2(viewport.x, viewport.y) - centre;
-            if (viewport.z < 0f) direction = -direction;
-            if (direction.sqrMagnitude < 0.0001f) return;
+            Text label = PoolLabel();
+            label.text = GameText.Metres(text, metres);
+            label.color = color;
+            label.fontSize = 26;
+            // Above an arrow at the bottom of the screen, and below anything else.
+            float under = place.y < Screen.height * 0.15f ? 46f : -36f;
+            label.rectTransform.position = place + Vector3.up * (under * CanvasScale);
+            label.rectTransform.localScale = Vector3.one * Mathf.Clamp(scale, 0.75f, 1.1f);
+        }
+
+        /// <summary>Red arrows for enemies close enough to get you, when they're not in view.</summary>
+        private void DrawThreats()
+        {
+            Camera view = WorldCamera();
+            PlayerAvatar local = PlayerAvatar.Local;
+            if (view == null || local == null) return;
+            foreach (PlayerAvatar enemy in PlayerAvatar.All)
+            {
+                if (enemy.Team == local.Team || enemy.IsKnockedDown) continue;
+                float distance = Vector3.Distance(enemy.transform.position, local.transform.position);
+                if (distance > ThreatRange) continue;
+                Vector3 viewport = view.WorldToViewportPoint(enemy.transform.position + Vector3.up);
+                bool inView = viewport.z > 0f && viewport.x > 0.06f && viewport.x < 0.94f && viewport.y > 0.06f && viewport.y < 0.94f;
+                if (inView) continue;
+
+                Vector3 place = PlaceOnEdge(view, enemy.transform.position + Vector3.up, out float angle);
+                float closeness = 1f - distance / ThreatRange;
+                Image arrow = PoolMarker(chevronSprite);
+                arrow.color = new Color(1f, 0.25f, 0.2f, Mathf.Lerp(0.45f, 1f, closeness));
+                arrow.rectTransform.position = place;
+                arrow.rectTransform.localRotation = Quaternion.Euler(0f, 0f, angle);
+                arrow.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.55f, 1.05f, closeness);
+            }
+        }
+
+        /// <summary>Where on the screen's edge something out of view lies, measured in the camera's own space so behind you works too.</summary>
+        private static Vector3 PlaceOnEdge(Camera view, Vector3 world, out float angle)
+        {
+            Vector3 local = view.transform.InverseTransformPoint(world);
+            Vector2 direction = new Vector2(local.x, local.y);
+            if (direction.sqrMagnitude < 0.0001f) direction = Vector2.down;
+            // Directly behind has no sideways part to go on, so it points down.
+            if (local.z < 0f && Mathf.Abs(local.x) < 0.5f && Mathf.Abs(local.y) < 2f) direction = new Vector2(local.x, -1f);
             direction.Normalize();
+            angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f;
 
-            float scale = Mathf.Min(0.44f / Mathf.Max(0.001f, Mathf.Abs(direction.x)), 0.44f / Mathf.Max(0.001f, Mathf.Abs(direction.y)));
-            Vector2 edge = centre + direction * scale;
-
-            Image arrow = PoolArrow();
-            arrow.color = color;
-            RectTransform rect = arrow.rectTransform;
-            rect.position = new Vector3(edge.x * Screen.width, edge.y * Screen.height, 0f);
-            rect.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f);
+            float aspect = (float)Screen.width / Screen.height;
+            const float margin = 0.42f;
+            float across = Mathf.Abs(direction.x) * (1f / aspect);
+            float up = Mathf.Abs(direction.y);
+            float reach = margin / Mathf.Max(across, up, 0.001f);
+            Vector2 edge = new Vector2(0.5f, 0.5f) + new Vector2(direction.x * reach / aspect, direction.y * reach);
+            return new Vector3(edge.x * Screen.width, edge.y * Screen.height, 0f);
         }
 
-        private void DrawBar(Vector3 screenPosition, float fraction)
+        private void DrawBar(Vector3 screenPosition, float fraction, float scale)
         {
+            float width = 92f * scale;
+            float height = 14f * scale;
             Image background = PoolBar();
-            background.color = new Color(0f, 0f, 0f, 0.75f);
+            background.color = new Color(0.09f, 0.12f, 0.24f, 0.9f);
             background.rectTransform.position = screenPosition;
-            background.rectTransform.sizeDelta = new Vector2(70f, 10f);
+            background.rectTransform.sizeDelta = new Vector2(width, height);
             background.rectTransform.pivot = new Vector2(0.5f, 0.5f);
 
+            float inside = (width - 6f) * fraction;
             Image fill = PoolBar();
             fill.color = Color.Lerp(new Color(1f, 0.25f, 0.2f), new Color(0.35f, 0.9f, 0.45f), fraction);
             fill.rectTransform.pivot = new Vector2(0f, 0.5f);
-            fill.rectTransform.position = screenPosition + Vector3.left * 33f * overlayRoot.lossyScale.x;
-            fill.rectTransform.sizeDelta = new Vector2(66f * fraction, 6f);
+            fill.rectTransform.position = screenPosition + Vector3.left * ((width * 0.5f - 3f) * CanvasScale);
+            fill.rectTransform.sizeDelta = new Vector2(Mathf.Max(inside, 2f), height - 6f);
         }
 
         private Text PoolLabel()
@@ -495,14 +774,13 @@ namespace CargoClash
             item.transform.SetParent(overlayRoot, false);
             Text label = item.GetComponent<Text>();
             label.font = overlayFont;
-            label.fontStyle = FontStyle.Bold;
             label.alignment = TextAnchor.MiddleCenter;
             label.horizontalOverflow = HorizontalWrapMode.Overflow;
             label.verticalOverflow = VerticalWrapMode.Overflow;
             label.raycastTarget = false;
             Outline outline = item.GetComponent<Outline>();
-            outline.effectColor = new Color(0f, 0f, 0f, 0.85f);
-            outline.effectDistance = new Vector2(1.5f, -1.5f);
+            outline.effectColor = new Color(0.09f, 0.12f, 0.24f, 0.95f);
+            outline.effectDistance = new Vector2(2f, -2f);
             return label;
         }
 
@@ -514,6 +792,9 @@ namespace CargoClash
                 item.transform.SetParent(overlayRoot, false);
                 Image image = item.GetComponent<Image>();
                 image.raycastTarget = false;
+                image.sprite = roundSprite;
+                image.type = Image.Type.Sliced;
+                image.pixelsPerUnitMultiplier = 6f;
                 barPool.Add(image);
             }
             Image bar = barPool[barsUsed++];
@@ -521,21 +802,21 @@ namespace CargoClash
             return bar;
         }
 
-        private Image PoolArrow()
+        private Image PoolMarker(Sprite sprite)
         {
-            if (arrowsUsed == arrowPool.Count)
+            if (markersUsed == markerPool.Count)
             {
-                GameObject item = new GameObject("Arrow", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                GameObject item = new GameObject("Marker", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
                 item.transform.SetParent(overlayRoot, false);
                 Image image = item.GetComponent<Image>();
-                image.sprite = UiKit.TriangleSprite();
                 image.raycastTarget = false;
-                image.rectTransform.sizeDelta = new Vector2(44f, 44f);
-                arrowPool.Add(image);
+                image.rectTransform.sizeDelta = new Vector2(64f, 64f);
+                markerPool.Add(image);
             }
-            Image arrow = arrowPool[arrowsUsed++];
-            if (!arrow.gameObject.activeSelf) arrow.gameObject.SetActive(true);
-            return arrow;
+            Image marker = markerPool[markersUsed++];
+            if (!marker.gameObject.activeSelf) marker.gameObject.SetActive(true);
+            if (marker.sprite != sprite) marker.sprite = sprite;
+            return marker;
         }
     }
 }

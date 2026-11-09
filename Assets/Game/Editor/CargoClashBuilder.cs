@@ -32,10 +32,6 @@ public static partial class CargoClashBuilder
     private const string LevelScenePath = SceneDir + "/Level01.unity";
     private const string InputPath = Root + "/Input/CargoClashInput.inputactions";
 
-    private static readonly Color PanelColor = new Color(0.07f, 0.09f, 0.13f, 0.94f);
-    private static readonly Color ButtonColor = new Color(0.16f, 0.45f, 0.82f);
-    private static readonly Color AccentColor = new Color(1f, 0.56f, 0.13f);
-
     private static readonly Dictionary<string, GameObject> sceneryPrefabs = new Dictionary<string, GameObject>();
     private static Dictionary<string, Material> modelMaterials;
 
@@ -51,6 +47,8 @@ public static partial class CargoClashBuilder
         config.orangeMaterial = Mat("Team_Orange", new Color(1f, 0.5f, 0.1f));
         config.blueMaterial = Mat("Team_Blue", new Color(0.2f, 0.52f, 1f));
         config.particleMaterial = ParticleMaterial();
+        config.puffMaterial = PuffMaterial();
+        config.flashMaterial = FlashMaterial();
         config.inputActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputPath);
 
         config.cargo = BuildCargo();
@@ -103,6 +101,8 @@ public static partial class CargoClashBuilder
         layers.GetArrayElementAtIndex(GameLayers.Cargo).stringValue = "Cargo";
         layers.GetArrayElementAtIndex(GameLayers.Level).stringValue = "Level";
         layers.GetArrayElementAtIndex(GameLayers.Outlined).stringValue = "Outlined";
+        layers.GetArrayElementAtIndex(GameLayers.ViewModel).stringValue = "ViewModel";
+        layers.GetArrayElementAtIndex(GameLayers.Debris).stringValue = "Debris";
         tags.ApplyModifiedPropertiesWithoutUndo();
     }
 
@@ -204,6 +204,29 @@ public static partial class CargoClashBuilder
             material = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
             AssetDatabase.CreateAsset(material, path);
         }
+        EditorUtility.SetDirty(material);
+        return material;
+    }
+
+    /// <summary>The comic star that flashes where a hit lands. See-through, and tinted by each particle's colour.</summary>
+    private static Material FlashMaterial()
+    {
+        string path = MaterialDir + "/Fx_Flash.mat";
+        Material material = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (material == null)
+        {
+            material = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
+            AssetDatabase.CreateAsset(material, path);
+        }
+        material.SetTexture("_BaseMap", UiSprite("UI_Pow").texture);
+        material.SetFloat("_Surface", 1f);
+        material.SetFloat("_Blend", 0f);
+        material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        material.SetFloat("_ZWrite", 0f);
+        material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        material.SetOverrideTag("RenderType", "Transparent");
+        material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
         EditorUtility.SetDirty(material);
         return material;
     }
@@ -336,6 +359,8 @@ public static partial class CargoClashBuilder
         visual.collectorHat = FindInModel(model, "HatCollector").gameObject;
         visual.interrupterHat = FindInModel(model, "HatInterrupter").gameObject;
         visual.hammer = FindInModel(model, "Hammer").gameObject;
+        visual.handLeft = FindInModel(model, "Hand.L");
+        visual.handRight = FindInModel(model, "Hand.R");
         visual.dizzyStars = FindInModel(model, "DizzyStars").gameObject;
         visual.starsBone = FindInModel(model, "Stars");
         visual.eyeLeft = FindInModel(model, "Eye.L");
@@ -401,6 +426,8 @@ public static partial class CargoClashBuilder
         { "Cargo_Chest", Mat("Cargo_Chest", new Color(0.47f, 0.26f, 0.72f), 0.45f) },
         { "Cargo_ChestDark", Mat("Cargo_ChestDark", new Color(0.3f, 0.14f, 0.5f), 0.4f) },
         { "Cargo_Gold", Mat("Cargo_Gold", new Color(1f, 0.8f, 0.2f), 0.65f) },
+        { "Cargo_Inside", Mat("Cargo_Inside", new Color(0.16f, 0.11f, 0.1f)) },
+        { "Cargo_Straw", Mat("Cargo_Straw", new Color(0.93f, 0.77f, 0.36f), 0.05f) },
 
         { "Truck_Blue", Mat("Truck_Blue", new Color(0.2f, 0.47f, 0.84f), 0.5f) },
         { "Truck_BlueDark", Mat("Truck_BlueDark", new Color(0.13f, 0.31f, 0.58f), 0.45f) },
@@ -546,6 +573,15 @@ public static partial class CargoClashBuilder
             AssetDatabase.CreateAsset(material, materialPath);
         }
 
+        // Nothing in the game reads these, and copying them takes time every frame on the lab's PCs.
+        foreach (string path in new[] { "Assets/Settings/PC_RPAsset.asset", "Assets/Settings/Mobile_RPAsset.asset" })
+        {
+            UniversalRenderPipelineAsset pipeline = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(path);
+            pipeline.supportsCameraDepthTexture = false;
+            pipeline.supportsCameraOpaqueTexture = false;
+            EditorUtility.SetDirty(pipeline);
+        }
+
         foreach (string path in new[] { "Assets/Settings/PC_Renderer.asset", "Assets/Settings/Mobile_Renderer.asset" })
         {
             UniversalRendererData data = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(path);
@@ -556,7 +592,11 @@ public static partial class CargoClashBuilder
             for (int i = features.arraySize - 1; i >= 0; i--)
             {
                 Object existing = features.GetArrayElementAtIndex(i).objectReferenceValue;
-                if (existing == null || (existing.name != "CharacterOutline" && existing.name != "ModelOutline")) continue;
+                // Ambient occlusion goes too. It comes out as speckles on the hands, which a second camera
+                // draws, and it's slow. It has to be removed, not switched off: switched off, its shaders
+                // get left out of the build, and then it fails every frame when the game creates it.
+                bool remove = existing != null && (existing.name == "CharacterOutline" || existing.name == "ModelOutline" || existing is ScreenSpaceAmbientOcclusion);
+                if (!remove) continue;
                 int size = features.arraySize;
                 features.DeleteArrayElementAtIndex(i);
                 if (features.arraySize == size) features.DeleteArrayElementAtIndex(i);
@@ -570,7 +610,8 @@ public static partial class CargoClashBuilder
             feature.settings.passTag = "ModelOutline";
             feature.settings.Event = RenderPassEvent.AfterRenderingOpaques;
             feature.settings.filterSettings.RenderQueueType = RenderQueueType.Opaque;
-            feature.settings.filterSettings.LayerMask = (1 << GameLayers.Player) | (1 << GameLayers.Cargo) | (1 << GameLayers.Outlined);
+            feature.settings.filterSettings.LayerMask = (1 << GameLayers.Player) | (1 << GameLayers.Cargo) | (1 << GameLayers.Outlined) |
+                (1 << GameLayers.ViewModel) | (1 << GameLayers.Debris);
             feature.settings.overrideMaterial = material;
             feature.settings.overrideMaterialPassIndex = 0;
             AssetDatabase.AddObjectToAsset(feature, data);
@@ -599,6 +640,8 @@ public static partial class CargoClashBuilder
         small.carrySpeedMultiplier = 0.9f;
         small.requiredCarriers = 1;
         small.fullCount = 12;
+        small.chipColor = new Color(0.82f, 0.66f, 0.42f);
+        small.breakSound = "crack";
 
         CargoDefinition medium = LoadOrCreate<CargoDefinition>(DataDir + "/Cargo_Medium.asset");
         medium.size = CargoSize.Medium;
@@ -607,6 +650,8 @@ public static partial class CargoClashBuilder
         medium.carrySpeedMultiplier = 0.7f;
         medium.requiredCarriers = 1;
         medium.fullCount = 6;
+        medium.chipColor = new Color(0.2f, 0.66f, 0.56f);
+        medium.breakSound = "crack";
 
         CargoDefinition large = LoadOrCreate<CargoDefinition>(DataDir + "/Cargo_Large.asset");
         large.size = CargoSize.Large;
@@ -615,7 +660,12 @@ public static partial class CargoClashBuilder
         large.carrySpeedMultiplier = 0.5f;
         large.requiredCarriers = 2;
         large.fullCount = 2;
+        large.chipColor = new Color(0.47f, 0.26f, 0.72f);
+        large.breakSound = "coins";
 
+        small.piecesPrefab = BuildCargoPieces("Cargo_Small");
+        medium.piecesPrefab = BuildCargoPieces("Cargo_Medium");
+        large.piecesPrefab = BuildCargoPieces("Cargo_Large");
         small.prefab = BuildCargoPrefab("Cargo_Small", new Vector3(0.3f, 0.3f, 0.3f), 1f, small);
         medium.prefab = BuildCargoPrefab("Cargo_Medium", new Vector3(0.52f, 0.46f, 0.46f), 3f, medium);
         large.prefab = BuildCargoPrefab("Cargo_Large", new Vector3(1.16f, 0.53f, 0.56f), 8f, large);
@@ -641,8 +691,46 @@ public static partial class CargoClashBuilder
         face.eyes = eyes.ToArray();
         face.mouths = mouths.ToArray();
 
+        // The bodies it changes into as it gets hit. The face stays on, so it can watch.
+        GameObject damaged = NewStaticModel(name + "_Damaged", visual);
+        damaged.name = "Damaged";
+        GameObject dented = damaged.transform.Find("Body_D1").gameObject;
+        GameObject wrecked = damaged.transform.Find("Body_D2").gameObject;
+        dented.SetActive(false);
+        wrecked.SetActive(false);
+        SerializedObject item = new SerializedObject(root.GetComponent<CargoItem>());
+        SerializedProperty bodies = item.FindProperty("damageBodies");
+        bodies.arraySize = 3;
+        bodies.GetArrayElementAtIndex(0).objectReferenceValue = model.transform.Find("Body").gameObject;
+        bodies.GetArrayElementAtIndex(1).objectReferenceValue = dented;
+        bodies.GetArrayElementAtIndex(2).objectReferenceValue = wrecked;
+        item.ApplyModifiedPropertiesWithoutUndo();
+
         SetLayerRecursively(root, GameLayers.Cargo);
         return SavePrefab(root, name);
+    }
+
+    /// <summary>What's left when it breaks: each piece gets its own collider and physics, and lands on the level.</summary>
+    private static GameObject BuildCargoPieces(string name)
+    {
+        GameObject root = NewStaticModel(name + "_Pieces", null);
+        root.name = name + "_Pieces";
+        PhysicsMaterial bounce = BouncyMaterial();
+        foreach (MeshFilter part in root.GetComponentsInChildren<MeshFilter>(true))
+        {
+            Bounds bounds = part.sharedMesh.bounds;
+            BoxCollider box = part.gameObject.AddComponent<BoxCollider>();
+            box.center = bounds.center;
+            box.size = Vector3.Max(bounds.size, Vector3.one * 0.04f);
+            box.sharedMaterial = bounce;
+            Rigidbody body = part.gameObject.AddComponent<Rigidbody>();
+            body.mass = Mathf.Clamp(bounds.size.x * bounds.size.y * bounds.size.z * 8f, 0.1f, 2f);
+            body.linearDamping = 0.15f;
+            body.angularDamping = 0.35f;
+        }
+        root.AddComponent<CargoPieces>();
+        SetLayerRecursively(root, GameLayers.Debris);
+        return SavePrefab(root, name + "_Pieces");
     }
 
     private static GameObject CargoRoot(string name, Vector3 half, float mass, CargoDefinition definition, out Transform visual)
@@ -809,19 +897,9 @@ public static partial class CargoClashBuilder
 
         Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         AddDaylight();
+        AddCountrySky();
 
-        GameObject cameraObject = new GameObject("Main Camera");
-        cameraObject.tag = "MainCamera";
-        Camera camera = cameraObject.AddComponent<Camera>();
-        camera.fieldOfView = 42f;
-        camera.clearFlags = CameraClearFlags.SolidColor;
-        camera.backgroundColor = new Color(0.55f, 0.75f, 0.9f);
-        camera.farClipPlane = 320f;
-        cameraObject.AddComponent<UniversalAdditionalCameraData>();
-        FollowCamera follow = cameraObject.AddComponent<FollowCamera>();
-        follow.fallbackFocus = new Vector3(0f, 0f, -20f);
-        cameraObject.transform.position = follow.fallbackFocus + follow.offset;
-        cameraObject.transform.rotation = Quaternion.LookRotation(-follow.offset);
+        BuildPlayerCamera();
 
         Transform environment = Group("Environment", null);
         AddGround(environment);
@@ -869,6 +947,8 @@ public static partial class CargoClashBuilder
         layout.truckZoneHalfSize = zoneHalf;
         layout.bedOrigin = truck.transform.Find("Model/BedOrigin");
         layout.bedHalfSize = new Vector2(1.35f, 2f);
+        layout.mapArea = new Rect(-23f, -49f, 46f, 98f);
+        layout.mapPicture = PaintedTexture("Level01_Ground", TextureWrapMode.Clamp);
 
         GameObject navigation = new GameObject("Navigation");
         NavMeshSurface surface = navigation.AddComponent<NavMeshSurface>();
@@ -888,6 +968,95 @@ public static partial class CargoClashBuilder
 
         ReportSceneSize(environment);
         EditorSceneManager.SaveScene(scene, LevelScenePath);
+    }
+
+    /// <summary>
+    /// The main camera, with a second camera stacked on it that only draws the hands and whatever
+    /// they're holding. That one clears the depth first, so they never poke into a wall.
+    /// </summary>
+    private static void BuildPlayerCamera()
+    {
+        GameObject cameraObject = new GameObject("Main Camera");
+        cameraObject.tag = "MainCamera";
+        Camera camera = cameraObject.AddComponent<Camera>();
+        camera.clearFlags = CameraClearFlags.Skybox;
+        camera.nearClipPlane = 0.08f;
+        camera.farClipPlane = 640f;
+        camera.cullingMask = ~(1 << GameLayers.ViewModel);
+        UniversalAdditionalCameraData cameraData = cameraObject.AddComponent<UniversalAdditionalCameraData>();
+        // Fences and wires shimmer as you walk past them at eye level.
+        cameraData.antialiasing = AntialiasingMode.FastApproximateAntialiasing;
+
+        GameObject handsObject = new GameObject("Hands Camera");
+        handsObject.transform.SetParent(cameraObject.transform, false);
+        Camera handsCamera = handsObject.AddComponent<Camera>();
+        handsCamera.cullingMask = 1 << GameLayers.ViewModel;
+        handsCamera.nearClipPlane = 0.03f;
+        handsCamera.farClipPlane = 8f;
+        UniversalAdditionalCameraData handsData = handsObject.AddComponent<UniversalAdditionalCameraData>();
+        handsData.renderType = CameraRenderType.Overlay;
+        handsData.renderShadows = false;
+        cameraData.cameraStack.Add(handsCamera);
+
+        FollowCamera follow = cameraObject.AddComponent<FollowCamera>();
+        follow.view = camera;
+        follow.handsView = handsCamera;
+        follow.fallbackFocus = new Vector3(0f, 0f, -20f);
+        camera.fieldOfView = follow.overviewFov;
+        handsCamera.fieldOfView = follow.firstPersonFov;
+        cameraObject.transform.position = follow.fallbackFocus + follow.offset;
+        cameraObject.transform.rotation = Quaternion.LookRotation(-follow.offset);
+
+        BuildFirstPersonRig(cameraObject.transform);
+    }
+
+    /// <summary>The model comes from Tools/blender/make_hands.py. FirstPersonRig poses its parts in code.</summary>
+    private static void BuildFirstPersonRig(Transform camera)
+    {
+        GameObject rigObject = new GameObject("First Person Rig");
+        rigObject.transform.SetParent(camera, false);
+        FirstPersonRig rig = rigObject.AddComponent<FirstPersonRig>();
+
+        GameObject model = NewStaticModel("FirstPersonHands", rigObject.transform);
+        model.name = "Hands";
+        rig.content = model;
+        Transform handLeft = Group("HandLeft", model.transform);
+        Transform handRight = Group("HandRight", model.transform);
+        rig.handLeft = handLeft;
+        rig.handRight = handRight;
+        rig.armLeft = FindInModel(model, "Arm_L");
+        rig.armRight = FindInModel(model, "Arm_R");
+
+        rig.openLeft = HandPart(model, "Hand_L_Open", handLeft);
+        rig.fistLeft = HandPart(model, "Hand_L_Fist", handLeft);
+        rig.openRight = HandPart(model, "Hand_R_Open", handRight);
+        rig.fistRight = HandPart(model, "Hand_R_Fist", handRight);
+        rig.hammer = HandPart(model, "Hammer", handRight);
+
+        SetLayerRecursively(model, GameLayers.ViewModel);
+        foreach (Renderer part in model.GetComponentsInChildren<Renderer>(true))
+        {
+            part.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            part.receiveShadows = false;
+        }
+    }
+
+    private static GameObject HandPart(GameObject model, string partName, Transform hand)
+    {
+        Transform part = FindInModel(model, partName);
+        part.SetParent(hand, false);
+        return part.gameObject;
+    }
+
+    /// <summary>A painted sky, with the far distance fading into the bottom of it.</summary>
+    private static void AddCountrySky()
+    {
+        RenderSettings.skybox = SkyMaterial();
+        RenderSettings.fog = true;
+        RenderSettings.fogMode = FogMode.Linear;
+        RenderSettings.fogColor = new Color(0.8f, 0.91f, 0.96f);
+        RenderSettings.fogStartDistance = 90f;
+        RenderSettings.fogEndDistance = 320f;
     }
 
     private static void AddDaylight()
@@ -933,6 +1102,10 @@ public static partial class CargoClashBuilder
             GroundMat("Level_Ground", "Level01_Ground", TextureWrapMode.Clamp), Vector2.zero, Vector2.one);
         GroundQuad("Level01_GroundFar", parent, new Rect(-250f, -200f, 400f, 400f), -0.05f,
             GroundMat("Level_GroundFar", "Level01_Far", TextureWrapMode.Clamp), Vector2.zero, Vector2.one);
+
+        // Past the painted land there's plain grass, out to where the haze hides everything.
+        GroundQuad("Level01_GroundHorizon", parent, new Rect(-900f, -900f, 1800f, 1800f), -0.12f,
+            Mat("Level_GroundHorizon", new Color(0.42f, 0.62f, 0.3f), 0f), Vector2.zero, Vector2.one);
 
         Material road = GroundMat("Level_RoadFar", "Level01_RoadTile", TextureWrapMode.Repeat);
         AddRoadStrip("Level01_RoadNorth", parent, 49f, 200f, road);
@@ -1189,7 +1362,7 @@ public static partial class CargoClashBuilder
         blocker.AddComponent<BoxCollider>().size = size;
     }
 
-    /// <summary>Hills and clouds on the far horizon. Only the helicopter shot looks this far.</summary>
+    /// <summary>Hills and clouds on the far horizon, all the way round, because in first person you can look anywhere.</summary>
     private static void AddBackdrop(Transform parent)
     {
         Material near = Mat("Level_Hill", new Color(0.36f, 0.57f, 0.38f));
@@ -1220,6 +1393,26 @@ public static partial class CargoClashBuilder
         };
         for (int i = 0; i < clouds.Length; i++)
             Place(i % 2 == 0 ? "Cloud_A" : "Cloud_B", backdrop, clouds[i], 90f + i * 9f, 0.8f + i * 0.08f);
+
+        // The other three sides. The helicopter shot looks west, and it flies in from the north above these.
+        System.Random random = new System.Random(808);
+        for (float angle = 35f; angle <= 325f; angle += 21f)
+        {
+            float wobble = Between(random, -7f, 7f);
+            Vector3 direction = Quaternion.Euler(0f, angle + wobble, 0f) * Vector3.forward;
+            Vector3 nearSpot = direction * Between(random, 235f, 265f);
+            float facing = angle + wobble;
+            Part(PrimitiveType.Sphere, "Hill", backdrop, nearSpot, new Vector3(Between(random, 120f, 170f), Between(random, 30f, 48f), 70f), near, new Vector3(0f, facing, 0f));
+            Vector3 farSpot = direction * Between(random, 305f, 340f);
+            Part(PrimitiveType.Sphere, "HillFar", backdrop, farSpot, new Vector3(Between(random, 170f, 220f), Between(random, 62f, 92f), 90f), far, new Vector3(0f, facing, 0f));
+        }
+        for (float angle = 20f; angle <= 340f; angle += 34f)
+        {
+            Vector3 direction = Quaternion.Euler(0f, angle + Between(random, -9f, 9f), 0f) * Vector3.forward;
+            Vector3 spot = direction * Between(random, 180f, 250f);
+            spot.y = Between(random, 42f, 72f);
+            Place(random.NextDouble() < 0.5 ? "Cloud_A" : "Cloud_B", backdrop, spot, Between(random, 0f, 360f), Between(random, 0.9f, 1.6f));
+        }
     }
 
     private static void AddWalls(Transform parent)
@@ -1396,131 +1589,303 @@ public static partial class CargoClashBuilder
         return rect;
     }
 
-    private static Font BuiltinFont() => Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-
-    private static Text Label(Transform parent, string name, string content, int fontSize, Color color, Vector2 anchor,
-        Vector2 position, Vector2 size, TextAnchor alignment = TextAnchor.MiddleCenter, bool heavy = false, bool outline = false)
-    {
-        GameObject item = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
-        Rect(item, parent, anchor, position, size);
-        Text text = item.GetComponent<Text>();
-        text.text = content;
-        text.font = BuiltinFont();
-        text.fontSize = fontSize;
-        text.color = color;
-        text.alignment = alignment;
-        text.raycastTarget = false;
-        text.horizontalOverflow = HorizontalWrapMode.Overflow;
-        text.verticalOverflow = VerticalWrapMode.Overflow;
-        if (heavy) item.AddComponent<CargoClashSolidText>();
-        else text.fontStyle = FontStyle.Bold;
-        if (outline)
-        {
-            Outline line = item.AddComponent<Outline>();
-            line.effectColor = new Color(0f, 0f, 0f, 0.9f);
-            line.effectDistance = new Vector2(2f, -2f);
-        }
-        return text;
-    }
-
-    private static Image Panel(Transform parent, string name, Color color, Vector2 anchor, Vector2 position, Vector2 size)
-    {
-        GameObject item = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        Rect(item, parent, anchor, position, size);
-        Image image = item.GetComponent<Image>();
-        image.color = color;
-        return image;
-    }
-
-    private static Button Btn(Transform parent, string name, string content, Vector2 anchor, Vector2 position, Vector2 size,
-        Color color, out Text label)
-    {
-        Image background = Panel(parent, name, color, anchor, position, size);
-        Button button = background.gameObject.AddComponent<Button>();
-        button.targetGraphic = background;
-        ColorBlock colors = button.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = new Color(1.15f, 1.15f, 1.15f);
-        colors.pressedColor = new Color(0.75f, 0.75f, 0.75f);
-        colors.disabledColor = new Color(0.45f, 0.45f, 0.45f, 0.7f);
-        button.colors = colors;
-        label = Label(background.transform, "Label", content, 26, Color.white, new Vector2(0.5f, 0.5f), Vector2.zero, size);
-        return button;
-    }
-
     // ---- HUD ----
 
     private static void BuildHud()
     {
+        LoadUiAssets();
         Canvas canvas = NewCanvas("HudCanvas", 10);
         MatchHud hud = canvas.gameObject.AddComponent<MatchHud>();
         Transform root = canvas.transform;
-        Vector2 top = new Vector2(0.5f, 1f);
-        Vector2 bottomLeft = new Vector2(0f, 0f);
-        Vector2 centre = new Vector2(0.5f, 0.5f);
 
-        GameObject overlay = new GameObject("Overlays", typeof(RectTransform));
-        RectTransform overlayRect = overlay.GetComponent<RectTransform>();
-        overlayRect.SetParent(root, false);
-        overlayRect.anchorMin = Vector2.zero;
-        overlayRect.anchorMax = Vector2.one;
-        overlayRect.offsetMin = Vector2.zero;
-        overlayRect.offsetMax = Vector2.zero;
-        hud.overlayRoot = overlayRect;
-        hud.overlayFont = BuiltinFont();
+        RectTransform overlay = UiPanelRoot(root, "Overlays");
+        hud.overlayRoot = overlay;
+        hud.overlayFont = uiFont;
+        hud.roundSprite = uiRound;
+        hud.diamondSprite = UiSprite("UI_Diamond");
+        hud.chevronSprite = UiSprite("UI_Chevron");
 
-        Panel(root, "TopBar", new Color(0.05f, 0.06f, 0.09f, 0.72f), top, new Vector2(0f, -62f), new Vector2(760f, 124f));
-        hud.halfText = Label(root, "Half", "HALF 1", 22, new Color(0.8f, 0.85f, 0.9f), top, new Vector2(0f, -24f), new Vector2(200f, 30f));
-        hud.timerText = Label(root, "Timer", "1:00", 64, Color.white, top, new Vector2(0f, -72f), new Vector2(240f, 80f), TextAnchor.MiddleCenter, true);
-        hud.orangeScoreText = Label(root, "OrangeScore", "0", 62, Team.Orange.ToColor(), top, new Vector2(-250f, -56f), new Vector2(190f, 76f), TextAnchor.MiddleCenter, true);
-        hud.blueScoreText = Label(root, "BlueScore", "0", 62, Team.Blue.ToColor(), top, new Vector2(250f, -56f), new Vector2(190f, 76f), TextAnchor.MiddleCenter, true);
-        hud.orangeRoleText = Label(root, "OrangeRole", "COLLECTORS", 19, Team.Orange.ToColor(), top, new Vector2(-250f, -105f), new Vector2(220f, 26f));
-        hud.blueRoleText = Label(root, "BlueRole", "INTERRUPTERS", 19, Team.Blue.ToColor(), top, new Vector2(250f, -105f), new Vector2(220f, 26f));
+        hud.speedLines = FullScreenImage(root, "SpeedLines", UiSprite("UI_SpeedLines"));
+        hud.vignette = FullScreenImage(root, "Vignette", UiSprite("UI_Vignette"));
 
-        hud.bannerText = Label(root, "Banner", "", 50, Color.white, centre, new Vector2(0f, 250f), new Vector2(1400f, 240f), TextAnchor.MiddleCenter, true, true);
+        BuildScoreboard(root, hud);
 
-        GameObject playGroup = new GameObject("PlayHud", typeof(RectTransform));
-        RectTransform playRect = playGroup.GetComponent<RectTransform>();
-        playRect.SetParent(root, false);
-        playRect.anchorMin = Vector2.zero;
-        playRect.anchorMax = Vector2.one;
-        playRect.offsetMin = Vector2.zero;
-        playRect.offsetMax = Vector2.zero;
-        hud.playHud = playGroup;
+        hud.bannerText = UiText(root, "Banner", "", 54, UiCream, 3.5f);
+        Rect(hud.bannerText.gameObject, root, AnchorCentre, new Vector2(0f, 330f), new Vector2(1500f, 90f));
 
-        Panel(playRect, "RamBack", new Color(0.05f, 0.06f, 0.09f, 0.8f), bottomLeft, new Vector2(170f, 70f), new Vector2(280f, 46f));
-        Image ramFill = Panel(playRect, "RamFill", Color.green, bottomLeft, new Vector2(170f, 70f), new Vector2(268f, 34f));
-        ramFill.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Background.psd");
-        ramFill.type = Image.Type.Filled;
-        ramFill.fillMethod = Image.FillMethod.Horizontal;
-        hud.ramFill = ramFill;
-        hud.ramLabel = Label(playRect, "RamLabel", "RAM READY", 22, Color.black, bottomLeft, new Vector2(170f, 70f), new Vector2(268f, 34f));
-        Label(playRect, "KeysHint", GameText.KeysHint, 20, new Color(1f, 1f, 1f, 0.85f), new Vector2(0.5f, 0f), new Vector2(120f, 34f), new Vector2(1300f, 30f), TextAnchor.MiddleCenter, false, true);
+        RectTransform play = UiPanelRoot(root, "PlayHud");
+        hud.playHud = play.gameObject;
+        BuildCrosshair(play, hud);
+        BuildRamChip(play, hud);
+        BuildMiniMap(play);
+        BuildRoleChip(play, hud);
 
-        Image results = Panel(root, "ResultsPanel", PanelColor, centre, Vector2.zero, new Vector2(880f, 620f));
-        Transform panel = results.transform;
-        Vector2 panelTop = new Vector2(0.5f, 1f);
-        hud.resultsPanel = results.gameObject;
-        hud.resultsHeading = Label(panel, "Heading", "ORANGE WINS!", 72, AccentColor, panelTop, new Vector2(0f, -90f), new Vector2(820f, 100f), TextAnchor.MiddleCenter, true);
-        hud.resultsScore = Label(panel, "Score", "0 : 0", 58, Color.white, panelTop, new Vector2(0f, -190f), new Vector2(820f, 80f), TextAnchor.MiddleCenter, true);
-        hud.resultsTitles = Label(panel, "Titles", "", 30, new Color(1f, 0.93f, 0.6f), panelTop, new Vector2(0f, -330f), new Vector2(820f, 170f));
-        hud.resultsWaiting = Label(panel, "Waiting", "Waiting for the host...", 24, new Color(0.8f, 0.85f, 0.9f), new Vector2(0.5f, 0f), new Vector2(-170f, 70f), new Vector2(380f, 50f));
-        hud.againButton = Btn(panel, "Again", "PLAY AGAIN", new Vector2(0.5f, 0f), new Vector2(-170f, 70f), new Vector2(340f, 72f), ButtonColor, out hud.againLabel);
-        hud.leaveButton = Btn(panel, "Leave", "MAIN MENU", new Vector2(0.5f, 0f), new Vector2(190f, 70f), new Vector2(320f, 72f), new Color(0.3f, 0.33f, 0.4f), out _);
+        hud.hitArrow = UiImage(root, "HitArrow", hud.chevronSprite, Color.clear);
+        Rect(hud.hitArrow.gameObject, root, AnchorCentre, Vector2.zero, new Vector2(120f, 120f));
+        hud.hitArrow.enabled = false;
 
-        Image pause = Panel(root, "PausePanel", PanelColor, centre, Vector2.zero, new Vector2(560f, 300f));
-        hud.pausePanel = pause.gameObject;
-        Label(pause.transform, "Heading", "PAUSE MENU", 44, Color.white, panelTop, new Vector2(0f, -60f), new Vector2(500f, 60f), TextAnchor.MiddleCenter, true);
-        hud.pauseResumeButton = Btn(pause.transform, "Resume", "KEEP PLAYING", centre, new Vector2(0f, -10f), new Vector2(400f, 64f), ButtonColor, out _);
-        hud.pauseLeaveButton = Btn(pause.transform, "LeaveMatch", "LEAVE MATCH", centre, new Vector2(0f, -90f), new Vector2(400f, 64f), new Color(0.3f, 0.33f, 0.4f), out _);
+        hud.dizzyStars = UiGroup(root, "DizzyStars", AnchorCentre, new Vector2(0f, 190f), new Vector2(10f, 10f));
+        Sprite star = UiSprite("UI_Star");
+        for (int i = 0; i < 5; i++)
+        {
+            Image item = UiImage(hud.dizzyStars, "Star", star, Color.white);
+            Rect(item.gameObject, hud.dizzyStars, AnchorCentre, Vector2.zero, new Vector2(84f, 84f));
+        }
+        hud.dizzyStars.gameObject.SetActive(false);
 
-        Image fade = Panel(root, "ScreenFade", new Color(0f, 0f, 0f, 0f), centre, Vector2.zero, Vector2.zero);
-        fade.rectTransform.anchorMin = Vector2.zero;
-        fade.rectTransform.anchorMax = Vector2.one;
-        fade.rectTransform.offsetMin = Vector2.zero;
-        fade.rectTransform.offsetMax = Vector2.zero;
-        fade.raycastTarget = false;
-        fade.enabled = false;
+        BuildIntroCard(root, hud);
+        BuildResults(root, hud);
+        BuildPause(root, hud);
+
+        Image fade = FullScreenImage(root, "ScreenFade", null);
+        fade.color = new Color(0f, 0f, 0f, 0f);
         hud.screenFade = fade;
+    }
+
+    private static Image FullScreenImage(Transform parent, string name, Sprite sprite)
+    {
+        Image image = UiImage(parent, name, sprite, Color.clear);
+        Fill(image.rectTransform);
+        image.enabled = false;
+        return image;
+    }
+
+    private static void BuildScoreboard(Transform root, MatchHud hud)
+    {
+        RectTransform board = UiGroup(root, "Scoreboard", AnchorTop, new Vector2(0f, -72f), new Vector2(860f, 124f));
+        hud.orangeScoreText = ScorePlate(board, "Orange", UiOrange, -286f, out hud.orangeRoleText, out hud.orangeYou);
+        hud.blueScoreText = ScorePlate(board, "Blue", UiBlue, 286f, out hud.blueRoleText, out hud.blueYou);
+
+        RectTransform timer = UiGroup(board, "Timer", AnchorCentre, new Vector2(0f, 0f), new Vector2(280f, 124f));
+        AddSoftShadow(timer, 0.4f);
+        Image back = UiImage(timer, "Back", uiRound, UiNavy, 1.5f);
+        Fill(back.rectTransform);
+        hud.halfText = UiText(timer, "Half", "", 26, UiYellow);
+        Rect(hud.halfText.gameObject, timer, AnchorTop, new Vector2(0f, -27f), new Vector2(260f, 30f));
+        hud.timerText = UiText(timer, "Time", "", 74, Color.white);
+        Rect(hud.timerText.gameObject, timer, AnchorCentre, new Vector2(0f, -15f), new Vector2(270f, 84f));
+    }
+
+    private static Text ScorePlate(Transform board, string name, Color color, float x, out Text role, out GameObject you)
+    {
+        RectTransform plate = UiGroup(board, name, AnchorCentre, new Vector2(x, 4f), new Vector2(320f, 106f));
+        AddSoftShadow(plate, 0.4f);
+        Image edge = UiImage(plate, "Edge", uiRound, UiNavy, 1.6f);
+        Fill(edge.rectTransform);
+        Image face = UiImage(edge.transform, "Face", uiFace, color, 1.6f);
+        Fill(face.rectTransform, 6f, 6f, 6f, 6f);
+
+        Text score = UiText(face.transform, "Score", "0", 66, Color.white, 3f);
+        Rect(score.gameObject, face.transform, AnchorCentre, new Vector2(0f, 12f), new Vector2(300f, 70f));
+        role = UiText(face.transform, "Role", "", 23, Color.white, 2f);
+        Rect(role.gameObject, face.transform, AnchorBottom, new Vector2(0f, 19f), new Vector2(300f, 28f));
+
+        RectTransform tag = UiGroup(board, name + "You", AnchorCentre, new Vector2(x, -66f), new Vector2(84f, 36f));
+        Image tagBack = UiImage(tag, "Back", uiRound, UiNavy, 3f);
+        Fill(tagBack.rectTransform);
+        Text tagText = UiText(tag, "Text", GameText.You, 24, UiYellow);
+        Fill(tagText.rectTransform);
+        you = tag.gameObject;
+        you.SetActive(false);
+        return score;
+    }
+
+    private static void BuildCrosshair(RectTransform parent, MatchHud hud)
+    {
+        hud.crosshairRing = UiImage(parent, "Ring", UiSprite("UI_Ring"), Color.white);
+        Rect(hud.crosshairRing.gameObject, parent, AnchorCentre, Vector2.zero, new Vector2(76f, 76f));
+        hud.crosshairRing.enabled = false;
+        hud.crosshairDot = UiImage(parent, "Dot", UiSprite("UI_Dot"), Color.white);
+        Rect(hud.crosshairDot.gameObject, parent, AnchorCentre, Vector2.zero, new Vector2(26f, 26f));
+
+        RectTransform bar = UiGroup(parent, "TargetBar", AnchorCentre, new Vector2(0f, -68f), new Vector2(236f, 24f));
+        hud.targetBar = bar.gameObject;
+        Image track = UiImage(bar, "Track", uiRound, UiNavy, 5f);
+        Fill(track.rectTransform);
+        hud.targetFill = UiImage(bar, "Fill", uiRound, UiGreen, 7f);
+        Fill(hud.targetFill.rectTransform, 5f, 5f, 5f, 5f);
+
+        hud.promptA = BuildPrompt(parent, "PromptA", new Vector2(0f, -118f));
+        hud.promptB = BuildPrompt(parent, "PromptB", new Vector2(0f, -182f));
+    }
+
+    private static HudPrompt BuildPrompt(Transform parent, string name, Vector2 position)
+    {
+        RectTransform slot = UiGroup(parent, name, AnchorCentre, position, new Vector2(300f, 56f));
+        HudPrompt prompt = slot.gameObject.AddComponent<HudPrompt>();
+        Image back = UiImage(slot, "Back", uiRound, new Color(UiNavy.r, UiNavy.g, UiNavy.b, 0.88f), 2.4f);
+        Rect(back.gameObject, slot, AnchorCentre, Vector2.zero, new Vector2(300f, 56f));
+        prompt.back = back.rectTransform;
+        Image key = UiImage(slot, "Key", uiFace, UiCream, 3f);
+        Rect(key.gameObject, slot, AnchorCentre, Vector2.zero, new Vector2(42f, 42f));
+        prompt.keyBack = key.rectTransform;
+        prompt.keyText = UiText(key.transform, "KeyText", "", 26, UiNavy);
+        Fill(prompt.keyText.rectTransform);
+        prompt.label = UiText(slot, "Label", "", 28, UiCream);
+        Rect(prompt.label.gameObject, slot, AnchorCentre, Vector2.zero, new Vector2(200f, 56f));
+        return prompt;
+    }
+
+    private static void BuildRamChip(Transform parent, MatchHud hud)
+    {
+        Vector2 size = new Vector2(330f, 74f);
+        RectTransform chip = UiGroup(parent, "Ram", Vector2.zero, new Vector2(30f + size.x * 0.5f, 30f + size.y * 0.5f), size);
+        AddSoftShadow(chip, 0.4f);
+        Image edge = UiImage(chip, "Edge", uiRound, UiNavy, 2f);
+        Fill(edge.rectTransform);
+        Image track = UiImage(edge.transform, "Track", uiRound, new Color(0.2f, 0.24f, 0.38f), 2.4f);
+        Fill(track.rectTransform, 7f, 7f, 7f, 7f);
+        hud.ramFill = UiImage(track.transform, "Fill", uiFace, UiGreen, 2.4f);
+        Fill(hud.ramFill.rectTransform);
+
+        Image key = UiImage(chip, "Key", uiFace, UiCream, 3f);
+        Rect(key.gameObject, chip, new Vector2(0f, 0.5f), new Vector2(68f, 1f), new Vector2(104f, 48f));
+        Text keyText = UiText(key.transform, "KeyText", GameText.KeyRam, 25, UiNavy);
+        Fill(keyText.rectTransform);
+        hud.ramLabel = UiText(chip, "Label", "", 32, Color.white, 2.5f);
+        Rect(hud.ramLabel.gameObject, chip, AnchorCentre, new Vector2(56f, 0f), new Vector2(200f, 50f));
+    }
+
+    private static void BuildMiniMap(Transform parent)
+    {
+        // The same shape as the level: 46 metres across and 98 long.
+        const float inset = 9f;
+        Vector2 size = new Vector2(176f, 356f);
+        RectTransform map = UiGroup(parent, "Map", Vector2.one, new Vector2(-30f - size.x * 0.5f, -30f - size.y * 0.5f), size);
+        AddSoftShadow(map, 0.4f);
+
+        GameObject pictureObject = new GameObject("Picture", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
+        pictureObject.transform.SetParent(map, false);
+        RawImage picture = pictureObject.GetComponent<RawImage>();
+        picture.raycastTarget = false;
+        Fill(picture.rectTransform, inset, inset, inset, inset);
+
+        RectTransform dots = UiGroup(map, "Dots", AnchorCentre, Vector2.zero, Vector2.zero);
+        Fill(dots, inset, inset, inset, inset);
+
+        Image rim = UiImage(map, "Rim", uiFrame, UiNavy, 2f);
+        Fill(rim.rectTransform);
+
+        MiniMap miniMap = map.gameObject.AddComponent<MiniMap>();
+        miniMap.picture = picture;
+        miniMap.dots = dots;
+        miniMap.dotSprite = UiSprite("UI_Dot");
+        miniMap.arrowSprite = UiSprite("UI_Chevron");
+    }
+
+    private static void BuildRoleChip(Transform parent, MatchHud hud)
+    {
+        Vector2 size = new Vector2(462f, 54f);
+        RectTransform chip = UiGroup(parent, "RoleChip", new Vector2(0f, 1f), new Vector2(30f + size.x * 0.5f, -30f - size.y * 0.5f), size);
+        AddSoftShadow(chip, 0.35f);
+        Image edge = UiImage(chip, "Edge", uiRound, UiNavy, 2.4f);
+        Fill(edge.rectTransform);
+        hud.roleChipBack = UiImage(edge.transform, "Face", uiFace, UiOrange, 2.8f);
+        Fill(hud.roleChipBack.rectTransform, 5f, 5f, 5f, 5f);
+        hud.roleChip = UiText(chip, "Text", "", 25, Color.white, 2f);
+        Fill(hud.roleChip.rectTransform, 12f, 2f, 12f, 2f);
+    }
+
+    private static void BuildIntroCard(Transform root, MatchHud hud)
+    {
+        RectTransform card = UiGroup(root, "IntroCard", AnchorCentre, new Vector2(0f, 60f), new Vector2(1180f, 380f));
+        card.gameObject.AddComponent<UiPopIn>();
+        hud.introCard = card.gameObject;
+        AddSoftShadow(card, 0.5f);
+        Image edge = UiImage(card, "Edge", uiRound, UiNavy, 1.4f);
+        Fill(edge.rectTransform);
+        Image inside = UiImage(edge.transform, "Inside", uiRound, UiCream, 1.7f);
+        Fill(inside.rectTransform, 8f, 8f, 8f, 8f);
+
+        hud.introSwap = UiText(card, "Swap", GameText.SidesSwapped, 32, new Color(0.86f, 0.42f, 0.05f));
+        Rect(hud.introSwap.gameObject, card, AnchorTop, new Vector2(0f, -40f), new Vector2(1100f, 40f));
+        hud.introHeading = UiText(card, "Heading", "", 82, UiOrange, 3.5f);
+        Rect(hud.introHeading.gameObject, card, AnchorTop, new Vector2(0f, -106f), new Vector2(1100f, 90f));
+        hud.introGoal = UiText(card, "Goal", "", 44, UiNavy);
+        Rect(hud.introGoal.gameObject, card, AnchorTop, new Vector2(0f, -182f), new Vector2(1100f, 56f));
+        Text keys = UiText(card, "Keys", GameText.KeysHint, 26, new Color(0.34f, 0.37f, 0.48f));
+        Rect(keys.gameObject, card, AnchorBottom, new Vector2(0f, 42f), new Vector2(1140f, 34f));
+
+        RectTransform count = UiGroup(card, "Count", AnchorTop, new Vector2(0f, -272f), new Vector2(84f, 84f));
+        Image countBack = UiImage(count, "Back", uiCircle, UiNavy);
+        Fill(countBack.rectTransform);
+        hud.introCount = UiText(count, "Number", "", 56, UiYellow);
+        Fill(hud.introCount.rectTransform, 0f, 2f);
+    }
+
+    private static void BuildResults(Transform root, MatchHud hud)
+    {
+        RectTransform panel = UiPanelRoot(root, "Results");
+        hud.resultsPanel = panel.gameObject;
+        Image dim = UiImage(panel, "Dim", null, new Color(UiNavy.r, UiNavy.g, UiNavy.b, 0.5f));
+        Fill(dim.rectTransform);
+        dim.raycastTarget = true;
+
+        RectTransform inside = UiPanel(panel, "Card", AnchorCentre, Vector2.zero, new Vector2(1160f, 780f), UiCream, 0f);
+        hud.resultsHeading = UiText(inside, "Heading", "", 96, UiOrange, 4f);
+        Rect(hud.resultsHeading.gameObject, inside, AnchorTop, new Vector2(0f, -100f), new Vector2(1080f, 110f));
+        hud.resultsScore = UiText(inside, "Score", "", 78, UiNavy);
+        Rect(hud.resultsScore.gameObject, inside, AnchorTop, new Vector2(0f, -212f), new Vector2(1080f, 90f));
+        hud.resultsTitles = UiText(inside, "Titles", "", 38, new Color(0.34f, 0.37f, 0.48f));
+        Rect(hud.resultsTitles.gameObject, inside, AnchorCentre, new Vector2(0f, -30f), new Vector2(1080f, 220f));
+
+        hud.resultsWaiting = UiText(inside, "Waiting", GameText.WaitingForHost, 34, new Color(0.34f, 0.37f, 0.48f));
+        Rect(hud.resultsWaiting.gameObject, inside, AnchorBottom, new Vector2(-270f, 92f), new Vector2(480f, 60f));
+        hud.againButton = UiButton(inside, "Again", GameText.PlayAgain, AnchorBottom, new Vector2(-270f, 92f), new Vector2(500f, 112f), UiOrange, 44, 0.1f, out hud.againLabel);
+        hud.leaveButton = UiButton(inside, "Leave", GameText.MainMenu, AnchorBottom, new Vector2(270f, 92f), new Vector2(500f, 112f), UiGray, 44, 0.15f, out _);
+    }
+
+    private static void BuildPause(Transform root, MatchHud hud)
+    {
+        RectTransform panel = UiPanelRoot(root, "Pause");
+        hud.pausePanel = panel.gameObject;
+        Image dim = UiImage(panel, "Dim", null, new Color(UiNavy.r, UiNavy.g, UiNavy.b, 0.5f));
+        Fill(dim.rectTransform);
+        dim.raycastTarget = true;
+
+        RectTransform inside = UiPanel(panel, "Card", AnchorCentre, Vector2.zero, new Vector2(820f, 640f), UiCream, 0f);
+        Text heading = UiText(inside, "Heading", GameText.Paused, 76, UiNavy);
+        Rect(heading.gameObject, inside, AnchorTop, new Vector2(0f, -68f), new Vector2(760f, 90f));
+
+        Text speed = UiText(inside, "SpeedLabel", GameText.LookSpeed, 34, new Color(0.86f, 0.42f, 0.05f));
+        Rect(speed.gameObject, inside, AnchorTop, new Vector2(0f, -146f), new Vector2(760f, 44f));
+        hud.lookSpeedSlider = UiSlider(inside, "LookSpeed", AnchorTop, new Vector2(0f, -196f), new Vector2(620f, 52f));
+        Text hint = UiText(inside, "Hint", GameText.ViewHint, 26, new Color(0.34f, 0.37f, 0.48f));
+        Rect(hint.gameObject, inside, AnchorTop, new Vector2(0f, -252f), new Vector2(780f, 36f));
+
+        hud.pauseResumeButton = UiButton(inside, "Resume", GameText.KeepPlaying, AnchorBottom, new Vector2(0f, 186f), new Vector2(560f, 104f), UiOrange, 42, 0.05f, out _);
+        hud.pauseLeaveButton = UiButton(inside, "LeaveMatch", GameText.LeaveMatch, AnchorBottom, new Vector2(0f, 66f), new Vector2(560f, 92f), UiGray, 38, 0.1f, out _);
+    }
+
+    private static Slider UiSlider(Transform parent, string name, Vector2 anchor, Vector2 position, Vector2 size)
+    {
+        float trackInset = size.y * 0.27f;
+        RectTransform root = UiGroup(parent, name, anchor, position, size);
+        Image track = UiImage(root, "Track", uiRound, UiNavy, 4f);
+        Fill(track.rectTransform, 0f, trackInset, 0f, trackInset);
+        track.raycastTarget = true;
+
+        RectTransform fillArea = UiGroup(root, "FillArea", AnchorCentre, Vector2.zero, Vector2.zero);
+        Fill(fillArea, 6f, trackInset + 5f, 6f, trackInset + 5f);
+        Image fill = UiImage(fillArea, "Fill", uiRound, UiOrange, 6f);
+        Fill(fill.rectTransform);
+
+        RectTransform handleArea = UiGroup(root, "HandleArea", AnchorCentre, Vector2.zero, Vector2.zero);
+        Fill(handleArea, size.y * 0.5f, 0f, size.y * 0.5f, 0f);
+        Image handleEdge = UiImage(handleArea, "Handle", uiCircle, UiNavy);
+        handleEdge.raycastTarget = true;
+        Fill(handleEdge.rectTransform);
+        handleEdge.rectTransform.sizeDelta = new Vector2(size.y, 0f);
+        Image handleFace = UiImage(handleEdge.transform, "Face", uiCircle, UiYellow);
+        Fill(handleFace.rectTransform, 7f, 7f, 7f, 7f);
+
+        Slider slider = root.gameObject.AddComponent<Slider>();
+        slider.fillRect = fill.rectTransform;
+        slider.handleRect = handleEdge.rectTransform;
+        slider.targetGraphic = handleEdge;
+        slider.direction = Slider.Direction.LeftToRight;
+        slider.transition = Selectable.Transition.None;
+        slider.navigation = new Navigation { mode = Navigation.Mode.None };
+        return slider;
     }
 }

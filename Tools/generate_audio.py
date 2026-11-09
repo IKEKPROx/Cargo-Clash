@@ -142,6 +142,21 @@ def make_effects():
     save("fanfare", fanfare)
     save("click", mix(decay(sweep(880, 540, 0.05), 5), [s * 0.25 for s in decay(lowpass(noise(0.03, 13), 0.7), 8)]))
     save("locked", mix(decay(sweep(190, 120, 0.13), 5), [0.0] * count(0.09) + decay(sweep(150, 95, 0.14), 5)))
+    # First person: the hammer going through the air, things breaking apart, and footsteps.
+    swing_noise = lowpass(noise(0.2, 17), 0.3)
+    save("swing", [s * math.sin(math.pi * i / len(swing_noise)) ** 2 for i, s in enumerate(swing_noise)])
+    save("crack", mix(decay(lowpass(noise(0.16, 19), 0.85), 14), [s * 0.5 for s in decay(sweep(320, 120, 0.12), 9)],
+                      [0.0] * count(0.04) + decay(lowpass(noise(0.08, 23), 0.9), 12)))
+    coins = [0.0] * count(0.5)
+    rng = random.Random(29)
+    for i in range(14):
+        start = count(0.01 + i * 0.026 + rng.uniform(0.0, 0.015))
+        ping = decay(sweep(rng.uniform(2600, 4200), rng.uniform(2400, 3800), 0.09), 8)
+        for j, sample in enumerate(ping):
+            if start + j < len(coins):
+                coins[start + j] += sample * 0.5 * (1.0 - i / 18)
+    save("coins", coins)
+    save("step", mix(decay(lowpass(noise(0.07, 31), 0.32), 9), [s * 0.7 for s in decay(sweep(120, 70, 0.07), 7)]))
 
 
 def make_music():

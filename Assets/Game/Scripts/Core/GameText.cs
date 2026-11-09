@@ -45,8 +45,12 @@ namespace CargoClash
         public static string LevelLine(int number, string title) => "LEVEL " + number + ": " + title;
         public static string RosterLine(string name, bool isYou, bool ready) => name + (isYou ? " (you)" : "") + (ready ? "  READY" : "");
 
-        public const string CollectorGoal = "YOU ARE COLLECTORS\nCarry cargo to the truck!";
-        public const string InterrupterGoal = "YOU ARE INTERRUPTERS\nKnock carriers down and smash the cargo!";
+        public const string CollectorRole = "YOU ARE COLLECTORS";
+        public const string InterrupterRole = "YOU ARE INTERRUPTERS";
+        public const string CollectorGoal = "Carry cargo to the truck!";
+        public const string InterrupterGoal = "Knock carriers down and smash the cargo!";
+        public const string CollectorChip = "COLLECTOR";
+        public const string InterrupterChip = "INTERRUPTER";
         public const string SidesSwapped = "HALF-TIME: SIDES SWAP";
         public const string TimeUp = "TIME!";
         public const string NoCargoLeft = "NO CARGO LEFT!";
@@ -58,13 +62,44 @@ namespace CargoClash
             ? "THE HELICOPTER SAVES " + rescuedValue + " IN CARGO!"
             : "THE HELICOPTER LEAVES WITH AN EMPTY BOX!";
 
-        public const string KeysHint = "WASD move    E pick up / drop    SPACE ram    F hold to smash (Interrupters)";
+        public const string KeysHint = "WASD move    MOUSE look    E pick up / drop    SPACE ram    LEFT CLICK smash    V camera";
 
-        public const string PromptPickUp = "E  pick up";
-        public const string PromptLarge = "E  grab (needs 2 people)";
-        public const string PromptSmash = "F  smash     E  carry";
+        public const string KeyInteract = "E";
+        public const string KeySmash = "CLICK";
+        public const string KeyRam = "SPACE";
+        public const string PromptPickUp = "PICK UP";
+        public const string PromptCarry = "CARRY";
+        public const string PromptLarge = "GRAB (NEEDS 2)";
+        public const string PromptHelp = "HELP CARRY";
+        public const string PromptSmash = "HOLD TO SMASH";
+        public const string PromptDrop = "DROP";
+        public const string PromptLetGo = "LET GO";
         public const string PromptWaiting = "Waiting for a second carrier...";
         public const string PromptToTruck = "Carry it to the truck!";
+        public const string PromptTogether = "Walk the same way together!";
+        public const string RamReady = "RAM";
+        public const string RamCooling = "RECHARGING";
+        public const string MarkerTruck = "TRUCK";
+        public const string You = "YOU";
+        public const string Bonk = "BONK!";
+        public const string Halftime = "HALF ";
+        public const string Paused = "PAUSED";
+        public const string KeepPlaying = "KEEP PLAYING";
+        public const string LeaveMatch = "LEAVE MATCH";
+        public const string LookSpeed = "LOOK SPEED";
+        public const string ViewHint = "Press V to switch between first person and over the shoulder.";
+        public const string PlayAgain = "PLAY AGAIN";
+        public const string BackToLobby = "BACK TO LOBBY";
+        public const string MainMenu = "MAIN MENU";
+        public const string WaitingForHost = "Waiting for the host...";
+        public const string Draw = "DRAW!";
+        public const string OrangeWins = "ORANGE WINS!";
+        public const string BlueWins = "BLUE WINS!";
+        public const string Collectors = "COLLECTORS";
+        public const string Interrupters = "INTERRUPTERS";
+
+        public static string CargoValue(int value) => "+" + value;
+        public static string Metres(string what, int metres) => what + "  " + metres + "m";
 
         public const string TitleMover = "Mover Supreme";
         public const string TitleWrecker = "Demolition Chief";

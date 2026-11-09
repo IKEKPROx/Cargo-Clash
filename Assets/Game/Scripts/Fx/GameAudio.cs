@@ -8,6 +8,8 @@ namespace CargoClash
     {
         private const float MusicVolume = 0.45f;
         private const float DuckedMusicVolume = 0.16f;
+        private const float HearFullyWithin = 5f;
+        private const float HearNothingBeyond = 55f;
 
         private static GameAudio instance;
 
@@ -16,6 +18,8 @@ namespace CargoClash
         private AudioSource effects;
         private AudioSource music;
         private AudioSource loop;
+        private readonly AudioSource[] placed = new AudioSource[8];
+        private int nextPlaced;
 
         private void Awake()
         {
@@ -29,6 +33,11 @@ namespace CargoClash
             loop = gameObject.AddComponent<AudioSource>();
             loop.playOnAwake = false;
             loop.loop = true;
+            for (int i = 0; i < placed.Length; i++)
+            {
+                placed[i] = gameObject.AddComponent<AudioSource>();
+                placed[i].playOnAwake = false;
+            }
             foreach (AudioClip clip in Resources.LoadAll<AudioClip>("Audio")) clips[clip.name] = clip;
         }
 
@@ -36,6 +45,32 @@ namespace CargoClash
         {
             if (instance == null || !instance.clips.TryGetValue(clipName, out AudioClip clip)) return;
             instance.effects.PlayOneShot(clip, volume);
+        }
+
+        /// <summary>
+        /// A sound from somewhere in the world: quieter the farther away it is, and from the side it came
+        /// from. Good for hearing someone coming up behind you in first person.
+        /// </summary>
+        public static void PlayAt(string clipName, Vector3 position, float volume = 1f)
+        {
+            if (instance == null || !instance.clips.TryGetValue(clipName, out AudioClip clip)) return;
+            Camera view = Camera.main;
+            if (view == null)
+            {
+                instance.effects.PlayOneShot(clip, volume);
+                return;
+            }
+
+            Vector3 offset = position - view.transform.position;
+            float distance = offset.magnitude;
+            float loudness = Mathf.Clamp01(1f - (distance - HearFullyWithin) / (HearNothingBeyond - HearFullyWithin));
+            loudness *= loudness;
+            if (loudness < 0.02f) return;
+
+            AudioSource source = instance.placed[instance.nextPlaced];
+            instance.nextPlaced = (instance.nextPlaced + 1) % instance.placed.Length;
+            source.panStereo = distance > 0.5f ? Vector3.Dot(offset / distance, view.transform.right) * 0.8f : 0f;
+            source.PlayOneShot(clip, volume * loudness);
         }
 
         /// <summary>For sounds that many things can trigger at once, such as several smashers.</summary>
