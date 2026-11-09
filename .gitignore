@@ -41,3 +41,6 @@ crashlytics-build.properties
 .DS_Store
 Thumbs.db
 .claude/settings.local.json
+
+# Python bytecode from the scripts in Tools
+__pycache__/

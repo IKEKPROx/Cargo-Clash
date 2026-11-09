@@ -13,12 +13,38 @@ MonoBehaviour:
   m_Name: GameConfig
   m_EditorClassIdentifier: CargoClash::CargoClash.GameConfig
   titleScene: CargoRover
-  levelScene: Level01
+  levels:
+  - title: TUTORIAL
+    scene: Level01
+    picture: {fileID: 21300000, guid: 4203716cdd7a04b72b2dea72cfa0458f, type: 3}
+  - title: FOREST ROAD
+    scene: 
+    picture: {fileID: 21300000, guid: 294ff343a699f41e79a9b13e11592dc4, type: 3}
+  - title: MOUNTAIN PASS
+    scene: 
+    picture: {fileID: 21300000, guid: cd1680c89a5a84853a64c704cadd53cb, type: 3}
+  - title: RIVER FLATS
+    scene: 
+    picture: {fileID: 21300000, guid: caab7b6327add41e9949b2d59ffeb6f6, type: 3}
+  - title: ???
+    scene: 
+    picture: {fileID: 21300000, guid: 9335afe636bcf45d3a76ec341ba11f82, type: 3}
+  - title: ???
+    scene: 
+    picture: {fileID: 21300000, guid: 79bdd48a6a6424424a487d698bc6f439, type: 3}
   maxPlayers: 6
   teamSize: 3
-  halfSeconds: 180
+  halfSeconds: 60
+  finalStretchSeconds: 15
   halfIntroSeconds: 4
-  halfOutroSeconds: 3
+  helicopterApproachSeconds: 12
+  helicopterWarningSeconds: 10
+  helicopterArrivalDelay: 1.2
+  helicopterHurrySeconds: 3
+  helicopterLowerSeconds: 1
+  helicopterClipSeconds: 0.4
+  helicopterLiftSeconds: 1.7
+  helicopterLeaveSeconds: 2.3
   runSpeed: 6.5
   turnDegreesPerSecond: 900
   ramCooldown: 3
@@ -31,7 +57,7 @@ MonoBehaviour:
   knockbackSpeed: 8
   pickupRange: 1.6
   smashRange: 1.8
-  headHeight: 1.55
+  headHeight: 1.46
   smashTimeMultiplier: 1
   cargo:
   - {fileID: 11400000, guid: 876bb7093f40c4959838604a550ac5f3, type: 2}

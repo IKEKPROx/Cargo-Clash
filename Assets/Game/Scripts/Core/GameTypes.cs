@@ -18,6 +18,8 @@ namespace CargoClash
         public const int Player = 8;
         public const int Cargo = 9;
         public const int Level = 10;
+        /// <summary>Vehicles and other models that get an outline but aren't characters or cargo.</summary>
+        public const int Outlined = 11;
         public static int LevelMask => 1 << Level;
     }
 

@@ -12,6 +12,7 @@ namespace CargoClash
             // Characters walk through cargo; only the level blocks them.
             Physics.IgnoreLayerCollision(GameLayers.Player, GameLayers.Cargo, true);
             Application.runInBackground = true;
+            if (!Application.isBatchMode) QualitySettings.vSyncCount = 1;
 
             if (NetworkManager.Singleton != null) return;
             GameObject prefab = Resources.Load<GameObject>("NetworkRig");

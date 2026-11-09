@@ -50,6 +50,9 @@ namespace CargoClash
         public readonly NetworkVariable<double> PhaseEndsAt = new NetworkVariable<double>();
         public readonly NetworkVariable<int> OrangeScore = new NetworkVariable<int>();
         public readonly NetworkVariable<int> BlueScore = new NetworkVariable<int>();
+        public readonly NetworkVariable<int> HalfRescued = new NetworkVariable<int>();
+        public readonly NetworkVariable<bool> CargoRanOut = new NetworkVariable<bool>();
+        public readonly NetworkVariable<double> HelicopterArrivesAt = new NetworkVariable<double>();
 
         public ResultLine[] Results { get; private set; }
         public event Action ResultsReady;
@@ -58,7 +61,6 @@ namespace CargoClash
         private readonly StringBuilder csv = new StringBuilder();
         private GameConfig config;
         private LevelLayout layout;
-        private int halfRescued;
         private int halfDestroyed;
         private int halfTotal;
         private double halfStartedAt;
@@ -106,10 +108,16 @@ namespace CargoClash
                 ResetField();
                 yield return RunPhase(MatchPhase.HalfIntro, config.halfIntroSeconds);
                 halfStartedAt = Now;
+                HelicopterArrivesAt.Value = Now + config.EffectiveHalfSeconds + config.helicopterArrivalDelay;
                 yield return RunPhase(MatchPhase.Playing, config.EffectiveHalfSeconds);
                 foreach (PlayerAvatar avatar in PlayerAvatar.All) avatar.ServerStopActions();
                 RecordHalf(half);
-                yield return RunPhase(MatchPhase.HalfOutro, config.halfOutroSeconds);
+
+                // If the cargo ran out early the helicopter is still far away, so it hurries in.
+                CargoRanOut.Value = AllCargoResolved();
+                HelicopterArrivesAt.Value = Math.Min(HelicopterArrivesAt.Value, Now + config.helicopterHurrySeconds);
+                float untilArrival = (float)(HelicopterArrivesAt.Value - Now);
+                yield return RunPhase(MatchPhase.HalfOutro, untilArrival + config.HelicopterWorkSeconds);
             }
             FinishMatch();
         }
@@ -176,7 +184,8 @@ namespace CargoClash
 
             int players = SessionRoster.Instance.Entries.Count;
             int thirds = players >= 5 ? 3 : players >= 3 ? 2 : 1;
-            halfRescued = 0;
+            HalfRescued.Value = 0;
+            CargoRanOut.Value = false;
             halfDestroyed = 0;
             halfTotal = 0;
             foreach (CargoDefinition definition in config.cargo)
@@ -207,7 +216,7 @@ namespace CargoClash
             int value = cargo.Definition.value;
             AutoPilot.Log($"RESCUED {cargo.Definition.size} carriers={string.Join("+", carriers.ConvertAll(c => c.DisplayName))}");
             AddScore(TeamOn(Side.Collector), value);
-            halfRescued += value;
+            HalfRescued.Value += value;
             float share = carriers.Count > 0 ? (float)value / carriers.Count : 0f;
             foreach (PlayerAvatar carrier in carriers)
             {
@@ -231,11 +240,13 @@ namespace CargoClash
 
         public void ServerOnRam(PlayerAvatar avatar)
         {
+            AutoPilot.Log($"RAM {avatar.DisplayName}");
             if (stats.TryGetValue(avatar, out PlayerStats entry)) entry.Rams++;
         }
 
         public void ServerOnKnockedDown(PlayerAvatar avatar, bool droppedCargo)
         {
+            AutoPilot.Log($"KNOCKDOWN {avatar.DisplayName} dropped={droppedCargo}");
             if (!stats.TryGetValue(avatar, out PlayerStats entry)) return;
             entry.KnockedDown++;
             if (droppedCargo) entry.Drops++;
@@ -249,9 +260,10 @@ namespace CargoClash
 
         private void RecordHalf(int half)
         {
-            int untouched = halfTotal - halfRescued - halfDestroyed;
-            AutoPilot.Log($"HALF {half} seconds={Now - halfStartedAt:0} collectors={CollectorTeam.Value} rescued={halfRescued} destroyed={halfDestroyed} untouched={untouched} total={halfTotal} orange={OrangeScore.Value} blue={BlueScore.Value}");
-            csv.AppendLine($"half,{half},{Now - halfStartedAt:0},{CollectorTeam.Value},{halfRescued},{halfDestroyed},{untouched},{halfTotal}");
+            int rescued = HalfRescued.Value;
+            int untouched = halfTotal - rescued - halfDestroyed;
+            AutoPilot.Log($"HALF {half} seconds={Now - halfStartedAt:0} collectors={CollectorTeam.Value} rescued={rescued} destroyed={halfDestroyed} untouched={untouched} total={halfTotal} orange={OrangeScore.Value} blue={BlueScore.Value}");
+            csv.AppendLine($"half,{half},{Now - halfStartedAt:0},{CollectorTeam.Value},{rescued},{halfDestroyed},{untouched},{halfTotal}");
         }
 
         private void FinishMatch()

@@ -34,8 +34,11 @@ namespace CargoClash
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.startLifetime = new ParticleSystem.MinMaxCurve(0.45f, 0.9f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(3f, 8f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.12f, 0.34f);
-            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.07f, 0.2f);
+            main.startRotation3D = true;
+            main.startRotationX = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.startRotationY = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.startRotationZ = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
             main.gravityModifier = 1.6f;
             main.maxParticles = 400;
 
@@ -46,7 +49,17 @@ namespace CargoClash
             shape.shapeType = ParticleSystemShapeType.Sphere;
             shape.radius = 0.35f;
 
+            // Small tumbling chunks rather than flat squares.
+            ParticleSystem.RotationOverLifetimeModule spin = system.rotationOverLifetime;
+            spin.enabled = true;
+            spin.separateAxes = true;
+            spin.x = new ParticleSystem.MinMaxCurve(-8f, 8f);
+            spin.y = new ParticleSystem.MinMaxCurve(-8f, 8f);
+            spin.z = new ParticleSystem.MinMaxCurve(-8f, 8f);
+
             ParticleSystemRenderer renderer = host.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Mesh;
+            renderer.mesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
             renderer.sharedMaterial = GameConfig.Get().particleMaterial;
         }
     }

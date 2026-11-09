@@ -3,104 +3,259 @@ using UnityEngine;
 namespace CargoClash
 {
     /// <summary>
-    /// Procedural animation for the round little characters: waddle, lean, fall over, swing the
-    /// hammer. It runs on every computer from replicated state, so nothing here affects the rules.
-    /// Replace it with an Animator once real animation clips exist.
+    /// Plays the character's animations. It runs on every computer from replicated state, so nothing
+    /// here affects the rules. The clips come from Tools/blender/make_character.py and the state
+    /// machine is Assets/Game/Animation/Character.controller.
     /// </summary>
     [RequireComponent(typeof(PlayerAvatar))]
     public sealed class CharacterVisual : MonoBehaviour
     {
+        private const int UpperBodyLayer = 1;
+        private const int UpperCarry = 1;
+        private const int UpperSmash = 2;
+        private const int UpperToss = 3;
+        private const int MoodCheer = 1;
+        private const int MoodGrumble = 2;
+
+        /// <summary>Where the hammer lands in the Smash clip, as a fraction of its length.</summary>
+        private const float SmashHitTime = 0.55f;
+        private const float TossSeconds = 0.36f;
+        private const float KnockedClipSeconds = 1.5f;
+
+        private static readonly int SpeedParam = Animator.StringToHash("Speed");
+        private static readonly int RateParam = Animator.StringToHash("Rate");
+        private static readonly int CarryParam = Animator.StringToHash("Carry");
+        private static readonly int DashParam = Animator.StringToHash("Dash");
+        private static readonly int KnockedParam = Animator.StringToHash("Knocked");
+        private static readonly int KnockedRateParam = Animator.StringToHash("KnockedRate");
+        private static readonly int MoodParam = Animator.StringToHash("Mood");
+        private static readonly int UpperPoseParam = Animator.StringToHash("UpperPose");
+        private static readonly int SmashState = Animator.StringToHash("Smash");
+
+        [Header("Model")]
         public Transform pivot;
-        public Renderer[] teamRenderers;
+        public Animator animator;
         public Renderer[] allRenderers;
+        [Tooltip("How many times faster than the clip the Run animation plays at full speed.")]
+        public float runRate = 2.6f;
+
+        [Header("Gear")]
         public GameObject collectorHat;
         public GameObject interrupterHat;
-        public Transform hammer;
+        public GameObject hammer;
+
+        [Header("Face")]
+        public Transform eyeLeft;
+        public Transform eyeRight;
+        public GameObject dizzyStars;
+        public Transform starsBone;
 
         private PlayerAvatar avatar;
         private GameConfig config;
         private Vector3 lastPosition;
+        private float lastYaw;
         private float smoothedSpeed;
-        private float walkPhase;
-        private float fall;
+        private float bank;
+        private float stretch;
         private float squash;
+        private float upperWeight;
+        private float starsAngle;
+        private float knockedAt;
+        private float tossUntil;
+        private float nextBlink;
+        private float blinkUntil;
+        private float lastSmashCycle;
         private bool colorsApplied;
         private bool wasKnockedDown;
+        private CargoItem lastCarried;
 
         private void Awake()
         {
             avatar = GetComponent<PlayerAvatar>();
             config = GameConfig.Get();
             lastPosition = transform.position;
+            lastYaw = transform.eulerAngles.y;
+            nextBlink = Time.time + Random.Range(1f, 4f);
+            animator.SetFloat(KnockedRateParam, KnockedClipSeconds / config.knockdownSeconds);
+        }
+
+        private void Update()
+        {
+            if (!avatar.IsSpawned) return;
+            float deltaTime = Mathf.Max(Time.deltaTime, 0.0001f);
+
+            Vector3 moved = transform.position - lastPosition;
+            moved.y = 0f;
+            lastPosition = transform.position;
+            smoothedSpeed = Mathf.MoveTowards(smoothedSpeed, moved.magnitude / deltaTime, 40f * deltaTime);
+
+            CargoItem carried = avatar.CarriedCargo;
+            bool coCarrying = carried != null && carried.Definition.requiredCarriers > 1;
+            bool knockedDown = avatar.IsKnockedDown;
+            if (knockedDown && !wasKnockedDown) knockedAt = Time.time;
+            if (wasKnockedDown && !knockedDown) squash = 1f;
+            wasKnockedDown = knockedDown;
+
+            float topSpeed = config.runSpeed * (carried != null ? carried.Definition.carrySpeedMultiplier : 1f);
+            float speed = Mathf.Clamp01(smoothedSpeed / topSpeed);
+            float pace = Mathf.Max(0.55f, smoothedSpeed / config.runSpeed);
+            animator.SetFloat(SpeedParam, speed, 0.05f, deltaTime);
+            animator.SetFloat(RateParam, Mathf.Lerp(1f, runRate * pace, speed));
+            animator.SetInteger(CarryParam, coCarrying ? 2 : carried != null ? 1 : 0);
+            animator.SetBool(DashParam, avatar.IsDashing);
+            animator.SetBool(KnockedParam, knockedDown);
+            animator.SetInteger(MoodParam, CurrentMood());
+
+            UpdateUpperBody(carried, coCarrying, knockedDown, deltaTime);
+        }
+
+        /// <summary>The upper-body layer covers carrying and smashing, so the legs can keep running below it.</summary>
+        private void UpdateUpperBody(CargoItem carried, bool coCarrying, bool knockedDown, float deltaTime)
+        {
+            if (carried != lastCarried)
+            {
+                squash = Mathf.Max(squash, 0.5f);
+                bool rescued = lastCarried != null && lastCarried.State.Value == CargoState.Rescued;
+                if (carried == null && rescued && lastCarried.Definition.requiredCarriers == 1)
+                    tossUntil = Time.time + TossSeconds;
+                lastCarried = carried;
+            }
+
+            int pose = 0;
+            if (!knockedDown)
+            {
+                if (avatar.Smashing.Value) pose = UpperSmash;
+                else if (carried != null && !coCarrying) pose = UpperCarry;
+                else if (Time.time < tossUntil) pose = UpperToss;
+            }
+            if (pose != 0) animator.SetInteger(UpperPoseParam, pose);
+
+            float target = pose != 0 ? 1f : 0f;
+            float speed = knockedDown ? 30f : pose != 0 ? 12f : 6f;
+            upperWeight = Mathf.MoveTowards(upperWeight, target, speed * deltaTime);
+            animator.SetLayerWeight(UpperBodyLayer, upperWeight);
+
+            if (pose == UpperSmash) CheckSmashHit();
+            else lastSmashCycle = 0f;
+        }
+
+        /// <summary>Sound and debris happen when the hammer lands, not whenever durability ticks down.</summary>
+        private void CheckSmashHit()
+        {
+            AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(UpperBodyLayer);
+            if (state.shortNameHash != SmashState) return;
+            float cycle = Mathf.Repeat(state.normalizedTime, 1f);
+            bool landed = lastSmashCycle < SmashHitTime && cycle >= SmashHitTime;
+            lastSmashCycle = cycle;
+            if (!landed) return;
+
+            squash = Mathf.Max(squash, 0.35f);
+            CargoItem target = CargoItem.FindSmashable(transform.position, config.smashRange);
+            if (target == null) return;
+            target.Bump();
+            GameAudio.PlayThrottled("smash", 0.08f);
+            FxBurst.Play(target.transform.position + Vector3.up * target.Height * 0.5f, new Color(0.75f, 0.55f, 0.3f), 7);
+        }
+
+        private int CurrentMood()
+        {
+            MatchDirector director = MatchDirector.Instance;
+            if (director == null) return 0;
+            MatchPhase phase = director.Phase.Value;
+            if (phase == MatchPhase.HalfOutro) return avatar.Side == Side.Collector ? MoodCheer : MoodGrumble;
+            if (phase != MatchPhase.Results) return 0;
+
+            int mine = avatar.Team == Team.Orange ? director.OrangeScore.Value : director.BlueScore.Value;
+            int theirs = avatar.Team == Team.Orange ? director.BlueScore.Value : director.OrangeScore.Value;
+            return mine >= theirs ? MoodCheer : MoodGrumble;
         }
 
         private void LateUpdate()
         {
             if (!avatar.IsSpawned) return;
             ApplyTeamColor();
+            UpdatePivot();
+            UpdateGear();
+            UpdateFace();
+            UpdateBlink();
+        }
 
+        /// <summary>A little extra life on top of the clips: lean into turns, stretch in a ram, squash on impacts.</summary>
+        private void UpdatePivot()
+        {
             float deltaTime = Mathf.Max(Time.deltaTime, 0.0001f);
-            Vector3 delta = transform.position - lastPosition;
-            delta.y = 0f;
-            lastPosition = transform.position;
-            smoothedSpeed = Mathf.MoveTowards(smoothedSpeed, delta.magnitude / deltaTime, 40f * deltaTime);
+            float yaw = transform.eulerAngles.y;
+            float turnRate = Mathf.DeltaAngle(lastYaw, yaw) / deltaTime;
+            lastYaw = yaw;
             float run = Mathf.Clamp01(smoothedSpeed / config.runSpeed);
-            walkPhase += deltaTime * (5f + 11f * run);
+            bank = Mathf.MoveTowards(bank, Mathf.Clamp(-turnRate * 0.035f, -16f, 16f) * run, 90f * deltaTime);
+            pivot.localRotation = Quaternion.Euler(0f, 0f, avatar.IsKnockedDown ? 0f : bank);
 
-            bool knockedDown = avatar.IsKnockedDown;
-            if (wasKnockedDown && !knockedDown) squash = 1f;
-            wasKnockedDown = knockedDown;
-            fall = Mathf.MoveTowards(fall, knockedDown ? 1f : 0f, deltaTime * (knockedDown ? 9f : 5f));
-            squash = Mathf.MoveTowards(squash, 0f, deltaTime * 3.5f);
-
-            float upright = 1f - fall;
-            float waddle = Mathf.Sin(walkPhase) * 11f * run * upright;
-            float bob = Mathf.Abs(Mathf.Sin(walkPhase)) * 0.16f * run * upright;
-            float lean = (avatar.IsDashing ? 30f : run * 7f) * upright;
-            pivot.localRotation = Quaternion.Euler(lean - 88f * fall, 0f, waddle);
-            pivot.localPosition = new Vector3(0f, bob + 0.28f * fall, 0f);
-
-            float stretch = avatar.IsDashing ? 0.12f : 0f;
-            float wobbleScale = Mathf.Sin(squash * 9f) * squash * 0.22f;
-            pivot.localScale = new Vector3(1f + wobbleScale - stretch, 1f - wobbleScale + stretch, 1f + wobbleScale);
-
-            UpdateHats();
-            UpdateHammer();
-            UpdateBlink(knockedDown);
+            stretch = Mathf.MoveTowards(stretch, avatar.IsDashing ? 0.14f : 0f, 2f * deltaTime);
+            squash = Mathf.MoveTowards(squash, 0f, 3.5f * deltaTime);
+            float wobble = Mathf.Sin(squash * 9f) * squash * 0.2f;
+            pivot.localScale = new Vector3(1f + wobble - stretch, 1f - wobble + stretch, 1f + wobble);
         }
 
         private void ApplyTeamColor()
         {
             if (colorsApplied) return;
             colorsApplied = true;
-            Material material = avatar.Team == Team.Orange ? config.orangeMaterial : config.blueMaterial;
-            foreach (Renderer part in teamRenderers) part.sharedMaterial = material;
+            if (avatar.Team == Team.Orange) return;
+            foreach (Renderer part in allRenderers)
+            {
+                Material[] slots = part.sharedMaterials;
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    if (slots[i] == config.orangeMaterial) slots[i] = config.blueMaterial;
+                }
+                part.sharedMaterials = slots;
+            }
         }
 
-        private void UpdateHats()
+        private void UpdateGear()
         {
             MatchDirector director = MatchDirector.Instance;
-            if (director == null) return;
-            bool collector = avatar.Side == Side.Collector;
-            if (collectorHat.activeSelf != collector) collectorHat.SetActive(collector);
-            if (interrupterHat.activeSelf == collector) interrupterHat.SetActive(!collector);
-        }
+            if (director != null)
+            {
+                bool collector = avatar.Side == Side.Collector;
+                if (collectorHat.activeSelf != collector) collectorHat.SetActive(collector);
+                if (interrupterHat.activeSelf == collector) interrupterHat.SetActive(!collector);
+            }
 
-        private void UpdateHammer()
-        {
-            bool smashing = avatar.Smashing.Value;
-            if (hammer.gameObject.activeSelf != smashing) hammer.gameObject.SetActive(smashing);
-            if (smashing) hammer.localRotation = Quaternion.Euler(20f + Mathf.Sin(Time.time * 24f) * 60f, 0f, 0f);
-        }
+            bool hammerOut = avatar.Smashing.Value && !avatar.IsKnockedDown;
+            if (hammer.activeSelf != hammerOut) hammer.SetActive(hammerOut);
 
-        private void UpdateBlink(bool knockedDown)
-        {
             // Flicker during the short immunity after getting up, so attackers can see it.
-            bool visible = knockedDown || !avatar.IsImmune || Mathf.Repeat(Time.time * 9f, 1f) > 0.35f;
+            bool visible = avatar.IsKnockedDown || !avatar.IsImmune || Mathf.Repeat(Time.time * 9f, 1f) > 0.35f;
             foreach (Renderer part in allRenderers)
             {
                 if (part.enabled != visible) part.enabled = visible;
             }
+        }
+
+        private void UpdateFace()
+        {
+            bool dizzy = avatar.IsKnockedDown && Time.time - knockedAt > 0.3f;
+            if (dizzyStars.activeSelf != dizzy) dizzyStars.SetActive(dizzy);
+            if (!dizzy) return;
+            starsAngle += 300f * Time.deltaTime;
+            starsBone.localRotation *= Quaternion.AngleAxis(starsAngle, Vector3.up);
+        }
+
+        private void UpdateBlink()
+        {
+            if (Time.time >= nextBlink)
+            {
+                blinkUntil = Time.time + 0.11f;
+                nextBlink = Time.time + Random.Range(1.8f, 5f);
+            }
+            if (Time.time >= blinkUntil || avatar.IsKnockedDown) return;
+
+            // The animator has already set the eyes this frame, so this only applies for now.
+            Vector3 lids = new Vector3(1f, 1f, 0.1f);
+            eyeLeft.localScale = Vector3.Scale(eyeLeft.localScale, lids);
+            eyeRight.localScale = Vector3.Scale(eyeRight.localScale, lids);
         }
     }
 }

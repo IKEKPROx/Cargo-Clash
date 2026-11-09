@@ -1,112 +1,67 @@
 using UnityEngine;
-using UnityEngine.Events;
 
 /// <summary>
-/// Keeps the terrain-following rover moving under a constant overhead follow shot.
-/// The Go event is the hand-off point for a future game flow.
+/// The stage behind the start screen: the truck drives down an endless road with the camera riding
+/// along. When the menus open, the camera swings to the side to make room for them.
 /// </summary>
 [DefaultExecutionOrder(-100)]
 public sealed class CargoClashStartMenu : MonoBehaviour
 {
     [SerializeField] private RoverTerrainAnimator rover;
     [SerializeField] private Transform vehicle;
-    [SerializeField] private Camera menuCamera;
-    [SerializeField] private CargoRoverIntroCamera cinematicCamera;
-    [SerializeField] private GameObject menuCanvas;
-    [SerializeField] private Vector3 fixedCameraPosition = new Vector3(0f, 27f, -18f);
-    [SerializeField] private Vector3 fixedCameraFocus = new Vector3(0f, 0.7f, 0f);
-    [SerializeField] private float driveStartX = -32f;
-    [SerializeField] private float driveZ = 0f;
-    [SerializeField, Min(0.1f)] private float driveSpeed = 4.2f;
-    [SerializeField] private UnityEvent onGoPressed = new UnityEvent();
+    [SerializeField] private Camera stageCamera;
+    [SerializeField, Min(0.1f)] private float driveSpeed = 5.5f;
+    [SerializeField, Min(0.1f)] private float swingSeconds = 1.2f;
 
-    public UnityEvent GoPressed => onGoPressed;
+    [Header("Camera, measured from the truck")]
+    public Vector3 titleCameraPosition = new Vector3(3.5f, 7.6f, -23f);
+    public Vector3 titleCameraFocus = new Vector3(0.8f, 4.2f, 0f);
+    public Vector3 menuCameraPosition = new Vector3(-8f, 7f, -19f);
+    public Vector3 menuCameraFocus = new Vector3(-5f, 3.6f, 0f);
 
-    private bool menuActive = true;
-    private bool startingPass = true;
-    private Transform fillLight;
-    private Vector3 fillLightRestPosition;
-    private CargoClashEndlessTerrain endlessTerrain;
+    private bool showingMenus;
+    private float swing;
 
-    public void Configure(RoverTerrainAnimator terrainRover, Transform roverRoot, Camera camera,
-        CargoRoverIntroCamera cinematic, GameObject canvas)
+    public void Configure(RoverTerrainAnimator terrainRover, Transform roverRoot, Camera camera)
     {
         rover = terrainRover;
         vehicle = roverRoot;
-        menuCamera = camera;
-        cinematicCamera = cinematic;
-        menuCanvas = canvas;
+        stageCamera = camera;
     }
 
     private void Awake()
     {
-        if (rover == null || vehicle == null || menuCamera == null || cinematicCamera == null || menuCanvas == null)
-        {
-            Debug.LogError("Cargo Clash start menu is missing a scene reference.", this);
-            enabled = false;
-            return;
-        }
-
         rover.SetRouteAnimation(false);
-        endlessTerrain = FindAnyObjectByType<CargoClashEndlessTerrain>();
-        cinematicCamera.enabled = false;
-        menuCamera.fieldOfView = 56f;
-        GameObject fill = GameObject.Find("Fill Light");
-        if (fill != null)
-        {
-            fillLight = fill.transform;
-            fillLightRestPosition = fillLight.position;
-        }
     }
 
     private void Update()
     {
-        if (!menuActive) return;
-
-        // Wait until the rover rig has captured the separately rooted cargo's rest offsets.
-        if (startingPass)
-        {
-            startingPass = false;
-            vehicle.SetPositionAndRotation(new Vector3(driveStartX, vehicle.position.y, driveZ),
-                Quaternion.Euler(0f, -90f, 0f));
-            rover.SetExternalTravel(0f);
-            return;
-        }
-
         float travel = driveSpeed * Time.deltaTime;
-        vehicle.position = new Vector3(vehicle.position.x + travel, vehicle.position.y, driveZ);
-        // Vehicle front faces local -Z after the 90-degree yaw.
+        vehicle.position += Vector3.right * travel;
+        // The truck's front is its local -Z, which faces along the road after the 90-degree yaw.
         rover.SetExternalTravel(-travel);
     }
 
     private void LateUpdate()
     {
-        if (!menuActive) return;
+        swing = Mathf.MoveTowards(swing, showingMenus ? 1f : 0f, Time.unscaledDeltaTime / swingSeconds);
+        float eased = Mathf.SmoothStep(0f, 1f, swing);
 
-        // Camera and focus share the vehicle's translation, never its pitch/roll.
-        // This preserves one overhead angle while the terrain moves underneath.
-        Vector3 cameraPosition = vehicle.position + fixedCameraPosition;
-        Vector3 cameraFocus = vehicle.position + fixedCameraFocus;
-        menuCamera.transform.SetPositionAndRotation(cameraPosition,
-            Quaternion.LookRotation(cameraFocus - cameraPosition, Vector3.up));
-        if (fillLight != null)
-            fillLight.position = new Vector3(vehicle.position.x + fillLightRestPosition.x,
-                fillLightRestPosition.y, fillLightRestPosition.z);
+        // The camera shares the truck's travel but not its bumps, so the view stays steady.
+        Vector3 position = vehicle.position + Vector3.Lerp(titleCameraPosition, menuCameraPosition, eased);
+        Vector3 focus = vehicle.position + Vector3.Lerp(titleCameraFocus, menuCameraFocus, eased);
+        stageCamera.transform.SetPositionAndRotation(position, Quaternion.LookRotation(focus - position, Vector3.up));
     }
 
-    public void OnGoPressed()
+    public void SwingToMenus()
     {
-        if (!menuActive) return;
+        showingMenus = true;
+    }
 
-        menuActive = false;
-        menuCanvas.SetActive(false);
-        if (fillLight != null) fillLight.position = fillLightRestPosition;
-        rover.SetRouteAnimation(true);
-        rover.RestartRoute();
-        if (endlessTerrain != null) endlessTerrain.RefreshNow();
-        rover.RefreshRigNow();
-        cinematicCamera.enabled = true;
-        onGoPressed.Invoke();
-        enabled = false;
+    /// <summary>Straight to the menu view with no camera move, for coming back from a match.</summary>
+    public void JumpToMenus()
+    {
+        showingMenus = true;
+        swing = 1f;
     }
 }

@@ -158,6 +158,19 @@ namespace CargoClash
                 lastSmash = smash;
                 SetSmashingRpc(smash);
             }
+            if (smash && wish.sqrMagnitude <= 0.01f) FaceSmashTarget(deltaTime);
+        }
+
+        /// <summary>Standing still and smashing: turn so the hammer lands on the cargo.</summary>
+        private void FaceSmashTarget(float deltaTime)
+        {
+            CargoItem target = CargoItem.FindSmashable(transform.position, config.smashRange);
+            if (target == null) return;
+            Vector3 toTarget = target.transform.position - transform.position;
+            toTarget.y = 0f;
+            if (toTarget.sqrMagnitude < 0.01f) return;
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(toTarget),
+                config.turnDegreesPerSecond * deltaTime);
         }
 
         private void TickRunning(CargoItem carried, Vector3 wish, float deltaTime)
@@ -237,6 +250,8 @@ namespace CargoClash
         {
             dashUntil = 0f;
             slide = direction * config.knockbackSpeed;
+            // Face whoever hit us, so the fall goes the way the hit pushed.
+            if (direction.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(-direction);
         }
 
         // ---- Host: rules ----

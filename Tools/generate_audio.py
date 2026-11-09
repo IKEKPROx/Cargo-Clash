@@ -90,6 +90,28 @@ def midi(number):
     return 440.0 * 2 ** ((number - 69) / 12)
 
 
+def make_rotor_loop():
+    """Heavy blade thumps over rushing air. The ends match, so it loops without a click."""
+    seconds = 2.0
+    blade_passes = 16
+    length = count(seconds)
+    overlap = count(0.12)
+    air = lowpass(noise(seconds + 0.12, 7), 0.2)
+    rumble = lowpass(noise(seconds + 0.12, 8), 0.03)
+    for i in range(overlap):
+        blend = i / overlap
+        air[i] = air[i] * blend + air[length + i] * (1 - blend)
+        rumble[i] = rumble[i] * blend + rumble[length + i] * (1 - blend)
+
+    result = []
+    for i in range(length):
+        beat = (i / length * blade_passes) % 1.0
+        thump = math.exp(-5.5 * beat)
+        low = math.sin(2 * math.pi * 62 * beat / (blade_passes / seconds)) * math.exp(-8 * beat)
+        result.append(air[i] * (0.18 + 0.82 * thump) * 0.8 + rumble[i] * 2.0 + low * 0.55)
+    return result
+
+
 def make_effects():
     save("bonk", mix(decay(sweep(260, 70, 0.28, 0.5), 7), [s * 0.5 for s in decay(lowpass(noise(0.14, 2), 0.45), 9)]))
     save("whoosh", [s * math.sin(math.pi * i / count(0.26)) for i, s in enumerate(lowpass(noise(0.26, 3), 0.18))])
@@ -111,18 +133,15 @@ def make_effects():
         envelope = min(1.0, i / 400) * min(1.0, (whistle_length - i) / 800)
         whistle.append(math.sin(phase) * envelope)
     save("whistle", whistle)
-    chop_length = count(4.0)
-    chop_noise = lowpass(noise(4.0, 7), 0.14)
-    helicopter = []
-    for i in range(chop_length):
-        t = i / RATE
-        gate = 0.25 + 0.75 * (0.5 + 0.5 * math.sin(2 * math.pi * 11 * t)) ** 4
-        helicopter.append(chop_noise[i] * gate * min(1.0, t / 2.5) * min(1.0, (4.0 - t) / 0.4))
-    save("helicopter", helicopter)
+    save("rotor", make_rotor_loop())
+    save("clunk", mix(decay(sweep(620, 260, 0.09), 7), [s * 0.7 for s in decay(lowpass(noise(0.09, 11), 0.8), 8)],
+                      [0.0] * count(0.06) + [s * 0.6 for s in decay(sweep(180, 90, 0.16), 6)]))
     fanfare = []
     for number, length in ((67, 0.13), (72, 0.13), (76, 0.13), (79, 0.26), (76, 0.13), (79, 0.5)):
         fanfare += mix(note(midi(number), length, "square", 0.6), note(midi(number - 12), length, "triangle", 0.8))
     save("fanfare", fanfare)
+    save("click", mix(decay(sweep(880, 540, 0.05), 5), [s * 0.25 for s in decay(lowpass(noise(0.03, 13), 0.7), 8)]))
+    save("locked", mix(decay(sweep(190, 120, 0.13), 5), [0.0] * count(0.09) + decay(sweep(150, 95, 0.14), 5)))
 
 
 def make_music():

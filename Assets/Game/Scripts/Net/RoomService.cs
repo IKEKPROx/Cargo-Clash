@@ -33,6 +33,9 @@ namespace CargoClash
         public bool IsPractice { get; private set; }
         public bool IsLanRoom { get; private set; }
 
+        /// <summary>The level this computer picked. If it hosts, the roster shares this with everyone.</summary>
+        public int SelectedLevel { get; set; }
+
         private NetworkManager net;
         private UnityTransport transport;
         private ISession session;

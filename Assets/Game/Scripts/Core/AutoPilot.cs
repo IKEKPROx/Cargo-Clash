@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.IO;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace CargoClash
 {
@@ -18,6 +20,7 @@ namespace CargoClash
         public static float SmashScaleOverride;
         public static ushort PortOverride;
         public static bool LocalIsBot;
+        public static float CameraZoom;
 
         private string mode;
         private string address = "127.0.0.1";
@@ -30,6 +33,9 @@ namespace CargoClash
         private bool again;
         private bool waitHostLeave;
         private bool forceCoCarry;
+        private bool uncapped;
+        private bool hideUi;
+        private string tourSpots;
         private int errorCount;
         private int shotNumber;
 
@@ -44,6 +50,15 @@ namespace CargoClash
             if (Array.IndexOf(args, "-ccMode") < 0) return;
             AutoPilot pilot = rig.AddComponent<AutoPilot>();
             pilot.Parse(args);
+
+            // Without a display nothing limits the frame rate, and thousands of frames per second
+            // make a test behave unlike a real game. 60 is what players see.
+            if (Application.isBatchMode) Application.targetFrameRate = 60;
+            if (pilot.uncapped)
+            {
+                QualitySettings.vSyncCount = 0;
+                Application.targetFrameRate = -1;
+            }
         }
 
         private void Parse(string[] args)
@@ -59,6 +74,7 @@ namespace CargoClash
                     case "-ccSmashScale": SmashScaleOverride = float.Parse(next); break;
                     case "-ccPort": PortOverride = ushort.Parse(next); break;
                     case "-ccBotLocal": LocalIsBot = true; break;
+                    case "-ccCameraZoom": CameraZoom = float.Parse(next); break;
                     case "-ccShotDir": shotDirectory = next; break;
                     case "-ccShotEvery": shotEvery = float.Parse(next); break;
                     case "-ccExpectClients": expectClients = int.Parse(next); break;
@@ -68,6 +84,9 @@ namespace CargoClash
                     case "-ccAgain": again = true; break;
                     case "-ccWaitHostLeave": waitHostLeave = true; break;
                     case "-ccForceCoCarry": forceCoCarry = true; break;
+                    case "-ccUncapped": uncapped = true; break;
+                    case "-ccTour": tourSpots = next; break;
+                    case "-ccHideUi": hideUi = true; break;
                 }
             }
         }
@@ -99,6 +118,8 @@ namespace CargoClash
             NetworkManager net = NetworkManager.Singleton;
             if (!string.IsNullOrEmpty(shotDirectory) && mode != "menu") StartCoroutine(TakeScreenshots());
             if (forceCoCarry) StartCoroutine(ForceCoCarry());
+            if (uncapped) StartCoroutine(MeasureFrames());
+            if (!string.IsNullOrEmpty(tourSpots)) StartCoroutine(TourTheLevel());
 
             if (useUi)
             {
@@ -122,11 +143,9 @@ namespace CargoClash
                     _ = rooms.JoinRoom(address);
                     break;
                 case "menu":
-                    FindAnyObjectByType<CargoClashStartMenu>().OnGoPressed();
-                    yield return new WaitForSeconds(1f);
-                    Shot();
-                    yield return new WaitForSeconds(1f);
-                    Application.Quit(0);
+                    yield return TourTheMenus(net);
+                    Log($"DONE errors={errorCount} timedOut=False");
+                    Application.Quit(errorCount > 0 ? 1 : 0);
                     yield break;
                 case "practice-ui":
                 case "host-ui":
@@ -193,6 +212,38 @@ namespace CargoClash
             bool timedOut = Time.realtimeSinceStartup - startedAt >= timeoutSeconds;
             Log($"DONE errors={errorCount} timedOut={timedOut}");
             if (quitAtEnd) Application.Quit(errorCount > 0 || timedOut ? 1 : 0);
+        }
+
+        /// <summary>
+        /// Points the camera at each "x,z" spot in turn and takes a picture, so every corner of the
+        /// level can be checked without waiting for a bot to walk there.
+        /// </summary>
+        private IEnumerator TourTheLevel()
+        {
+            while (MatchDirector.Instance == null || !MatchDirector.Instance.IsSpawned || MatchDirector.Instance.Phase.Value != MatchPhase.Playing)
+                yield return null;
+            foreach (string spot in tourSpots.Split(';'))
+            {
+                string[] parts = spot.Split(',');
+                FollowCamera.TestFocus = new Vector3(float.Parse(parts[0]), 0f, float.Parse(parts[1]));
+                yield return new WaitForSeconds(1.2f);
+                Shot();
+                yield return new WaitForSeconds(0.2f);
+            }
+            FollowCamera.TestFocus = null;
+        }
+
+        /// <summary>Logs the frame rate every few seconds, to compare how heavy two builds are.</summary>
+        private IEnumerator MeasureFrames()
+        {
+            while (true)
+            {
+                int frames = Time.frameCount;
+                float started = Time.realtimeSinceStartup;
+                yield return new WaitForSecondsRealtime(5f);
+                float seconds = Time.realtimeSinceStartup - started;
+                Log($"FPS {(Time.frameCount - frames) / seconds:0}");
+            }
         }
 
         /// <summary>
@@ -264,41 +315,165 @@ namespace CargoClash
             }
         }
 
+        private void Expect(bool passed, string what)
+        {
+            if (!passed) errorCount++;
+            Log($"CHECK {(passed ? "ok" : "FAILED")}: {what}");
+        }
+
+        /// <summary>Clicks a button the way the mouse would, so it fails if something is covering the button.</summary>
+        private void Click(Button button)
+        {
+            // Without a display nothing is drawn, so there is nothing for a click to hit.
+            if (Application.isBatchMode)
+            {
+                button.onClick.Invoke();
+                return;
+            }
+
+            RectTransform rect = (RectTransform)button.transform;
+            PointerEventData pointer = new PointerEventData(EventSystem.current)
+            {
+                position = RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(rect.rect.center)),
+            };
+            List<RaycastResult> hits = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(pointer, hits);
+            bool reached = hits.Count > 0 && hits[0].gameObject == button.gameObject;
+            if (!reached)
+            {
+                errorCount++;
+                Log($"CHECK FAILED: {button.name} under {rect.parent.name} can't be clicked. Top hit: {(hits.Count > 0 ? hits[0].gameObject.name : "nothing")}");
+                return;
+            }
+            ExecuteEvents.Execute(button.gameObject, pointer, ExecuteEvents.pointerClickHandler);
+        }
+
+        /// <summary>Goes through every screen of the start scene with the real buttons, and takes a picture of each.</summary>
+        private IEnumerator TourTheMenus(NetworkManager net)
+        {
+            TitleFlow flow = FindAnyObjectByType<TitleFlow>();
+            yield return new WaitForSeconds(3f);
+            Expect(flow.titlePanel.activeSelf, "the game opens on the title");
+            yield return ShotThenWait();
+            yield return new WaitForSeconds(6f);
+            yield return ShotThenWait();
+
+            // The button held down, to see its face sink.
+            PointerEventData press = new PointerEventData(EventSystem.current);
+            ExecuteEvents.Execute(flow.playButton.gameObject, press, ExecuteEvents.pointerDownHandler);
+            yield return new WaitForSeconds(0.4f);
+            yield return ShotThenWait();
+            ExecuteEvents.Execute(flow.playButton.gameObject, press, ExecuteEvents.pointerUpHandler);
+
+            Click(flow.playButton);
+            yield return new WaitForSeconds(0.6f);
+            yield return ShotThenWait();
+            yield return new WaitForSeconds(2f);
+            Expect(flow.menuPanel.activeSelf && !flow.titlePanel.activeSelf, "Play opens the menu");
+            yield return ShotThenWait();
+
+            flow.codeInput.text = "NOSUCHROOM";
+            yield return null;
+            yield return null;
+            Click(flow.joinButton);
+            yield return new WaitForSeconds(0.5f);
+            Expect(flow.menuPanel.activeSelf && flow.statusText.text.Length > 0, "a code that can't work leaves a message on the menu");
+            yield return ShotThenWait();
+            flow.codeInput.text = "";
+            yield return new WaitForSeconds(0.2f);
+
+            Click(flow.practiceButton);
+            yield return new WaitForSeconds(1.5f);
+            Expect(flow.levelPanel.activeSelf, "Practice opens the level select");
+            Expect(flow.statusText.text.Length == 0, "the old message is gone");
+            yield return ShotThenWait();
+
+            GameConfig config = GameConfig.Get();
+            int locked = 0;
+            for (int i = 0; i < flow.levelCards.Length; i++)
+            {
+                if (config.Level(i).IsReady) continue;
+                locked++;
+                Click(flow.levelCards[i].button);
+                yield return null;
+                Expect(flow.levelPanel.activeSelf && !net.IsListening, $"locked level {i + 1} starts nothing");
+            }
+            Log($"LEVELS total={config.levels.Length} locked={locked} cards={flow.levelCards.Length}");
+            yield return new WaitForSeconds(0.1f);
+            yield return ShotThenWait();
+
+            Click(flow.levelBackButton);
+            yield return new WaitForSeconds(1f);
+            Expect(flow.menuPanel.activeSelf, "Back returns to the menu");
+
+            Click(flow.createButton);
+            yield return new WaitForSeconds(1f);
+            Expect(flow.levelPanel.activeSelf, "Create Room opens the level select");
+            Click(flow.levelCards[0].button);
+            yield return new WaitForSeconds(2f);
+            Expect(flow.lobbyPanel.activeSelf, "choosing the tutorial opens the lobby");
+            Expect(SessionRoster.Instance != null && SessionRoster.Instance.Level.Value == 0, "the room knows its level");
+            Click(flow.fillButton);
+            Click(flow.readyButton);
+            yield return new WaitForSeconds(0.5f);
+            yield return ShotThenWait();
+
+            Click(flow.leaveButton);
+            yield return new WaitForSeconds(1.5f);
+            Expect(flow.menuPanel.activeSelf && !net.IsListening, "Leave returns to the menu");
+            yield return ShotThenWait();
+            yield return new WaitForSeconds(0.5f);
+        }
+
+        /// <summary>A screenshot is taken at the end of the frame, so this keeps later changes out of the picture.</summary>
+        private IEnumerator ShotThenWait()
+        {
+            Shot();
+            yield return null;
+        }
+
         /// <summary>Goes through the real title and lobby buttons, the way a player would.</summary>
         private IEnumerator DriveMenus(NetworkManager net)
         {
             yield return new WaitForSeconds(1f);
             TitleFlow flow = FindAnyObjectByType<TitleFlow>();
-            flow.startMenu.OnGoPressed();
+            Click(flow.playButton);
             yield return new WaitForSeconds(1f);
 
             if (mode == "practice")
             {
-                flow.practiceButton.onClick.Invoke();
+                Click(flow.practiceButton);
+                yield return new WaitForSeconds(1f);
+                Click(flow.levelCards[0].button);
                 yield break;
             }
 
             if (mode == "host")
             {
-                flow.createButton.onClick.Invoke();
-                while (SessionRoster.Instance == null || net.ConnectedClientsIds.Count < expectClients) yield return null;
-                flow.fillButton.onClick.Invoke();
+                Click(flow.createButton);
                 yield return new WaitForSeconds(1f);
-                flow.readyButton.onClick.Invoke();
+                Click(flow.levelCards[0].button);
+                while (SessionRoster.Instance == null || net.ConnectedClientsIds.Count < expectClients) yield return null;
+                yield return new WaitForSeconds(1f);
+                Click(flow.fillButton);
+                yield return new WaitForSeconds(1f);
+                Click(flow.readyButton);
                 while (!SessionRoster.Instance.CanStart) yield return null;
                 yield return new WaitForSeconds(1f);
                 Log($"LOBBY code={RoomService.Instance.RoomCode} players={SessionRoster.Instance.Entries.Count} canStart={SessionRoster.Instance.CanStart}");
                 Shot();
                 yield return new WaitForSeconds(1f);
-                flow.startButton.onClick.Invoke();
+                Click(flow.startButton);
                 yield break;
             }
 
             flow.codeInput.text = address;
-            flow.joinButton.onClick.Invoke();
+            yield return null;
+            yield return null;
+            Click(flow.joinButton);
             while (SessionRoster.Instance == null || !SessionRoster.Instance.IsSpawned) yield return null;
             yield return new WaitForSeconds(1f);
-            flow.readyButton.onClick.Invoke();
+            Click(flow.readyButton);
             Log($"JOINED code={RoomService.Instance.RoomCode}");
         }
 
@@ -315,6 +490,10 @@ namespace CargoClash
         {
             if (string.IsNullOrEmpty(shotDirectory)) return;
             Directory.CreateDirectory(shotDirectory);
+            if (hideUi)
+            {
+                foreach (Canvas canvas in FindObjectsByType<Canvas>()) canvas.enabled = false;
+            }
             string path = Path.Combine(shotDirectory, $"{mode}-{shotNumber++:00}.png");
             ScreenCapture.CaptureScreenshot(path);
             Log("SHOT " + path);

@@ -15,16 +15,36 @@ namespace CargoClash
             return instance;
         }
 
+        public LevelInfo Level(int index) => levels[Mathf.Clamp(index, 0, levels.Length - 1)];
+
         [Header("Scenes")]
         public string titleScene = "CargoRover";
-        public string levelScene = "Level01";
+
+        [Header("Levels")]
+        [Tooltip("In the order the level select shows them. The first one is the tutorial.")]
+        public LevelInfo[] levels;
 
         [Header("Match")]
         public int maxPlayers = 6;
         public int teamSize = 3;
-        public float halfSeconds = 180f;
+        public float halfSeconds = 60f;
+        [Tooltip("The music speeds up and the timer turns red for this long at the end of a half.")]
+        public float finalStretchSeconds = 15f;
         public float halfIntroSeconds = 4f;
-        public float halfOutroSeconds = 3f;
+
+        [Header("Helicopter")]
+        [Tooltip("It starts flying in this long before it arrives over the truck.")]
+        public float helicopterApproachSeconds = 12f;
+        [Tooltip("The warning banner shows this long before the half ends.")]
+        public float helicopterWarningSeconds = 10f;
+        [Tooltip("It arrives this long after time runs out, so the camera has time to reach the truck.")]
+        public float helicopterArrivalDelay = 1.2f;
+        [Tooltip("If the cargo runs out early, it arrives this long after the half ends.")]
+        public float helicopterHurrySeconds = 3f;
+        public float helicopterLowerSeconds = 1f;
+        public float helicopterClipSeconds = 0.4f;
+        public float helicopterLiftSeconds = 1.7f;
+        public float helicopterLeaveSeconds = 2.3f;
 
         [Header("Movement")]
         public float runSpeed = 6.5f;
@@ -46,7 +66,7 @@ namespace CargoClash
         [Header("Interaction")]
         public float pickupRange = 1.6f;
         public float smashRange = 1.8f;
-        public float headHeight = 1.55f;
+        public float headHeight = 1.46f;
         [Tooltip("Scales every cargo type's smash time. Playtesting tunes this before individual values.")]
         public float smashTimeMultiplier = 1f;
 
@@ -70,5 +90,8 @@ namespace CargoClash
         public float EffectiveHalfSeconds => AutoPilot.HalfSecondsOverride > 0f ? AutoPilot.HalfSecondsOverride : halfSeconds;
 
         public float EffectiveSmashMultiplier => AutoPilot.SmashScaleOverride > 0f ? AutoPilot.SmashScaleOverride : smashTimeMultiplier;
+
+        /// <summary>From the helicopter's arrival until it has flown off with the box.</summary>
+        public float HelicopterWorkSeconds => helicopterLowerSeconds + helicopterClipSeconds + helicopterLiftSeconds + helicopterLeaveSeconds;
     }
 }

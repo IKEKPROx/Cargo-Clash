@@ -27,6 +27,7 @@ namespace CargoClash
         public CargoDefinition Definition => definition;
         public float Radius => Mathf.Max(halfExtents.x, halfExtents.z);
         public float Height => halfExtents.y * 2f;
+        public float LastHurtTime { get; private set; } = -100f;
         public bool HasFreeSlot => definition.requiredCarriers > 1 && State.Value != CargoState.Rescued &&
             State.Value != CargoState.Destroyed && (CarrierA.Value == NetIds.None || CarrierB.Value == NetIds.None);
 
@@ -35,6 +36,7 @@ namespace CargoClash
         private Rigidbody body;
         private Collider[] colliders;
         private float shakeUntil;
+        private float squash;
         private Vector3 visualRest;
 
         public static CargoItem Find(ulong networkObjectId)
@@ -124,7 +126,7 @@ namespace CargoClash
             if (current < previous)
             {
                 shakeUntil = Time.time + 0.12f;
-                GameAudio.PlayThrottled("smash", 0.16f);
+                LastHurtTime = Time.time;
             }
         }
 
@@ -138,6 +140,10 @@ namespace CargoClash
                 visual.localPosition = Time.time < shakeUntil
                     ? visualRest + Random.insideUnitSphere * 0.06f
                     : visualRest;
+
+                squash = Mathf.MoveTowards(squash, 0f, 4f * Time.deltaTime);
+                float wobble = Mathf.Sin(squash * 9f) * squash * 0.18f;
+                visual.localScale = new Vector3(1f + wobble, 1f - wobble, 1f + wobble);
             }
         }
 
@@ -151,6 +157,28 @@ namespace CargoClash
             transform.SetPositionAndRotation(
                 carrier.transform.position + Vector3.up * (config.headHeight + halfExtents.y),
                 carrier.transform.rotation * Quaternion.Euler(wobble * 0.5f, 0f, wobble));
+        }
+
+        /// <summary>
+        /// Moves only the model, so the replicated position stays where the host put it. The
+        /// helicopter uses this to carry rescued cargo away inside the box.
+        /// </summary>
+        public void ShowCarriedAway(Vector3 pivotFrom, Vector3 pivotTo, Quaternion turn)
+        {
+            if (visual == null) return;
+            Vector3 rest = transform.TransformPoint(visualRest);
+            visual.SetPositionAndRotation(pivotTo + turn * (rest - pivotFrom), turn * transform.rotation);
+        }
+
+        /// <summary>A squash and wobble when the hammer lands. Only for show.</summary>
+        public void Bump()
+        {
+            squash = 1f;
+        }
+
+        public void HideModel()
+        {
+            if (visual != null) visual.gameObject.SetActive(false);
         }
 
         /// <summary>Where a co-carrier stands: one on each side of the item.</summary>
@@ -230,6 +258,7 @@ namespace CargoClash
         public bool ServerTryGrab(PlayerAvatar avatar)
         {
             ulong id = avatar.NetworkObjectId;
+            if (CarrierA.Value == id || CarrierB.Value == id) return false;
             if (definition.requiredCarriers > 1)
             {
                 if (!HasFreeSlot) return false;

@@ -9,6 +9,9 @@ namespace CargoClash
     /// <summary>Timer, scores, banners, results, and the labels drawn over the game world.</summary>
     public sealed class MatchHud : MonoBehaviour
     {
+        private static readonly Vector2 BannerInPlay = new Vector2(0f, 250f);
+        private static readonly Vector2 BannerUnderShot = new Vector2(0f, -455f);
+
         private sealed class Popup
         {
             public Text Label;
@@ -30,8 +33,13 @@ namespace CargoClash
         public Text bannerText;
 
         [Header("Bottom")]
+        [Tooltip("The ram bar and key hints, hidden while the helicopter sequence plays.")]
+        public GameObject playHud;
         public Image ramFill;
         public Text ramLabel;
+
+        [Header("Transitions")]
+        public Image screenFade;
 
         [Header("World overlays")]
         public RectTransform overlayRoot;
@@ -61,9 +69,10 @@ namespace CargoClash
         private int arrowsUsed;
         private Camera worldCamera;
         private bool resultsShown;
-        private float lastThirtyShownAt = -100f;
-        private bool lastThirtyDone;
-        private bool whistlePlayed;
+        private string timedBanner = "";
+        private float timedBannerUntil;
+        private bool finalStretchAnnounced;
+        private bool helicopterAnnounced;
         private MatchPhase lastPhase = MatchPhase.Loading;
 
         private void Awake()
@@ -96,23 +105,31 @@ namespace CargoClash
             UpdateResults(director);
             UpdatePopups();
             UpdatePause();
+            UpdateFade(director);
+
+            bool inPlay = director.Phase.Value == MatchPhase.Playing || director.Phase.Value == MatchPhase.HalfIntro;
+            if (playHud.activeSelf != inPlay) playHud.SetActive(inPlay);
 
             BeginOverlays();
-            DrawCargoOverlays();
-            DrawPlayerOverlays();
-            DrawPrompt(director);
-            DrawArrows();
+            if (inPlay)
+            {
+                DrawCargoOverlays();
+                DrawPlayerOverlays();
+                DrawPrompt(director);
+                DrawArrows();
+            }
             EndOverlays();
         }
 
         private void UpdateTopBar(MatchDirector director)
         {
-            float seconds = director.Phase.Value == MatchPhase.Playing
+            MatchPhase phase = director.Phase.Value;
+            float seconds = phase == MatchPhase.Playing
                 ? director.SecondsLeft
-                : director.Phase.Value == MatchPhase.HalfOutro ? 0f : GameConfig.Get().EffectiveHalfSeconds;
+                : phase == MatchPhase.HalfIntro || phase == MatchPhase.Loading ? GameConfig.Get().EffectiveHalfSeconds : 0f;
             int whole = Mathf.CeilToInt(seconds);
             timerText.text = $"{whole / 60}:{whole % 60:00}";
-            timerText.color = seconds <= 30f && director.Phase.Value == MatchPhase.Playing
+            timerText.color = seconds <= GameConfig.Get().finalStretchSeconds && phase == MatchPhase.Playing
                 ? new Color(1f, 0.35f, 0.25f)
                 : Color.white;
 
@@ -127,10 +144,17 @@ namespace CargoClash
         private void UpdateBanner(MatchDirector director)
         {
             MatchPhase phase = director.Phase.Value;
+            GameConfig config = GameConfig.Get();
+            bannerText.rectTransform.anchoredPosition = phase == MatchPhase.HalfOutro ? BannerUnderShot : BannerInPlay;
             if (phase != lastPhase)
             {
-                if (phase == MatchPhase.Playing) GameAudio.Play("whistle");
-                if (phase == MatchPhase.HalfOutro) GameAudio.Play("whistle");
+                if (phase == MatchPhase.Playing || phase == MatchPhase.HalfOutro) GameAudio.Play("whistle");
+                if (phase == MatchPhase.HalfIntro)
+                {
+                    finalStretchAnnounced = false;
+                    helicopterAnnounced = false;
+                    timedBannerUntil = 0f;
+                }
                 lastPhase = phase;
             }
 
@@ -144,22 +168,51 @@ namespace CargoClash
                     bannerText.text = prefix + goal + "\n" + Mathf.CeilToInt(director.SecondsLeft);
                     break;
                 case MatchPhase.HalfOutro:
-                    bannerText.text = GameText.TimeUp;
+                    float sinceArrival = (float)(director.Now - director.HelicopterArrivesAt.Value);
+                    bool lifting = sinceArrival >= config.helicopterLowerSeconds + config.helicopterClipSeconds;
+                    if (lifting) bannerText.text = GameText.HelicopterLeaves(director.HalfRescued.Value);
+                    else bannerText.text = director.CargoRanOut.Value ? GameText.NoCargoLeft : GameText.TimeUp;
                     break;
                 case MatchPhase.Playing:
-                    bool showLastThirty = !lastThirtyDone && director.SecondsLeft <= 30f;
-                    if (showLastThirty)
+                    float left = director.SecondsLeft;
+                    if (!finalStretchAnnounced && left <= config.finalStretchSeconds)
                     {
-                        lastThirtyDone = true;
-                        lastThirtyShownAt = Time.time;
+                        finalStretchAnnounced = true;
+                        ShowTimedBanner(GameText.SecondsLeft(Mathf.CeilToInt(left)));
                     }
-                    bannerText.text = Time.time - lastThirtyShownAt < 2f ? GameText.LastThirty : "";
+                    if (!helicopterAnnounced && left <= config.helicopterWarningSeconds)
+                    {
+                        helicopterAnnounced = true;
+                        ShowTimedBanner(GameText.HelicopterIncoming);
+                    }
+                    bannerText.text = Time.time < timedBannerUntil ? timedBanner : "";
                     break;
                 default:
                     bannerText.text = "";
                     break;
             }
-            if (phase == MatchPhase.HalfIntro) lastThirtyDone = false;
+        }
+
+        private void ShowTimedBanner(string message)
+        {
+            timedBanner = message;
+            timedBannerUntil = Time.time + 2.2f;
+        }
+
+        /// <summary>Hides the reset between halves: black at the end of the first half, clear shortly after the next begins.</summary>
+        private void UpdateFade(MatchDirector director)
+        {
+            const float fadeSeconds = 0.35f;
+            float alpha = 0f;
+            MatchPhase phase = director.Phase.Value;
+            if (phase == MatchPhase.HalfIntro)
+                alpha = 1f - (GameConfig.Get().halfIntroSeconds - director.SecondsLeft) / fadeSeconds;
+            else if (phase == MatchPhase.HalfOutro && director.Half.Value == 1)
+                alpha = 1f - director.SecondsLeft / fadeSeconds;
+
+            alpha = Mathf.Clamp01(alpha);
+            screenFade.color = new Color(0f, 0f, 0f, alpha);
+            if (screenFade.enabled != alpha > 0f) screenFade.enabled = alpha > 0f;
         }
 
         private void UpdateRamBar()
@@ -174,21 +227,16 @@ namespace CargoClash
 
         private void UpdateMusic(MatchDirector director)
         {
-            if (director.Phase.Value == MatchPhase.Playing)
+            MatchPhase phase = director.Phase.Value;
+            GameAudio.SetMusicDucked(phase == MatchPhase.HalfOutro);
+            if (phase == MatchPhase.Playing)
             {
-                bool fast = director.SecondsLeft <= 30f;
+                bool fast = director.SecondsLeft <= GameConfig.Get().finalStretchSeconds;
                 GameAudio.SetMusic("music", fast ? 1.22f : 1f);
-                bool helicopterNear = director.SecondsLeft <= 12f;
-                if (helicopterNear && !whistlePlayed)
-                {
-                    whistlePlayed = true;
-                    GameAudio.Play("helicopter", 0.8f);
-                }
             }
-            else
+            else if (phase == MatchPhase.Results)
             {
-                whistlePlayed = false;
-                if (director.Phase.Value == MatchPhase.Results) GameAudio.SetMusic(null);
+                GameAudio.SetMusic(null);
             }
         }
 
@@ -364,7 +412,8 @@ namespace CargoClash
                 if (nearby == null) return;
                 if (local.Side == Side.Interrupter && nearby.State.Value == CargoState.Ground) message = GameText.PromptSmash;
                 else message = nearby.Definition.requiredCarriers > 1 ? GameText.PromptLarge : GameText.PromptPickUp;
-                anchor = nearby.transform.position;
+                // Below the cargo, so it doesn't cover its face.
+                anchor = nearby.transform.position + Vector3.back * nearby.Radius;
             }
 
             Vector3 screen = view.WorldToScreenPoint(anchor);

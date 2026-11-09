@@ -40,8 +40,11 @@ namespace CargoClash
         public NetworkList<RosterEntry> Entries;
         public readonly NetworkVariable<bool> FillWithBots = new NetworkVariable<bool>(false);
         public readonly NetworkVariable<bool> InGame = new NetworkVariable<bool>(false);
+        public readonly NetworkVariable<int> Level = new NetworkVariable<int>(0);
 
         private GameConfig config;
+
+        private string LevelScene => config.Level(Level.Value).scene;
 
         private void Awake()
         {
@@ -54,6 +57,7 @@ namespace CargoClash
             Instance = this;
             if (!IsServer) return;
 
+            Level.Value = RoomService.Instance.SelectedLevel;
             NetworkManager.OnClientConnectedCallback += AddHuman;
             NetworkManager.OnClientDisconnectCallback += RemoveHuman;
             NetworkManager.SceneManager.OnLoadEventCompleted += HandleSceneLoaded;
@@ -135,13 +139,13 @@ namespace CargoClash
             RemoveBots();
             if (FillWithBots.Value || RoomService.Instance.IsPractice) AddBots();
             InGame.Value = true;
-            NetworkManager.SceneManager.LoadScene(config.levelScene, LoadSceneMode.Single);
+            NetworkManager.SceneManager.LoadScene(LevelScene, LoadSceneMode.Single);
         }
 
         public void ServerRestartMatch()
         {
             if (!IsServer) return;
-            NetworkManager.SceneManager.LoadScene(config.levelScene, LoadSceneMode.Single);
+            NetworkManager.SceneManager.LoadScene(LevelScene, LoadSceneMode.Single);
         }
 
         public void ServerBackToLobby()
@@ -161,7 +165,7 @@ namespace CargoClash
         private void HandleSceneLoaded(string sceneName, LoadSceneMode mode,
             List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
         {
-            if (sceneName != config.levelScene) return;
+            if (sceneName != LevelScene) return;
             GameObject director = Instantiate(config.directorPrefab);
             director.GetComponent<NetworkObject>().Spawn(true);
         }
