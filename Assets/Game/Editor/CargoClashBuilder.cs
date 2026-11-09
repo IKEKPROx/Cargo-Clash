@@ -1020,18 +1020,9 @@ public static partial class CargoClashBuilder
         GameObject model = NewStaticModel("FirstPersonHands", rigObject.transform);
         model.name = "Hands";
         rig.content = model;
-        Transform handLeft = Group("HandLeft", model.transform);
-        Transform handRight = Group("HandRight", model.transform);
-        rig.handLeft = handLeft;
-        rig.handRight = handRight;
-        rig.armLeft = FindInModel(model, "Arm_L");
-        rig.armRight = FindInModel(model, "Arm_R");
-
-        rig.openLeft = HandPart(model, "Hand_L_Open", handLeft);
-        rig.fistLeft = HandPart(model, "Hand_L_Fist", handLeft);
-        rig.openRight = HandPart(model, "Hand_R_Open", handRight);
-        rig.fistRight = HandPart(model, "Hand_R_Fist", handRight);
-        rig.hammer = HandPart(model, "Hammer", handRight);
+        rig.rightArm = BuildFirstPersonArm(model, "R");
+        rig.leftArm = BuildFirstPersonArm(model, "L");
+        rig.hammer = FindInModel(model, "Hammer");
 
         SetLayerRecursively(model, GameLayers.ViewModel);
         foreach (Renderer part in model.GetComponentsInChildren<Renderer>(true))
@@ -1039,6 +1030,20 @@ public static partial class CargoClashBuilder
             part.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             part.receiveShadows = false;
         }
+    }
+
+    private static FirstPersonRig.ArmParts BuildFirstPersonArm(GameObject model, string side)
+    {
+        Transform hand = Group("Hand_" + side, model.transform);
+        return new FirstPersonRig.ArmParts
+        {
+            upperArm = FindInModel(model, "UpperArm_" + side),
+            forearm = FindInModel(model, "Forearm_" + side),
+            hand = hand,
+            relaxed = HandPart(model, $"Hand_{side}_Relaxed", hand),
+            open = HandPart(model, $"Hand_{side}_Open", hand),
+            fist = HandPart(model, $"Hand_{side}_Fist", hand),
+        };
     }
 
     private static GameObject HandPart(GameObject model, string partName, Transform hand)

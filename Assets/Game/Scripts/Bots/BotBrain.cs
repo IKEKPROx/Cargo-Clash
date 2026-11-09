@@ -12,6 +12,9 @@ namespace CargoClash
     /// </summary>
     public sealed class BotBrain : ICharacterInput, IDisposable
     {
+        /// <summary>An interrupter with no ram ready goes after a carrier this close, to hit them with the hammer.</summary>
+        private const float HammerChaseRange = 7f;
+
         private static readonly List<BotBrain> Brains = new List<BotBrain>();
 
         private readonly PlayerAvatar self;
@@ -21,7 +24,7 @@ namespace CargoClash
         private Vector2 move;
         private bool interact;
         private bool ram;
-        private bool smash;
+        private bool attack;
 
         private bool hasGoal;
         private Vector3 goal;
@@ -55,7 +58,7 @@ namespace CargoClash
         public bool SwitchViewPressed => false;
         public bool InteractPressed => interact;
         public bool RamPressed => ram;
-        public bool SmashHeld => smash;
+        public bool AttackHeld => attack;
 
         public void Tick()
         {
@@ -76,7 +79,7 @@ namespace CargoClash
             if (director == null || director.Phase.Value != MatchPhase.Playing || self.IsKnockedDown)
             {
                 hasGoal = false;
-                smash = false;
+                attack = false;
                 return;
             }
 
@@ -84,7 +87,7 @@ namespace CargoClash
             CargoItem carried = self.CarriedCargo;
             if (carried != null)
             {
-                smash = false;
+                attack = false;
                 ThinkCarrying(carried);
                 return;
             }
@@ -124,8 +127,8 @@ namespace CargoClash
 
         private void ThinkCollector()
         {
-            smash = false;
-            PlayerAvatar smasher = NearestEnemy(9f, enemy => enemy.Smashing.Value);
+            attack = false;
+            PlayerAvatar smasher = NearestEnemy(9f, enemy => enemy.Swinging.Value);
             if (smasher != null && self.RamReady)
             {
                 ChaseAndRam(smasher);
@@ -136,6 +139,15 @@ namespace CargoClash
             if (threat != null && self.RamReady)
             {
                 ChaseAndRam(threat);
+                return;
+            }
+
+            // No ram ready, but someone's busy swinging or carrying within reach: give them a punch.
+            PlayerAvatar busy = NearestEnemy(config.hitRange, enemy => !enemy.IsImmune && (enemy.Swinging.Value || enemy.CarriedCargoId.Value != NetIds.None));
+            if (busy != null)
+            {
+                attack = true;
+                SetGoal(busy.transform.position, 1f);
                 return;
             }
 
@@ -188,7 +200,7 @@ namespace CargoClash
             PlayerAvatar carrier = NearestEnemy(14f, enemy => enemy.CarriedCargoId.Value != NetIds.None && !enemy.IsImmune);
             if (carrier != null && self.RamReady)
             {
-                smash = false;
+                attack = false;
                 ChaseAndRam(carrier);
                 return;
             }
@@ -196,15 +208,32 @@ namespace CargoClash
             PlayerAvatar attacker = NearestEnemy(3.5f, enemy => !enemy.IsImmune);
             if (attacker != null && self.RamReady)
             {
-                smash = false;
+                attack = false;
                 ChaseAndRam(attacker);
+                return;
+            }
+
+            // The ram is recharging, but the hammer works on people too. It just takes two hits.
+            PlayerAvatar closeCarrier = NearestEnemy(HammerChaseRange, enemy => !enemy.IsImmune && enemy.CarriedCargoId.Value != NetIds.None);
+            if (closeCarrier != null)
+            {
+                target = null;
+                attack = Vector3.Distance(closeCarrier.transform.position, self.transform.position) <= config.hitRange;
+                SetGoal(closeCarrier.transform.position, 1f);
+                return;
+            }
+            PlayerAvatar withinReach = NearestEnemy(config.hitRange, enemy => !enemy.IsImmune);
+            if (withinReach != null)
+            {
+                attack = true;
+                SetGoal(withinReach.transform.position, 1f);
                 return;
             }
 
             target = PickCargoForInterrupter();
             if (target == null)
             {
-                smash = false;
+                attack = false;
                 PlayerAvatar anyCarrier = NearestEnemy(200f, enemy => enemy.CarriedCargoId.Value != NetIds.None);
                 if (anyCarrier != null) SetGoal(anyCarrier.transform.position, 1f);
                 else hasGoal = false;
@@ -213,7 +242,7 @@ namespace CargoClash
 
             float distance = target.EdgeDistance(self.transform.position);
             SetGoal(target.transform.position, 0.8f + target.Radius * 0.5f);
-            smash = distance <= config.smashRange - 0.2f;
+            attack = distance <= config.smashRange - 0.2f;
         }
 
         private CargoItem PickCargoForInterrupter()

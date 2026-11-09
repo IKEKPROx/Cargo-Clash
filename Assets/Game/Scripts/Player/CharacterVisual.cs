@@ -15,13 +15,15 @@ namespace CargoClash
         private const int UpperSmash = 2;
         private const int UpperToss = 3;
         private const int UpperCarryBig = 4;
+        private const int UpperPunch = 5;
+        private const int UpperFlinch = 6;
         private const int MoodCheer = 1;
         private const int MoodGrumble = 2;
 
-        /// <summary>Where the hammer lands in the Smash clip, as a fraction of its length.</summary>
-        private const float SmashHitTime = 0.55f;
-        /// <summary>Where the hammer starts coming down, for the sound of it going through the air.</summary>
-        private const float SmashSwingTime = 0.36f;
+        /// <summary>Where the blow lands in the Smash and Punch clips, as a fraction of their length.</summary>
+        private const float SwingHitTime = 0.55f;
+        /// <summary>Where it starts coming down, for the sound of it going through the air.</summary>
+        private const float SwingWhooshTime = 0.36f;
         private const float TossSeconds = 0.36f;
         private const float KnockedClipSeconds = 1.5f;
 
@@ -34,6 +36,7 @@ namespace CargoClash
         private static readonly int MoodParam = Animator.StringToHash("Mood");
         private static readonly int UpperPoseParam = Animator.StringToHash("UpperPose");
         private static readonly int SmashState = Animator.StringToHash("Smash");
+        private static readonly int PunchState = Animator.StringToHash("Punch");
 
         [Header("Model")]
         public Transform pivot;
@@ -69,14 +72,17 @@ namespace CargoClash
         private float tossUntil;
         private float nextBlink;
         private float blinkUntil;
-        private float lastSmashCycle;
+        private float lastSwingCycle;
         private bool colorsApplied;
         private bool wasKnockedDown;
         private bool bodyHidden;
         private CargoItem lastCarried;
 
-        /// <summary>How far through a hammer swing the character is, from 0 to 1. The first-person hammer follows this.</summary>
-        public float SmashCycle { get; private set; }
+        /// <summary>How far through a swing the character is, from 0 to 1. The first-person hands follow this.</summary>
+        public float SwingCycle { get; private set; }
+
+        /// <summary>How many swings since it started swinging. In first person, the hands take turns punching.</summary>
+        public int SwingIndex { get; private set; }
 
         /// <summary>Where held cargo goes for anyone watching: between the hands, against the belly.</summary>
         public Vector3 CarryPoint(float cargoHalfDepth)
@@ -140,7 +146,8 @@ namespace CargoClash
             int pose = 0;
             if (!knockedDown)
             {
-                if (avatar.Smashing.Value) pose = UpperSmash;
+                if (avatar.IsStaggered) pose = UpperFlinch;
+                else if (avatar.Swinging.Value) pose = avatar.Side == Side.Interrupter ? UpperSmash : UpperPunch;
                 else if (carried != null && !coCarrying) pose = carried.Definition.size == CargoSize.Small ? UpperCarry : UpperCarryBig;
                 else if (Time.time < tossUntil) pose = UpperToss;
             }
@@ -151,30 +158,37 @@ namespace CargoClash
             upperWeight = Mathf.MoveTowards(upperWeight, target, speed * deltaTime);
             animator.SetLayerWeight(UpperBodyLayer, upperWeight);
 
-            if (pose == UpperSmash)
+            if (pose == UpperSmash || pose == UpperPunch)
             {
-                CheckSmashHit();
+                CheckSwingLanding();
             }
             else
             {
-                lastSmashCycle = 0f;
-                SmashCycle = 0f;
+                lastSwingCycle = 0f;
+                SwingCycle = 0f;
+                SwingIndex = 0;
             }
         }
 
-        /// <summary>Sound and debris happen when the hammer lands, not whenever durability ticks down.</summary>
-        private void CheckSmashHit()
+        /// <summary>Sound and debris happen when the blow lands, not whenever durability ticks down.</summary>
+        private void CheckSwingLanding()
         {
             AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(UpperBodyLayer);
-            if (state.shortNameHash != SmashState) return;
+            if (state.shortNameHash != SmashState && state.shortNameHash != PunchState) return;
             float cycle = Mathf.Repeat(state.normalizedTime, 1f);
-            SmashCycle = cycle;
-            if (lastSmashCycle < SmashSwingTime && cycle >= SmashSwingTime) GameAudio.PlayAt("swing", transform.position, 0.5f);
-            bool landed = lastSmashCycle < SmashHitTime && cycle >= SmashHitTime;
-            lastSmashCycle = cycle;
+            SwingCycle = cycle;
+            SwingIndex = Mathf.FloorToInt(state.normalizedTime);
+            if (lastSwingCycle < SwingWhooshTime && cycle >= SwingWhooshTime) GameAudio.PlayAt("swing", transform.position, 0.5f);
+            bool landed = lastSwingCycle < SwingHitTime && cycle >= SwingHitTime;
+            lastSwingCycle = cycle;
             if (!landed) return;
 
             squash = Mathf.Max(squash, 0.35f);
+            if (avatar == PlayerAvatar.Local) FollowCamera.Kick(1.1f);
+
+            // Whether it hurt someone is up to the host, and the effects come when it says so.
+            if (avatar.HitTarget != null) return;
+
             CargoItem target = avatar.SmashTarget;
             if (target == null || target.State.Value != CargoState.Ground) return;
 
@@ -187,7 +201,7 @@ namespace CargoClash
             GameAudio.PlayAt("smash", hit);
             FxBurst.Play(hit, target.Definition.chipColor, 8);
             FxBurst.PlayFlash(hit + Vector3.up * 0.1f, Color.white, 0.75f);
-            if (avatar == PlayerAvatar.Local) FollowCamera.Kick(1.6f);
+            if (avatar == PlayerAvatar.Local) FollowCamera.Kick(0.6f);
             FollowCamera.Shake(hit, avatar == PlayerAvatar.Local ? 0.42f : 0.18f);
         }
 
@@ -270,7 +284,7 @@ namespace CargoClash
                 if (interrupterHat.activeSelf == collector) interrupterHat.SetActive(!collector);
             }
 
-            bool hammerOut = avatar.Smashing.Value && !avatar.IsKnockedDown;
+            bool hammerOut = avatar.Swinging.Value && !avatar.IsKnockedDown && avatar.Side == Side.Interrupter;
             if (hammer.activeSelf != hammerOut) hammer.SetActive(hammerOut);
 
             // Flicker during the short immunity after getting up, so attackers can see it.

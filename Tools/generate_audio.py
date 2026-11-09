@@ -157,6 +157,7 @@ def make_effects():
                 coins[start + j] += sample * 0.5 * (1.0 - i / 18)
     save("coins", coins)
     save("step", mix(decay(lowpass(noise(0.07, 31), 0.32), 9), [s * 0.7 for s in decay(sweep(120, 70, 0.07), 7)]))
+    save("punch", mix(decay(sweep(190, 80, 0.11, 0.6), 7), [s * 0.6 for s in decay(lowpass(noise(0.05, 37), 0.55), 10)]))
 
 
 def make_music():

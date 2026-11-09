@@ -14,11 +14,12 @@ WASD                 Move
 Mouse                Look around (the arrow keys turn too)
 E                    Pick up / put down cargo
 Space or right-click Ram
-Hold left-click or F Smash cargo (Interrupters only)
+Left-click or F      Hit someone (both sides): once pushes them back, twice in a row knocks them down.
+                     Interrupters can also hold it on cargo to smash it.
 V                    Switch between first person and over the shoulder
 Esc                  Pause menu, where you can change the look speed
 Alt+Enter            Full screen on / off
-A gamepad also works: left stick to move, right stick to look, A / B / X to pick up, ram and smash.
+A gamepad also works: left stick to move, right stick to look, A / B / X to pick up, ram, and hit or smash.
 
 PLAYING TOGETHER ON A LOCAL NETWORK
 One player clicks CREATE ROOM and chooses a level. The room code is that computer's IP address.

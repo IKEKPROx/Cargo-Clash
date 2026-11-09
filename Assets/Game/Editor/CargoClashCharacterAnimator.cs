@@ -13,7 +13,7 @@ public static class CargoClashCharacterAnimator
 
     private static readonly HashSet<string> LoopingClips = new HashSet<string>
     {
-        "Idle", "Run", "Carry", "CarryBig", "CoCarryIdle", "CoCarryWalk", "Smash", "Cheer", "Grumble",
+        "Idle", "Run", "Carry", "CarryBig", "CoCarryIdle", "CoCarryWalk", "Smash", "Punch", "Cheer", "Grumble",
     };
 
     public static void ConfigureImport(string modelPath)
@@ -55,7 +55,7 @@ public static class CargoClashCharacterAnimator
         {
             if (asset is AnimationClip clip && !clip.name.StartsWith("__preview__")) clips[clip.name] = clip;
         }
-        foreach (string needed in new[] { "Idle", "Run", "Carry", "CarryBig", "CoCarryIdle", "CoCarryWalk", "Ram", "Knocked", "Smash", "Toss", "Cheer", "Grumble" })
+        foreach (string needed in new[] { "Idle", "Run", "Carry", "CarryBig", "CoCarryIdle", "CoCarryWalk", "Ram", "Knocked", "Smash", "Toss", "Punch", "Flinch", "Cheer", "Grumble" })
         {
             if (!clips.ContainsKey(needed)) Debug.LogError($"[Builder] The character model has no {needed} clip.");
         }
@@ -127,12 +127,16 @@ public static class CargoClashCharacterAnimator
         AnimatorState smash = ClipState(machine, "Smash", clips["Smash"]);
         AnimatorState toss = ClipState(machine, "Toss", clips["Toss"]);
         AnimatorState carryBig = ClipState(machine, "CarryBig", clips["CarryBig"]);
+        AnimatorState punch = ClipState(machine, "Punch", clips["Punch"]);
+        AnimatorState flinch = ClipState(machine, "Flinch", clips["Flinch"]);
         machine.defaultState = carry;
 
         AnyTransition(machine, carry, 0.08f).AddCondition(AnimatorConditionMode.Equals, 1, "UpperPose");
         AnyTransition(machine, smash, 0.08f).AddCondition(AnimatorConditionMode.Equals, 2, "UpperPose");
         AnyTransition(machine, toss, 0.04f).AddCondition(AnimatorConditionMode.Equals, 3, "UpperPose");
         AnyTransition(machine, carryBig, 0.08f).AddCondition(AnimatorConditionMode.Equals, 4, "UpperPose");
+        AnyTransition(machine, punch, 0.06f).AddCondition(AnimatorConditionMode.Equals, 5, "UpperPose");
+        AnyTransition(machine, flinch, 0.03f).AddCondition(AnimatorConditionMode.Equals, 6, "UpperPose");
     }
 
     /// <summary>The spine, head and arms. The face stays with the base layer, so its expressions keep playing.</summary>

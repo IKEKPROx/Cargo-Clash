@@ -38,6 +38,7 @@ namespace CargoClash
             public float Rescued;
             public float Destroyed;
             public int Rams;
+            public int Hits;
             public int KnockedDown;
             public int Drops;
         }
@@ -244,6 +245,12 @@ namespace CargoClash
             if (stats.TryGetValue(avatar, out PlayerStats entry)) entry.Rams++;
         }
 
+        public void ServerOnHit(PlayerAvatar attacker, PlayerAvatar victim, bool knockedDown)
+        {
+            AutoPilot.Log($"HIT {attacker.DisplayName} on {victim.DisplayName} knockedDown={knockedDown}");
+            if (stats.TryGetValue(attacker, out PlayerStats entry)) entry.Hits++;
+        }
+
         public void ServerOnKnockedDown(PlayerAvatar avatar, bool droppedCargo)
         {
             AutoPilot.Log($"KNOCKDOWN {avatar.DisplayName} dropped={droppedCargo}");
@@ -274,7 +281,7 @@ namespace CargoClash
             AddTitle(lines, GameText.TitleButterfingers, s => s.Drops);
 
             foreach (PlayerStats entry in stats.Values)
-                csv.AppendLine($"player,{entry.Name},{entry.Team},{entry.Rescued:0},{entry.Destroyed:0},{entry.Rams},{entry.KnockedDown},{entry.Drops}");
+                csv.AppendLine($"player,{entry.Name},{entry.Team},{entry.Rescued:0},{entry.Destroyed:0},{entry.Rams},{entry.KnockedDown},{entry.Drops},{entry.Hits}");
             WritePlaytestLog();
 
             Phase.Value = MatchPhase.Results;

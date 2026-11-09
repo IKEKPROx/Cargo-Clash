@@ -19,7 +19,7 @@ namespace CargoClash
 
         bool InteractPressed { get; }
         bool RamPressed { get; }
-        bool SmashHeld { get; }
+        bool AttackHeld { get; }
         bool SwitchViewPressed { get; }
 
         /// <summary>Called once a frame before the character reads the values above.</summary>
@@ -34,7 +34,7 @@ namespace CargoClash
         private readonly InputAction turn;
         private readonly InputAction interact;
         private readonly InputAction ram;
-        private readonly InputAction smash;
+        private readonly InputAction attack;
         private readonly InputAction switchView;
         private Vector2 lookThisFrame;
 
@@ -48,7 +48,7 @@ namespace CargoClash
             turn = map.FindAction("Turn", true);
             interact = map.FindAction("Interact", true);
             ram = map.FindAction("Ram", true);
-            smash = map.FindAction("Smash", true);
+            attack = map.FindAction("Attack", true);
             switchView = map.FindAction("SwitchView", true);
         }
 
@@ -61,7 +61,7 @@ namespace CargoClash
         public Vector2 Look => lookThisFrame;
         public bool InteractPressed => !Blocked && interact.WasPressedThisFrame();
         public bool RamPressed => !Blocked && ram.WasPressedThisFrame();
-        public bool SmashHeld => !Blocked && smash.IsPressed();
+        public bool AttackHeld => !Blocked && attack.IsPressed();
         public bool SwitchViewPressed => !Blocked && switchView.WasPressedThisFrame();
 
         public void Tick()

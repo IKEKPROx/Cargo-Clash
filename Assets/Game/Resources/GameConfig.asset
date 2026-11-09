@@ -60,6 +60,12 @@ MonoBehaviour:
   ramDuration: 0.28
   ramSpeed: 15
   ramHitRadius: 1.5
+  hitRange: 2.1
+  hitAimDegrees: 38
+  hitStaggerSeconds: 0.4
+  hitPushSpeed: 6
+  hitsToKnockDown: 2
+  hitComboSeconds: 2.5
   knockdownSeconds: 1.5
   immuneSeconds: 2
   knockbackSpeed: 8

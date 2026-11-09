@@ -1,6 +1,6 @@
 # Cargo Clash 工程规则
 
-给在这个仓库里工作的 agent 和人看。玩法规则以设计文档（`Docs/设计文档_v0.4.2.md`）为准，这里只写做工程时要遵守的事。
+给在这个仓库里工作的 agent 和人看。玩法规则以设计文档（`Docs/设计文档_v0.5.0.md`）为准，这里只写做工程时要遵守的事。
 
 接手前先读 `Docs/修改记录与交接说明.md`：里面有做过什么、现在到哪一步、还差什么。
 
@@ -18,16 +18,19 @@
 | 角色移动 | 角色的拥有者（NetworkTransform 设为 Owner 权限） | `PlayerAvatar.TickOwner` |
 | 机器人 | 主机拥有，走和玩家一样的代码 | `BotBrain` 实现 `ICharacterInput` |
 | 冲撞判定、倒地、掉货 | 主机 | `PlayerAvatar.ServerCheckRamHit`、`ServerKnockDown` |
+| 打人 | 拥有者把准星对着的敌人的 ID 发给主机；主机查距离、数这是第几下，再判定推开或倒地 | `PlayerAvatar.UpdateSwing`、`ServerSwing`、`ServerTakeHit` |
 | 地上的货物物理 | 主机（NetworkRigidbody） | `CargoItem` |
-| 瞄准 | 拥有者算出准星对着哪件货，把货的 ID 发给主机；主机只查距离和状态 | `PlayerAvatar.UpdateAim`、`InteractRpc`、`SetSmashingRpc` |
+| 瞄准 | 拥有者算出准星对着哪件货或哪个人，把 ID 发给主机；主机只查距离和状态 | `PlayerAvatar.UpdateAim`、`InteractRpc`、`SetSwingingRpc` |
 | 一人搬的货 | 主机定谁在搬。各电脑在本地摆放：自己搬的在手里（`FirstPersonRig`），别人搬的抱在胸前（`CharacterVisual.CarryPoint`） | `CargoItem.LateUpdate` |
 | 两人合搬的大件 | 主机取两人输入的平均方向并移动大件，角色跟着抓取点走 | `CargoItem.MoveWithCarriers`、`PlayerAvatar.TickCoCarry` |
-| 砸货耐久、倒计时、比分、称号 | 主机。耐久按锤子落下扣，每挥一下扣一次（`PlayerAvatar.ServerSwingHammer`），总时间仍是 `CargoDefinition.smashSeconds` | `CargoItem`、`MatchDirector` |
+| 砸货耐久、倒计时、比分、称号 | 主机。耐久按锤子落下扣，每挥一下扣一次（`PlayerAvatar.ServerSwing`），总时间仍是 `CargoDefinition.smashSeconds` | `CargoItem`、`MatchDirector` |
 | 直升机吊走货箱的结尾 | 主机只同步到达时间，各电脑自己播放动画 | `MatchDirector.HelicopterArrivesAt`、`HelicopterExtraction` |
 | 角色动作 | 各电脑按同步下来的状态自己播放，不影响规则 | `CharacterVisual` |
 | 第一人称的手、货物裂开和碎块 | 只在本地播放，不影响规则，也不走网络 | `FirstPersonRig`、`CargoItem`、`CargoPieces` |
 
 改联网逻辑时，先想清楚这段代码在哪台电脑上跑。写 `NetworkVariable` 和判定规则都只在主机上做。
+
+**客户端的时钟比主机略快。** 客户端觉得自己已经站起来了，请求到主机时主机可能还认为它没起来，就会拒绝。所以按住不放这种持续的状态，不能只在变化时发一次：`UpdateSwing` 发现主机的状态和自己想要的不一样，就隔 0.2 秒再发。这类问题在主机上跑测试查不出来，要看客户端的 `-ccDriveInput`。
 
 ## 写代码的规则
 
@@ -79,7 +82,15 @@ Animator 有两层：`Base` 管全身，`UpperBody` 只管上半身，这样搬�
 
 **两台相机。** 主相机不画 `ViewModel` 层。它上面叠了一台 Overlay 相机，只画 `ViewModel` 层：手、锤子和自己手里的货。这台相机会先清深度，所以手和货不会插进墙里。自己手里的货由 `CargoItem.SetOnViewLayer` 换层。两台相机的视野一样，货从地上进到手里时才不会跳。
 
-**手是代码摆的，不是 Animator。** `make_hands.py` 输出 `FirstPersonHands.fbx`，里面每只手和每条袖子都是一个不变形的物体，原点在手腕。`FirstPersonRig` 每帧算它们的位置，因为手要跟着货物的大小走。锤子的关键帧（`SwingPoses`）跟着角色 `Smash` 动画的进度（`CharacterVisual.SmashCycle`），所以手、声音和碎屑是同一时刻。改 `Smash` 动画的长度，要同时改 `GameConfig.smashSwingSeconds` 和 `smashFirstHitSeconds`。自己的身体只投影子（`ShadowsOnly`），别人看到的还是 Animator 动作。
+**手是代码摆的，不是 Animator。** `make_hands.py` 输出 `FirstPersonHands.fbx`，上臂、前臂、三种手型（放松、张开、握拳）和锤子都是不变形的物体，长度要和 `FirstPersonRig` 开头的常量一致。`FirstPersonRig` 每帧算它们的位置，因为手要跟着货物的大小走。要让动作看着协调，守住这几条：
+
+- 手臂是两段的 IK（`PlaceArm`、`FindElbow`）：动作只说手腕放哪里，手肘和手的朝向是算出来的。
+- 根节点是上半身，绕胸口转（`torso` 弹簧）。一个动作要带上身体，不要只动手。
+- 跑步摆臂用 `FollowCamera.Stride`，它和落脚同步。想和步子合拍就用它，不要自己算相位。
+- 锤子是双手握的刚体：动的是锤子（`HammerKeys`），两只手锁在锤柄上。打人用 `PunchKeys`，左右交替。两者都跟着角色动画的进度（`CharacterVisual.SwingCycle`、`SwingIndex`），所以手、声音和特效是同一时刻。改 `Smash` 或 `Punch` 的长度，要同时改 `GameConfig.smashSwingSeconds` 和 `smashFirstHitSeconds`。
+- 合搬时人站在箱子一端，走路时箱子总在身侧。看得到把手时手搭在上面，看不到时两只手朝箱子的方向伸，箱子在身后时手放到视野外（`CoCarryPoses`）。
+
+看手的动作要用连拍（`-ccSwingBurst`），单张截图看不出协不协调。自己的身体只投影子（`ShadowsOnly`），别人看到的还是 Animator 动作。
 
 **货物的损坏。** `make_cargo.py` 给每种货多输出两个文件：`_Damaged` 里是两个受损的箱体（`Body_D1`、`Body_D2`，按 `GameConfig.damagedBelow` 和 `wreckedBelow` 切换），`_Pieces` 里是碎掉之后的各个碎块，每块是一个物体，起始位置就在完整模型的对应位置。生成脚本给碎块加碰撞和刚体，放在 `Debris` 层，只和 `Level` 层碰撞（`GameBoot`）。
 
@@ -137,12 +148,13 @@ grep CCTEST /tmp/cargo-match.log
 | `-ccAgain` | 结算后点“再来一局”或“回大厅”，测重新进入的流程 |
 | `-ccForceCoCarry` | 每个半场强制两名正方合搬大件，第二个半场放在货车附近，测运送得分 |
 | `-ccWaitHostLeave` | 客户端等主机退出，测回到主菜单和提示 |
-| `-ccDriveInput` | 用真实的键盘和鼠标事件玩一局：转视角、走路、拿货送到货车、抡锤砸货，并检查 V、方向键、Esc 和灵敏度滑块。最后要看到 `CHECK ok`，这是测 `HumanInput` 和按键绑定的唯一办法 |
-| `-ccView first` / `third` | 这一局用第一人称或肩后视角，不保存 |
+| `-ccDriveInput` | 用真实的键盘和鼠标事件玩一局：转视角、走路、拿货送到货车、抡锤砸货、打人，并检查 V、方向键、Esc、灵敏度滑块，以及按住左键不会挥不动。最后要看到 `CHECK ok`，这是测 `HumanInput` 和按键绑定的唯一办法。两台机器都加这个参数，主机打客户端和客户端打主机就都测到了 |
+| `-ccSwingBurst 秒` | 配合 `-ccDriveInput`、`-ccShotDir` 和 `-ccView first`：每半场按这个间隔连拍跑步、站立、挥击，合搬时转一圈拍，用来看手的动作 |
+| `-ccView first` / `third` | 这一局用第一人称或肩后视角，不保存。不加就用上次玩时存下的视角，截图时记得加 |
 | `-ccEyeTour "x,z,yaw;x,z,yaw"` | 站在这些位置平视并截图，用来检查场景从地面看是什么样 |
 | `-ccTour "x,z;x,z"` | 用老的高空镜头依次看这些位置并截图（要配合 `-ccShotDir`），用来检查场景的每个角落 |
 | `-ccCameraZoom 倍数` | 把上面那个高空镜头拉近，比如 0.42 |
-| `-ccUncapped` | 窗口运行时不限帧率，每 5 秒记一次帧率，用来比较两个版本哪个更卡 |
+| `-ccUncapped` | 窗口运行时不限帧率，每 5 秒记一次帧率，用来比较两个版本哪个更卡。不同时间测的数可以差两成，要两个包同一时间交替跑 |
 
 agent 只能验证规则和流程。手感和两人联机必须由人来测：在 Multiplayer Play Mode 里开两个玩家，确认两边都看到倒地、货掉在同一个位置、冷却时间一致，再合并。
 

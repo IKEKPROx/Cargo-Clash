@@ -832,6 +832,31 @@ smash = keyed([
     (0.50, SMASH_TOP),
 ], SMASH_SECONDS)
 
+PUNCH_SECONDS = 0.5
+PUNCH_GUARD = Pose(hands_in_body=1.0, hand_l=(0.30, -0.34, 0.68), hand_r=(-0.30, -0.34, 0.68), elbow_l=(1.0, 0.3, -0.4), elbow_r=(-1.0, 0.3, -0.4),
+                   chest=(3.0, 0, 0), head=(3.0, 0, 0), brow_tilt=-14.0)
+PUNCH_WIND = PUNCH_GUARD.copy(hand_r=(-0.40, -0.10, 0.70), hand_l=(0.26, -0.40, 0.70), spine=(0, 0, -8.0), chest=(0.0, 0, -18.0), head=(2.0, 0, 12.0), mouth=0.8)
+PUNCH_HIT = PUNCH_GUARD.copy(hand_r=(-0.14, -0.62, 0.78), hand_l=(0.40, -0.14, 0.66), hips=(4.0, 0, 6.0), spine=(6.0, 0, 10.0), chest=(10.0, 0, 22.0),
+                             head=(0.0, 0, -14.0), mouth=2.4, brow_tilt=-24.0)
+
+punch = keyed([
+    (0.00, PUNCH_GUARD),
+    (0.15, PUNCH_WIND),
+    (0.275, PUNCH_HIT),
+    (0.33, PUNCH_HIT),
+    (0.50, PUNCH_GUARD),
+], PUNCH_SECONDS)
+
+FLINCH_SECONDS = 0.4
+flinch = keyed([
+    (0.00, Pose()),
+    (0.05, Pose(hands_in_body=1.0, hand_l=(0.34, -0.3, 0.98), hand_r=(-0.34, -0.3, 0.98), elbow_l=(1.0, 0.3, -0.3), elbow_r=(-1.0, 0.3, -0.3),
+                spine=(-10.0, 0, 0), chest=(-14.0, 0, 0), head=(-16.0, 0, 8.0), eye=1.35, mouth=3.0, brow_up=0.035)),
+    (0.18, Pose(hands_in_body=1.0, hand_l=(0.36, -0.22, 0.86), hand_r=(-0.36, -0.22, 0.86), elbow_l=(1.0, 0.3, -0.3), elbow_r=(-1.0, 0.3, -0.3),
+                spine=(-5.0, 0, 0), chest=(-6.0, 0, 0), head=(-4.0, 0, 4.0), eye=1.15, mouth=1.8)),
+    (0.40, Pose()),
+], FLINCH_SECONDS)
+
 TOSS_SECONDS = 0.36
 toss = keyed([
     (0.00, carry(0.0)),
@@ -899,6 +924,8 @@ CLIPS = [
     ("Knocked", KNOCKED_SECONDS, knocked),
     ("Smash", SMASH_SECONDS, smash),
     ("Toss", TOSS_SECONDS, toss),
+    ("Punch", PUNCH_SECONDS, punch),
+    ("Flinch", FLINCH_SECONDS, flinch),
     ("Cheer", 0.8, cheer),
     ("Grumble", 1.0, grumble),
 ]

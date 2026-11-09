@@ -64,6 +64,8 @@ namespace CargoClash
         private float noiseSeed;
         private float kickPitch;
         private float kickVelocity;
+        private float rollNow;
+        private float rollVelocity;
         private bool placed;
         private bool shotActive;
         private float shotBlend;
@@ -93,6 +95,12 @@ namespace CargoClash
         /// <summary>How far through a walking stride the view is, in radians. The hands swing in time with it.</summary>
         public static float WalkPhase => instance != null ? instance.walkPhase : 0f;
 
+        /// <summary>
+        /// Where the arms are in their swing: 1 with the right hand as far forward as it goes, -1 with the left.
+        /// An arm is furthest forward when the opposite foot lands, and footsteps fall on whole turns of the phase.
+        /// </summary>
+        public static float Stride => -Mathf.Cos(WalkPhase);
+
         /// <summary>From 0 standing still to 1 at a full run.</summary>
         public static float WalkAmount => instance != null ? instance.walkAmount : 0f;
 
@@ -113,6 +121,15 @@ namespace CargoClash
         {
             if (instance == null) return;
             instance.kickVelocity += degrees * 14f;
+        }
+
+        /// <summary>A light hit: your head snaps back and round. `push` is the way it pushed you, in the world.</summary>
+        public static void Flinch(Vector3 push)
+        {
+            if (instance == null) return;
+            instance.kickVelocity -= 26f;
+            instance.rollVelocity += Vector3.Dot(push, instance.transform.right) * 170f;
+            instance.trauma = Mathf.Max(instance.trauma, 0.5f);
         }
 
         public static void ToggleView()
@@ -269,13 +286,15 @@ namespace CargoClash
 
             float dazed = Mathf.Sin(Time.time * 5f) * 3f * down;
             float pitch = local.LookPitch - 48f * down + kickPitch;
-            float roll = hitRoll * 22f * down + dazed - side * 0.35f * walkAmount + ramRoll * dashAmount * side;
+            float roll = hitRoll * 22f * down + dazed - side * 0.35f * walkAmount + ramRoll * dashAmount * side + rollNow;
             rotation = Quaternion.Euler(pitch, local.LookYaw, roll);
 
             // A spring, so a kick snaps down and eases back.
             float spring = -kickPitch * 220f - kickVelocity * 24f;
             kickVelocity += spring * deltaTime;
             kickPitch += kickVelocity * deltaTime;
+            rollVelocity += (-rollNow * 180f - rollVelocity * 20f) * deltaTime;
+            rollNow += rollVelocity * deltaTime;
         }
 
         private void ShoulderPose(PlayerAvatar local, out Vector3 position, out Quaternion rotation)

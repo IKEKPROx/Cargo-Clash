@@ -62,16 +62,17 @@ namespace CargoClash
             ? "THE HELICOPTER SAVES " + rescuedValue + " IN CARGO!"
             : "THE HELICOPTER LEAVES WITH AN EMPTY BOX!";
 
-        public const string KeysHint = "WASD move    MOUSE look    E pick up / drop    SPACE ram    LEFT CLICK smash    V camera";
+        public const string KeysHint = "WASD move    MOUSE look    E pick up / drop    LEFT CLICK hit / smash    SPACE ram    V camera";
 
         public const string KeyInteract = "E";
-        public const string KeySmash = "CLICK";
+        public const string KeyAttack = "CLICK";
         public const string KeyRam = "SPACE";
         public const string PromptPickUp = "PICK UP";
         public const string PromptCarry = "CARRY";
         public const string PromptLarge = "GRAB (NEEDS 2)";
         public const string PromptHelp = "HELP CARRY";
         public const string PromptSmash = "HOLD TO SMASH";
+        public const string PromptHit = "HIT";
         public const string PromptDrop = "DROP";
         public const string PromptLetGo = "LET GO";
         public const string PromptWaiting = "Waiting for a second carrier...";
@@ -82,6 +83,7 @@ namespace CargoClash
         public const string MarkerTruck = "TRUCK";
         public const string You = "YOU";
         public const string Bonk = "BONK!";
+        public const string Pow = "POW!";
         public const string Halftime = "HALF ";
         public const string Paused = "PAUSED";
         public const string KeepPlaying = "KEEP PLAYING";

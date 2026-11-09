@@ -72,6 +72,18 @@ namespace CargoClash
         public float ramSpeed = 15f;
         public float ramHitRadius = 1.5f;
 
+        [Header("Hitting people")]
+        [Tooltip("How close someone has to be for a punch or hammer to reach them, from the middle of one person to the middle of the other.")]
+        public float hitRange = 2.1f;
+        [Tooltip("How far off the middle of the view someone can be and still get hit.")]
+        public float hitAimDegrees = 38f;
+        [Tooltip("How long a hit stops someone from moving or doing anything.")]
+        public float hitStaggerSeconds = 0.4f;
+        public float hitPushSpeed = 6f;
+        [Tooltip("Hits in a row that knock someone down, each coming within hitComboSeconds of the last.")]
+        public int hitsToKnockDown = 2;
+        public float hitComboSeconds = 2.5f;
+
         [Header("Knockdown")]
         public float knockdownSeconds = 1.5f;
         public float immuneSeconds = 2f;
@@ -84,9 +96,9 @@ namespace CargoClash
         public float reachTolerance = 0.6f;
         [Tooltip("Scales every cargo type's smash time. Playtesting tunes this before individual values.")]
         public float smashTimeMultiplier = 1f;
-        [Tooltip("One hammer swing. Should match the Smash clip's length in make_character.py.")]
+        [Tooltip("One swing of a hammer or a fist. Should match the Smash and Punch clips' length in make_character.py.")]
         public float smashSwingSeconds = 0.5f;
-        [Tooltip("From starting to swing until the first hit. Should match where the Smash clip's hammer lands.")]
+        [Tooltip("From starting to swing until the first hit. Should match where the hit lands in the Smash and Punch clips.")]
         public float smashFirstHitSeconds = 0.275f;
 
         [Header("Cargo")]

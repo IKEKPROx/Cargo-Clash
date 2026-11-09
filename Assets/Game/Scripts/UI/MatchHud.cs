@@ -403,8 +403,16 @@ namespace CargoClash
                 ShowAimPrompts(local, interrupter);
             }
 
-            crosshairRing.enabled = target != null;
-            if (target != null)
+            // Someone to hit comes before any cargo, the same as in the swing itself.
+            bool aimsAtPerson = carried == null && local.AimedEnemy != null;
+            if (aimsAtPerson) target = null;
+            crosshairRing.enabled = target != null || aimsAtPerson;
+            if (aimsAtPerson)
+            {
+                crosshairRing.rectTransform.localScale = Vector3.one;
+                crosshairRing.color = AimSmash;
+            }
+            else if (target != null)
             {
                 float sinceHit = Time.time - target.LastHurtTime;
                 float punch = sinceHit < 0.16f ? 1f - sinceHit / 0.16f : 0f;
@@ -412,7 +420,7 @@ namespace CargoClash
                 crosshairRing.color = local.Side == Side.Interrupter && local.AimedSmash != null ? AimSmash : AimGrab;
             }
 
-            bool showBar = target != null && target.State.Value == CargoState.Ground && (target.Durability.Value < 1f || local.Smashing.Value);
+            bool showBar = target != null && target.State.Value == CargoState.Ground && (target.Durability.Value < 1f || local.Swinging.Value);
             if (targetBar.activeSelf != showBar) targetBar.SetActive(showBar);
             if (showBar)
             {
@@ -437,9 +445,16 @@ namespace CargoClash
         {
             CargoItem grab = local.AimedGrab;
             CargoItem smash = local.AimedSmash;
+            if (local.AimedEnemy != null)
+            {
+                promptA.Show(GameText.KeyAttack, GameText.PromptHit);
+                if (grab != null) promptB.Show(GameText.KeyInteract, GameText.PromptCarry);
+                else promptB.Hide();
+                return;
+            }
             if (interrupter && smash != null)
             {
-                promptA.Show(GameText.KeySmash, GameText.PromptSmash);
+                promptA.Show(GameText.KeyAttack, GameText.PromptSmash);
                 if (grab != null) promptB.Show(GameText.KeyInteract, GameText.PromptCarry);
                 else promptB.Hide();
                 return;
