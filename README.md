@@ -4,6 +4,8 @@
 
 现在的版本只有教学关能玩，可以和机器人练习，也可以联网对战。选关页预留了另外 5 个关卡的位置，它们还是锁着的占位。
 
+每一版改了什么、还缺什么，见 `CHANGELOG.md`。
+
 ## 打开工程
 
 1. 安装 Git LFS（只需一次）：`brew install git-lfs`，然后运行 `git lfs install`。Windows 从 [git-lfs.com](https://git-lfs.com) 安装。

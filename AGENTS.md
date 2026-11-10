@@ -189,6 +189,7 @@ Tools/package_windows.sh 输出文件夹
 ## 协作
 
 - 每个功能开一个短分支，走 PR 合并到 `main`，合并前自己先跑一遍。
+- 推送给组员看的版本，在 `CHANGELOG.md` 最上面加一节：改了什么、怎么试、还缺什么、有哪些提交。
 - 模型、贴图、音频走 Git LFS，`.gitattributes` 已经配好。
 - `Assets/Game/Scenes/Level01.unity` 同一时间只让一个人改。其他人在自己的测试场景里做功能，东西尽量做成预制体。
 - 不要打开 `com.unity.pipeline` 的 `enableInReleaseBuilds`（默认是关的）。这个包只给本机 agent 跑编译和测试用，打开后发布的包会带一个能执行代码的本地 HTTP 服务。
