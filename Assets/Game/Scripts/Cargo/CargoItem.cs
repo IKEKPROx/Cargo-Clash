@@ -140,6 +140,37 @@ namespace CargoClash
             return best;
         }
 
+        /// <summary>The cargo nearest the middle of the view that a vacuum here would pull in, for the prompt.</summary>
+        public static CargoItem FindSuckable(Vector3 feet, Vector3 forward)
+        {
+            CargoItem best = null;
+            float bestDistance = float.MaxValue;
+            foreach (CargoItem cargo in All)
+            {
+                if (!cargo.CanBeSuckedFrom(feet, forward)) continue;
+                float distance = cargo.EdgeDistance(feet);
+                if (distance < bestDistance)
+                {
+                    best = cargo;
+                    bestDistance = distance;
+                }
+            }
+            return best;
+        }
+
+        /// <summary>A vacuum pulls what's on the ground in front of it. Large cargo is too heavy.</summary>
+        public bool CanBeSuckedFrom(Vector3 feet, Vector3 forward)
+        {
+            if (State.Value != CargoState.Ground || definition.requiredCarriers > 1) return false;
+            Vector3 to = transform.position - feet;
+            to.y = 0f;
+            float distance = to.magnitude;
+            if (distance - Radius > config.suckRange) return false;
+            if (distance < 0.01f) return true;
+            float size = Mathf.Atan2(Radius, distance) * Mathf.Rad2Deg;
+            return Vector3.Angle(forward, to) - size <= config.suckAimDegrees;
+        }
+
         public bool IsWithin(Vector3 position, float range) => EdgeDistance(position) <= range;
 
         public float EdgeDistance(Vector3 position)
@@ -493,6 +524,15 @@ namespace CargoClash
         {
             body.isKinematic = !active;
             foreach (Collider part in colliders) part.enabled = active;
+        }
+
+        /// <summary>Drags it through the air toward a vacuum. Called every frame someone's sucking on it.</summary>
+        public void ServerPullToward(Vector3 point, float speed, float deltaTime)
+        {
+            if (State.Value != CargoState.Ground) return;
+            Vector3 wanted = (point - transform.position).normalized * speed;
+            body.linearVelocity = Vector3.MoveTowards(body.linearVelocity, wanted, 45f * deltaTime);
+            body.angularVelocity = Vector3.MoveTowards(body.angularVelocity, Vector3.up * 5f, 20f * deltaTime);
         }
 
         public void ServerApplySmash(PlayerAvatar smasher, float deltaTime)

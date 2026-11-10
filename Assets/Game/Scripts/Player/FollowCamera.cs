@@ -64,6 +64,7 @@ namespace CargoClash
         private float noiseSeed;
         private float kickPitch;
         private float kickVelocity;
+        private bool wasKnockedOut;
         private float rollNow;
         private float rollVelocity;
         private bool placed;
@@ -266,9 +267,14 @@ namespace CargoClash
             }
             wasKnocked = knocked;
 
+            // Knocked out, you stay down until you come back somewhere else.
+            bool knockedOut = local.KnockedOut.Value;
+            if (wasKnockedOut && !knockedOut) knockedAt = -100f;
+            wasKnockedOut = knockedOut;
+
             // Falling over and getting up, timed to the length of a knockdown.
             float since = Time.time - knockedAt;
-            float length = config.knockdownSeconds;
+            float length = knockedOut ? 1000f : config.knockdownSeconds;
             float down = 0f;
             if (since < length)
             {

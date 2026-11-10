@@ -13,6 +13,9 @@ namespace CargoClash
 
     public enum CargoState : byte { Ground = 0, Carried = 1, Rescued = 2, Destroyed = 3 }
 
+    /// <summary>What someone got hit with.</summary>
+    public enum Weapon : byte { Hammer = 0, Blast = 1, Slam = 2, Ram = 3 }
+
     public static class GameLayers
     {
         public const int Player = 8;

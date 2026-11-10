@@ -39,6 +39,8 @@ namespace CargoClash
             public float Destroyed;
             public int Rams;
             public int Hits;
+            public int KnockOuts;
+            public int TimesOut;
             public int KnockedDown;
             public int Drops;
         }
@@ -245,10 +247,28 @@ namespace CargoClash
             if (stats.TryGetValue(avatar, out PlayerStats entry)) entry.Rams++;
         }
 
-        public void ServerOnHit(PlayerAvatar attacker, PlayerAvatar victim, bool knockedDown)
+        public void ServerOnHit(PlayerAvatar attacker, PlayerAvatar victim, Weapon weapon, bool knockedDown, bool knockedOut)
         {
-            AutoPilot.Log($"HIT {attacker.DisplayName} on {victim.DisplayName} knockedDown={knockedDown}");
+            AutoPilot.Log($"HIT {attacker.DisplayName} on {victim.DisplayName} with={weapon} health={victim.Health.Value} knockedDown={knockedDown} knockedOut={knockedOut}");
             if (stats.TryGetValue(attacker, out PlayerStats entry)) entry.Hits++;
+        }
+
+        public void ServerOnKnockedOut(PlayerAvatar attacker, PlayerAvatar victim, Weapon weapon, bool droppedCargo)
+        {
+            if (stats.TryGetValue(attacker, out PlayerStats winner)) winner.KnockOuts++;
+            if (stats.TryGetValue(victim, out PlayerStats loser))
+            {
+                loser.TimesOut++;
+                if (droppedCargo) loser.Drops++;
+            }
+            KnockOutRpc(attacker.NetworkObjectId, victim.NetworkObjectId, weapon);
+        }
+
+        /// <summary>Back at their own side's start for this half.</summary>
+        public Transform RespawnSpot(PlayerAvatar avatar)
+        {
+            Transform[] spots = avatar.Team == CollectorTeam.Value ? layout.collectorSpawns : layout.interrupterSpawns;
+            return spots[UnityEngine.Random.Range(0, spots.Length)];
         }
 
         public void ServerOnKnockedDown(PlayerAvatar avatar, bool droppedCargo)
@@ -278,10 +298,12 @@ namespace CargoClash
             List<ResultLine> lines = new List<ResultLine>();
             AddTitle(lines, GameText.TitleMover, s => s.Rescued);
             AddTitle(lines, GameText.TitleWrecker, s => s.Destroyed);
+            AddTitle(lines, GameText.TitleBrawler, s => s.KnockOuts);
             AddTitle(lines, GameText.TitleButterfingers, s => s.Drops);
+            AddTitle(lines, GameText.TitlePunchingBag, s => s.TimesOut);
 
             foreach (PlayerStats entry in stats.Values)
-                csv.AppendLine($"player,{entry.Name},{entry.Team},{entry.Rescued:0},{entry.Destroyed:0},{entry.Rams},{entry.KnockedDown},{entry.Drops},{entry.Hits}");
+                csv.AppendLine($"player,{entry.Name},{entry.Team},{entry.Rescued:0},{entry.Destroyed:0},{entry.Rams},{entry.KnockedDown},{entry.Drops},{entry.Hits},{entry.KnockOuts},{entry.TimesOut}");
             WritePlaytestLog();
 
             Phase.Value = MatchPhase.Results;
@@ -334,6 +356,17 @@ namespace CargoClash
             if (hud != null) hud.ShowPopup(position, GameText.CargoValue(value), team.ToColor());
             if (rescued) GameAudio.Play("rescue");
             else GameAudio.PlayAt("break", position);
+        }
+
+        [Rpc(SendTo.Everyone)]
+        private void KnockOutRpc(ulong attackerId, ulong victimId, Weapon weapon)
+        {
+            PlayerAvatar attacker = PlayerAvatar.Find(attackerId);
+            PlayerAvatar victim = PlayerAvatar.Find(victimId);
+            if (attacker == null || victim == null) return;
+            AutoPilot.Log($"KNOCKOUT {attacker.DisplayName} on {victim.DisplayName} with={weapon}");
+            MatchHud hud = MatchHud.Instance;
+            if (hud != null) hud.ShowKnockOut(attacker, victim, weapon);
         }
 
         [Rpc(SendTo.Everyone)]

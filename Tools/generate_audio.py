@@ -112,6 +112,23 @@ def make_rotor_loop():
     return result
 
 
+def make_suck_loop():
+    """Rushing air with a whine on top. The ends match, so it loops without a click."""
+    seconds = 1.2
+    length = count(seconds)
+    overlap = count(0.15)
+    air = lowpass(noise(seconds + 0.15, 41), 0.42)
+    for i in range(overlap):
+        blend = i / overlap
+        air[i] = air[i] * blend + air[length + i] * (1 - blend)
+    result = []
+    for i in range(length):
+        # Whole numbers of cycles, so the whine joins up too.
+        whine = math.sin(2 * math.pi * 620 * i / length) * 0.12 + math.sin(2 * math.pi * 930 * i / length) * 0.07
+        result.append(air[i] * 0.9 + whine)
+    return result
+
+
 def make_effects():
     save("bonk", mix(decay(sweep(260, 70, 0.28, 0.5), 7), [s * 0.5 for s in decay(lowpass(noise(0.14, 2), 0.45), 9)]))
     save("whoosh", [s * math.sin(math.pi * i / count(0.26)) for i, s in enumerate(lowpass(noise(0.26, 3), 0.18))])
@@ -158,6 +175,19 @@ def make_effects():
     save("coins", coins)
     save("step", mix(decay(lowpass(noise(0.07, 31), 0.32), 9), [s * 0.7 for s in decay(sweep(120, 70, 0.07), 7)]))
     save("punch", mix(decay(sweep(190, 80, 0.11, 0.6), 7), [s * 0.6 for s in decay(lowpass(noise(0.05, 37), 0.55), 10)]))
+    # The vacuum and the charged hammer.
+    save("blast", mix(decay(lowpass(noise(0.24, 43), 0.55), 7), [s * 0.5 for s in decay(sweep(420, 110, 0.16, 0.6), 7)]))
+    save("suck", make_suck_loop())
+    save("slam", mix(decay(sweep(150, 34, 0.42, 0.5), 5), [s * 0.8 for s in decay(lowpass(noise(0.26, 47), 0.5), 8)],
+                     [0.0] * count(0.03) + [s * 0.4 for s in decay(lowpass(noise(0.1, 53), 0.9), 9)]))
+    # Knocking someone out: the bell from a boxing ring, twice.
+    bell = mix(decay(sweep(1760, 1750, 0.5), 5), [s * 0.5 for s in decay(sweep(2640, 2630, 0.32), 7)])
+    save("knockout", mix(bell, [0.0] * count(0.16) + bell))
+    respawn = []
+    for number in (67, 74, 79):
+        respawn += note(midi(number), 0.07, "triangle", 0.8)
+    save("respawn", mix(respawn, [s * 0.3 for s in decay(lowpass(noise(0.2, 59), 0.3), 5)]))
+    save("tick", decay(sweep(1500, 1100, 0.045), 6))
 
 
 def make_music():

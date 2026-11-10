@@ -44,6 +44,11 @@ HORN = "Hat_Horn"
 WOOD = "Hammer_Handle"
 STEEL = "Hammer_Head"
 STAR = "Char_Star"
+VAC_BODY = "Heli_Yellow"
+VAC_DARK = "Heli_Dark"
+VAC_METAL = "Heli_Steel"
+VAC_GLASS = "Heli_Glass"
+VAC_RED = "Heli_Red"
 
 PALETTE = {
     TEAM: (0.95, 0.32, 0.03, 0.5),
@@ -65,6 +70,11 @@ PALETTE = {
     WOOD: (0.35, 0.16, 0.05, 0.6),
     STEEL: (0.32, 0.34, 0.38, 0.3),
     STAR: (1.0, 0.8, 0.05, 0.3),
+    VAC_BODY: (1.0, 0.62, 0.03, 0.35),
+    VAC_DARK: (0.03, 0.03, 0.04, 0.5),
+    VAC_METAL: (0.45, 0.47, 0.52, 0.3),
+    VAC_GLASS: (0.3, 0.7, 0.9, 0.1),
+    VAC_RED: (0.75, 0.05, 0.04, 0.4),
 }
 
 FPS = 30
@@ -362,6 +372,36 @@ def build_hammer():
     part.along((x - 0.31, head_y, z), (x + 0.31, head_y, z), 0.215, 0.215, STEEL, points=22, keys=keys, up=(0, 1, 0))
     for offset in (-0.19, 0.19):
         part.along((x + offset - 0.04, head_y, z), (x + offset + 0.04, head_y, z), 0.228, 0.228, HAT_BAND, points=22, up=(0, 1, 0))
+    return part
+
+
+def build_vacuum():
+    """Modelled at the right wrist, with the mouth facing forward along -Y."""
+    part = MeshPart("Vacuum")
+    part.bind({"Hand.R": 1.0})
+    wrist = side_vector(SHOULDER + ARM_REST * (ARM_SEGMENT * 2), "R")
+    x, y, z = wrist
+    z += 0.13
+    part.along((x, y + 0.02, z - 0.2), (x, y + 0.02, z - 0.03), 0.045, 0.045, VAC_DARK, points=12)
+    part.lengthwise([
+        (y + 0.27, x, z, 0.02, 0.02, 2.0),
+        (y + 0.26, x, z, 0.11, 0.11, 2.4),
+        (y + 0.12, x, z, 0.15, 0.155, 2.4),
+        (y - 0.22, x, z, 0.145, 0.15, 2.4),
+        (y - 0.34, x, z, 0.105, 0.105, 2.2),
+    ], VAC_BODY, points=24, samples=2)
+    part.along((x, y + 0.13, z), (x, y + 0.07, z), 0.165, 0.17, TEAM, power=2.4, points=24, up=(0, 0, 1))
+    part.lengthwise([
+        (y - 0.33, x, z, 0.09, 0.09, 2.0),
+        (y - 0.44, x, z, 0.095, 0.095, 2.0),
+        (y - 0.58, x, z, 0.17, 0.17, 2.0),
+        (y - 0.66, x, z, 0.245, 0.245, 2.0),
+    ], VAC_METAL, points=24, samples=2)
+    part.along((x, y - 0.655, z), (x, y - 0.695, z), 0.262, 0.262, VAC_RED, points=24, up=(0, 0, 1))
+    part.along((x, y - 0.69, z), (x, y - 0.70, z), 0.215, 0.215, VAC_DARK, points=22, up=(0, 0, 1))
+    part.along((x, y - 0.02, z + 0.13), (x, y - 0.02, z + 0.2), 0.1, 0.1, VAC_METAL, points=18)
+    part.along((x, y - 0.02, z + 0.19), (x, y - 0.02, z + 0.33), 0.09, 0.09, VAC_GLASS, points=18)
+    part.ellipsoid((x, y - 0.02, z + 0.34), (0.095, 0.095, 0.04), VAC_RED, rings=6, points=16)
     return part
 
 
@@ -776,7 +816,7 @@ LYING = dict(
 
 KNOCKED_SECONDS = 1.5
 
-knocked = keyed([
+FALLING = [
     (0.00, Pose()),
     (0.06, Pose(root_rot=(-22.0, 0, 0), root_loc=(0, 0.06, 0.09), spine=(18.0, 0, 0), chest=(12.0, 0, 0), head=(20.0, 0, 0),
                 hand_l=(0.18, -0.34, 0.10), hand_r=(-0.18, -0.34, 0.10), foot_l=(0.19, -0.12, 0.17), foot_r=(-0.19, -0.18, 0.21),
@@ -789,6 +829,15 @@ knocked = keyed([
     (0.44, Pose(root_rot=(-84.0, 0, 0), root_loc=(0, 0.42, 0.50), head=(10.0, 0, 0), hand_l=(0.30, -0.24, 0.12), hand_r=(-0.30, -0.24, 0.12),
                 foot_l=(0.24, -0.22, 0.15), foot_r=(-0.24, -0.22, 0.15), eye=0.7, mouth=1.8)),
     (0.56, Pose(head=(-6.0, 14.0, 0), eye=0.38, **LYING)),
+]
+
+KNOCKED_OUT_SECONDS = 1.2
+knocked_out = keyed(FALLING + [
+    (0.8, Pose(head=(-6.0, 8.0, 0), eye=0.12, **LYING)),
+    (1.2, Pose(head=(-6.0, 0.0, 0), eye=0.12, **LYING)),
+], KNOCKED_OUT_SECONDS)
+
+knocked = keyed(FALLING + [
     (0.95, Pose(head=(-6.0, -12.0, 0), eye=0.3, **LYING)),
     (1.10, Pose(root_rot=(-48.0, 0, 0), root_loc=(0, 0.28, 0.20), spine=(18.0, 0, 0), chest=(10.0, 0, 0), head=(12.0, 0, 0),
                 hand_l=(0.24, 0.14, -0.30), hand_r=(-0.24, 0.14, -0.30), foot_l=(0.22, -0.15, 0.13), foot_r=(-0.22, -0.15, 0.13),
@@ -832,29 +881,75 @@ smash = keyed([
     (0.50, SMASH_TOP),
 ], SMASH_SECONDS)
 
-PUNCH_SECONDS = 0.5
-PUNCH_GUARD = Pose(hands_in_body=1.0, hand_l=(0.30, -0.34, 0.68), hand_r=(-0.30, -0.34, 0.68), elbow_l=(1.0, 0.3, -0.4), elbow_r=(-1.0, 0.3, -0.4),
-                   chest=(3.0, 0, 0), head=(3.0, 0, 0), brow_tilt=-14.0)
-PUNCH_WIND = PUNCH_GUARD.copy(hand_r=(-0.40, -0.10, 0.70), hand_l=(0.26, -0.40, 0.70), spine=(0, 0, -8.0), chest=(0.0, 0, -18.0), head=(2.0, 0, 12.0), mouth=0.8)
-PUNCH_HIT = PUNCH_GUARD.copy(hand_r=(-0.14, -0.62, 0.78), hand_l=(0.40, -0.14, 0.66), hips=(4.0, 0, 6.0), spine=(6.0, 0, 10.0), chest=(10.0, 0, 22.0),
-                             head=(0.0, 0, -14.0), mouth=2.4, brow_tilt=-24.0)
+def ready_hammer(u):
+    """Held upright at the side, so you can see who's got one from across the field."""
+    sway = math.sin(TAU * u)
+    return swing_pose((-0.50, -0.16, 0.68 + 0.008 * sway), (-0.14, 0.08, 0.98), (0.50, -0.05, 0.50 + 0.006 * sway),
+                      chest=(2.0 + sway, 0, -5.0), head=(2.0, 0, 3.0), mouth=1.0)
 
-punch = keyed([
-    (0.00, PUNCH_GUARD),
-    (0.15, PUNCH_WIND),
-    (0.275, PUNCH_HIT),
-    (0.33, PUNCH_HIT),
-    (0.50, PUNCH_GUARD),
-], PUNCH_SECONDS)
+
+def vacuum_pose(right_wrist, aim, left_wrist, **values):
+    """Both hands on it: the right on the grip and the left steadying the body."""
+    return Pose(
+        hands_in_body=1.0,
+        hand_r=right_wrist,
+        hand_l=left_wrist,
+        grip=tuple(Vector(aim).normalized()),
+        elbow_r=(-1.0, 0.3, -0.4),
+        elbow_l=(1.0, 0.1, -0.6),
+        brow_tilt=-12.0,
+        **values,
+    )
+
+
+VACUUM_READY = vacuum_pose((-0.33, -0.34, 0.64), (0.0, -1.0, 0.08), (0.03, -0.32, 0.76), chest=(3.0, 0, 8.0), head=(2.0, 0, -6.0))
+
+
+def ready_vacuum(u):
+    sway = math.sin(TAU * u)
+    return VACUUM_READY.copy(hand_r=(-0.33, -0.34, 0.64 + 0.008 * sway), hand_l=(0.03, -0.32, 0.76 + 0.008 * sway), chest=(3.0 + sway, 0, 8.0))
+
+
+# The air goes out early, so a blast answers the click straight away.
+BLAST_SECONDS = 0.55
+blast = keyed([
+    (0.00, VACUUM_READY),
+    (0.05, VACUUM_READY.copy(hand_r=(-0.33, -0.38, 0.62), hand_l=(0.03, -0.35, 0.74), spine=(4.0, 0, 0))),
+    (0.10, vacuum_pose((-0.33, -0.2, 0.72), (0.0, -0.95, 0.3), (0.03, -0.2, 0.84), spine=(-8.0, 0, 0), chest=(-8.0, 0, 8.0), head=(-4.0, 0, -6.0), mouth=2.4)),
+    (0.22, vacuum_pose((-0.33, -0.28, 0.68), (0.0, -1.0, 0.16), (0.03, -0.27, 0.8), spine=(-3.0, 0, 0), chest=(0.0, 0, 8.0), head=(0.0, 0, -6.0), mouth=1.4)),
+    (0.55, VACUUM_READY),
+], BLAST_SECONDS)
+
+
+CHARGE_TOP = swing_pose((-0.26, 0.14, 1.24), (-0.06, 0.74, 0.67), (0.40, -0.10, 0.92),
+                        spine=(-9.0, 0, 0), chest=(-20.0, 0, -16.0), head=(-10.0, 0, 10.0), mouth=2.0)
+
+
+def charge(u):
+    """Hauled up over the head and shaking with the effort."""
+    shake = math.sin(TAU * u * 6) * 0.012
+    return CHARGE_TOP.copy(hand_r=(-0.26 + shake, 0.14, 1.24 + shake))
+
+
+SLAM_SECONDS = 0.5
+SLAM_HIT = swing_pose((-0.12, -0.56, 0.48), (0.12, -0.8, -0.58), (0.46, 0.24, 0.5),
+                      hips_loc=(0, 0, -0.08), spine=(24.0, 0, 0), chest=(38.0, 0, 12.0), head=(4.0, 0, -6.0), mouth=3.2, eye=0.7)
+slam = keyed([
+    (0.00, CHARGE_TOP),
+    (0.14, SLAM_HIT),
+    (0.26, SLAM_HIT),
+    (0.50, ready_hammer(0.0)),
+], SLAM_SECONDS)
 
 FLINCH_SECONDS = 0.4
+FLINCH_GRIP = tuple(Vector((-0.3, 0.1, 0.95)).normalized())
 flinch = keyed([
-    (0.00, Pose()),
-    (0.05, Pose(hands_in_body=1.0, hand_l=(0.34, -0.3, 0.98), hand_r=(-0.34, -0.3, 0.98), elbow_l=(1.0, 0.3, -0.3), elbow_r=(-1.0, 0.3, -0.3),
+    (0.00, Pose(hands_in_body=1.0, hand_l=(0.5, -0.05, 0.5), hand_r=(-0.5, -0.16, 0.68), grip=FLINCH_GRIP)),
+    (0.05, Pose(hands_in_body=1.0, hand_l=(0.34, -0.3, 0.98), hand_r=(-0.42, -0.26, 0.92), elbow_l=(1.0, 0.3, -0.3), elbow_r=(-1.0, 0.3, -0.3), grip=FLINCH_GRIP,
                 spine=(-10.0, 0, 0), chest=(-14.0, 0, 0), head=(-16.0, 0, 8.0), eye=1.35, mouth=3.0, brow_up=0.035)),
-    (0.18, Pose(hands_in_body=1.0, hand_l=(0.36, -0.22, 0.86), hand_r=(-0.36, -0.22, 0.86), elbow_l=(1.0, 0.3, -0.3), elbow_r=(-1.0, 0.3, -0.3),
+    (0.18, Pose(hands_in_body=1.0, hand_l=(0.36, -0.22, 0.86), hand_r=(-0.44, -0.2, 0.84), elbow_l=(1.0, 0.3, -0.3), elbow_r=(-1.0, 0.3, -0.3), grip=FLINCH_GRIP,
                 spine=(-5.0, 0, 0), chest=(-6.0, 0, 0), head=(-4.0, 0, 4.0), eye=1.15, mouth=1.8)),
-    (0.40, Pose()),
+    (0.40, Pose(hands_in_body=1.0, hand_l=(0.5, -0.05, 0.5), hand_r=(-0.5, -0.16, 0.68), grip=FLINCH_GRIP)),
 ], FLINCH_SECONDS)
 
 TOSS_SECONDS = 0.36
@@ -922,9 +1017,14 @@ CLIPS = [
     ("CoCarryWalk", 0.8, co_carry_walk),
     ("Ram", 0.34, ram),
     ("Knocked", KNOCKED_SECONDS, knocked),
+    ("KnockedOut", KNOCKED_OUT_SECONDS, knocked_out),
     ("Smash", SMASH_SECONDS, smash),
     ("Toss", TOSS_SECONDS, toss),
-    ("Punch", PUNCH_SECONDS, punch),
+    ("ReadyHammer", 1.2, ready_hammer),
+    ("ReadyVacuum", 1.2, ready_vacuum),
+    ("Blast", BLAST_SECONDS, blast),
+    ("Charge", 1.0, charge),
+    ("Slam", SLAM_SECONDS, slam),
     ("Flinch", FLINCH_SECONDS, flinch),
     ("Cheer", 0.8, cheer),
     ("Grumble", 1.0, grumble),
@@ -954,7 +1054,8 @@ def render_sheet(rig, actions, folder):
         if only and name not in only:
             continue
         rig.arm.animation_data.action = action
-        bpy.data.objects["Hammer"].hide_render = name != "Smash"
+        bpy.data.objects["Hammer"].hide_render = name not in ("Smash", "ReadyHammer", "Charge", "Slam")
+        bpy.data.objects["Vacuum"].hide_render = name not in ("ReadyVacuum", "Blast")
         bpy.data.objects["HatInterrupter"].hide_render = True
         bpy.data.objects["DizzyStars"].hide_render = name != "Knocked"
         for step in range(6):
@@ -965,6 +1066,7 @@ def render_sheet(rig, actions, folder):
     # A still of each hat from the game's camera angle and from the front.
     rig.clear_pose()
     bpy.data.objects["Hammer"].hide_render = True
+    bpy.data.objects["Vacuum"].hide_render = True
     bpy.data.objects["DizzyStars"].hide_render = True
     for hat_name, other in (("HatCollector", "HatInterrupter"), ("HatInterrupter", "HatCollector")):
         bpy.data.objects[hat_name].hide_render = False
@@ -983,7 +1085,7 @@ def main():
     materials = modeling.make_materials(PALETTE)
     arm = build_armature()
 
-    for part in (build_body(), build_hard_hat(), build_rival_hat(), build_hammer(), build_stars()):
+    for part in (build_body(), build_hard_hat(), build_rival_hat(), build_hammer(), build_vacuum(), build_stars()):
         attach(part.to_object(materials), arm)
 
     rig = Rig(arm)

@@ -62,10 +62,11 @@ namespace CargoClash
             ? "THE HELICOPTER SAVES " + rescuedValue + " IN CARGO!"
             : "THE HELICOPTER LEAVES WITH AN EMPTY BOX!";
 
-        public const string KeysHint = "WASD move    MOUSE look    E pick up / drop    LEFT CLICK hit / smash    SPACE ram    V camera";
+        public const string KeysHint = "WASD move   MOUSE look   E carry   LEFT CLICK attack   RIGHT CLICK suck / slam   SPACE ram   F inspect   V camera";
 
         public const string KeyInteract = "E";
         public const string KeyAttack = "CLICK";
+        public const string KeySecondary = "R-CLICK";
         public const string KeyRam = "SPACE";
         public const string PromptPickUp = "PICK UP";
         public const string PromptCarry = "CARRY";
@@ -73,6 +74,12 @@ namespace CargoClash
         public const string PromptHelp = "HELP CARRY";
         public const string PromptSmash = "HOLD TO SMASH";
         public const string PromptHit = "HIT";
+        public const string PromptBlast = "BLAST";
+        public const string PromptSuck = "HOLD TO SUCK";
+        public const string PromptSucking = "SUCKING";
+        public const string PromptSlam = "HOLD TO CHARGE";
+        public const string PromptCharging = "CHARGING";
+        public const string PromptSlamReady = "LET GO TO SLAM";
         public const string PromptDrop = "DROP";
         public const string PromptLetGo = "LET GO";
         public const string PromptWaiting = "Waiting for a second carrier...";
@@ -84,6 +91,8 @@ namespace CargoClash
         public const string You = "YOU";
         public const string Bonk = "BONK!";
         public const string Pow = "POW!";
+        public const string Slam = "SLAM!";
+        public const string HealthLabel = "HP";
         public const string Halftime = "HALF ";
         public const string Paused = "PAUSED";
         public const string KeepPlaying = "KEEP PLAYING";
@@ -106,5 +115,35 @@ namespace CargoClash
         public const string TitleMover = "Mover Supreme";
         public const string TitleWrecker = "Demolition Chief";
         public const string TitleButterfingers = "Butterfingers";
+        public const string TitleBrawler = "Knockout King";
+        public const string TitlePunchingBag = "Punching Bag";
+
+        public static string Damage(int amount) => "-" + amount;
+
+        /// <summary>What goes between two names in the feed when one knocks the other out.</summary>
+        public static string KnockOutVerb(Weapon weapon)
+        {
+            switch (weapon)
+            {
+                case Weapon.Blast: return "BLEW AWAY";
+                case Weapon.Slam: return "FLATTENED";
+                case Weapon.Ram: return "BULLDOZED";
+                default: return "BONKED";
+            }
+        }
+
+        public static string KnockedOutBy(string attacker, int seconds) => "KNOCKED OUT BY " + attacker + "  -  BACK IN " + seconds;
+
+        /// <summary>For knocking people out one after another.</summary>
+        public static string Streak(int count)
+        {
+            switch (count)
+            {
+                case 1: return "KNOCKOUT!";
+                case 2: return "DOUBLE KNOCKOUT!";
+                case 3: return "TRIPLE KNOCKOUT!";
+                default: return "UNSTOPPABLE!";
+            }
+        }
     }
 }

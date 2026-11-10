@@ -1,6 +1,6 @@
 # Cargo Clash 工程规则
 
-给在这个仓库里工作的 agent 和人看。玩法规则以设计文档（`Docs/设计文档_v0.5.0.md`）为准，这里只写做工程时要遵守的事。
+给在这个仓库里工作的 agent 和人看。玩法规则以设计文档（`Docs/设计文档_v0.6.0.md`）为准，这里只写做工程时要遵守的事。
 
 接手前先读 `Docs/修改记录与交接说明.md`：里面有做过什么、现在到哪一步、还差什么。
 
@@ -18,7 +18,9 @@
 | 角色移动 | 角色的拥有者（NetworkTransform 设为 Owner 权限） | `PlayerAvatar.TickOwner` |
 | 机器人 | 主机拥有，走和玩家一样的代码 | `BotBrain` 实现 `ICharacterInput` |
 | 冲撞判定、倒地、掉货 | 主机 | `PlayerAvatar.ServerCheckRamHit`、`ServerKnockDown` |
-| 打人 | 拥有者把准星对着的敌人的 ID 发给主机；主机查距离、数这是第几下，再判定推开或倒地 | `PlayerAvatar.UpdateSwing`、`ServerSwing`、`ServerTakeHit` |
+| 打人、喷气、重锤 | 拥有者把准星对着的敌人的 ID 发给主机；主机查距离、数这是第几下，再判定推开或倒地 | `PlayerAvatar.UpdateTools`、`ServerSwing`、`ServerSlam`、`ServerTakeHit` |
+| 血量、击败、重生 | 主机。血量是 `NetworkVariable`，击败时通知所有人出战报，到时间把人传回出生点 | `PlayerAvatar.ServerKnockOut`、`ServerRespawn`、`MatchDirector.ServerOnKnockedOut` |
+| 吸货、吸人 | 拥有者只说按着右键。主机用身体朝向算前方：货由主机拉动，人由主机通知他的拥有者（`PullRpc`），因为移动归拥有者管 | `PlayerAvatar.ServerSuck`、`CargoItem.ServerPullToward` |
 | 地上的货物物理 | 主机（NetworkRigidbody） | `CargoItem` |
 | 瞄准 | 拥有者算出准星对着哪件货或哪个人，把 ID 发给主机；主机只查距离和状态 | `PlayerAvatar.UpdateAim`、`InteractRpc`、`SetSwingingRpc` |
 | 一人搬的货 | 主机定谁在搬。各电脑在本地摆放：自己搬的在手里（`FirstPersonRig`），别人搬的抱在胸前（`CharacterVisual.CarryPoint`） | `CargoItem.LateUpdate` |
@@ -31,6 +33,10 @@
 改联网逻辑时，先想清楚这段代码在哪台电脑上跑。写 `NetworkVariable` 和判定规则都只在主机上做。
 
 **客户端的时钟比主机略快。** 客户端觉得自己已经站起来了，请求到主机时主机可能还认为它没起来，就会拒绝。所以按住不放这种持续的状态，不能只在变化时发一次：`UpdateSwing` 发现主机的状态和自己想要的不一样，就隔 0.2 秒再发。这类问题在主机上跑测试查不出来，要看客户端的 `-ccDriveInput`。
+
+**客户端看到的别人是 0.2 到 0.3 秒之前的位置。** 主机判定客户端的攻击时（锤子、喷气、重锤），按双方的移动速度多放宽一些距离（`PlayerAvatar.LagAllowance`，`GameConfig.lagCompensationSeconds`），否则客户端打正在跑的人总是打不中。主机和机器人看到的就是真实位置，不放宽。新加会打到人的东西，也要走这里。主机拒绝的攻击会记 `MISS` 日志。
+
+**系统的键盘配置一变（比如切换输入法），Input System 会重新绑定所有动作**，按着的键会被取消，要松开再按才有反应。按住才有效的动作（`Attack`、`Secondary`）要打开 `initialStateCheck`，这样重新绑定后会重新读按键。只看按下那一下的动作（`Interact`、`Ram`）不要开，否则会多触发一次。
 
 ## 写代码的规则
 
@@ -66,6 +72,8 @@
 
 开始场景用的 `TitleTruck` 是同一辆车没出事的样子（`make_truck.py` 同时输出），由 `CargoClashBuilder.BuildTitleTruck` 组装，`Assets/CargoRover` 里的脚本带动它。轮子是单独的物体，轴距和轮距要和那些脚本一致。
 
+别人看到的工具也在 `Character.fbx` 里（`Hammer`、`Vacuum`，绑在 `Hand.R` 上）。手里有工具时上半身层播 `ReadyHammer` 或 `ReadyVacuum`。
+
 角色的每个动作是 `make_character.py` 里的一个函数，只写手脚放在哪里，手肘和膝盖由脚本算出来。新增一个动作要改三处：
 
 1. `make_character.py`：写动作函数，加进 `CLIPS`。
@@ -82,12 +90,15 @@ Animator 有两层：`Base` 管全身，`UpperBody` 只管上半身，这样搬�
 
 **两台相机。** 主相机不画 `ViewModel` 层。它上面叠了一台 Overlay 相机，只画 `ViewModel` 层：手、锤子和自己手里的货。这台相机会先清深度，所以手和货不会插进墙里。自己手里的货由 `CargoItem.SetOnViewLayer` 换层。两台相机的视野一样，货从地上进到手里时才不会跳。
 
-**手是代码摆的，不是 Animator。** `make_hands.py` 输出 `FirstPersonHands.fbx`，上臂、前臂、三种手型（放松、张开、握拳）和锤子都是不变形的物体，长度要和 `FirstPersonRig` 开头的常量一致。`FirstPersonRig` 每帧算它们的位置，因为手要跟着货物的大小走。要让动作看着协调，守住这几条：
+**手是代码摆的，不是 Animator。** `make_hands.py` 输出 `FirstPersonHands.fbx`，上臂、前臂、三种手型（放松、张开、握拳）、锤子和收集器都是不变形的物体，长度要和 `FirstPersonRig` 开头的常量一致。`FirstPersonRig` 每帧算它们的位置，因为手要跟着货物的大小走。要让动作看着协调，守住这几条：
 
 - 手臂是两段的 IK（`PlaceArm`、`FindElbow`）：动作只说手腕放哪里，手肘和手的朝向是算出来的。
 - 根节点是上半身，绕胸口转（`torso` 弹簧）。一个动作要带上身体，不要只动手。
 - 跑步摆臂用 `FollowCamera.Stride`，它和落脚同步。想和步子合拍就用它，不要自己算相位。
-- 锤子是双手握的刚体：动的是锤子（`HammerKeys`），两只手锁在锤柄上。打人用 `PunchKeys`，左右交替。两者都跟着角色动画的进度（`CharacterVisual.SwingCycle`、`SwingIndex`），所以手、声音和特效是同一时刻。改 `Smash` 或 `Punch` 的长度，要同时改 `GameConfig.smashSwingSeconds` 和 `smashFirstHitSeconds`。
+- 工具是双手握的刚体：动的是工具（`HammerKeys`、`BlastKeys`、`SlamKeys`），两只手锁在把手上。挥锤和喷气跟着角色动画的进度（`CharacterVisual.SwingCycle`），所以手、声音和特效是同一时刻。改 `Smash` 的长度要同时改 `GameConfig.smashSwingSeconds` 和 `smashFirstHitSeconds`，`Blast` 对应 `blastCycleSeconds` 和 `blastFirstSeconds`，`Slam` 对应 `slamSeconds` 和 `slamLandSeconds`。
+- 手里的货：手掌贴在两侧、手指朝前、拇指朝上（`HoldPoses`）。手的朝向不要跟着前臂，前臂从下面上来，手指会竖起来。拿货时手从下面迎上去，不要伸到地上，否则一条手臂会横穿画面。
+- 收集器做大了会挡视线。它在 `make_hands.py` 里按 `VACUUM_SCALE` 缩小，`FirstPersonRig` 里的 `VacuumForeGrip`、`VacuumMouth` 是缩小后的值。
+- 检视（F）是 `HammerInspect`、`VacuumInspect` 两张关键帧表，只在本地播放。`Flip` 和 `Twist` 可以超过一整圈。锤子在画面平面内转，翻跟头的话锤头会贴到镜头上。左手松开（`leftLetGo`）之后，握回工具的那个键不用写左手位置：手先停在原处，快到时伸回把手（`SampleInspect` 的返回值）。检查检视要看每一张连拍，有的问题只出现一帧。一按左键或右键检视就停，看的是本机的 `PlayerAvatar.WantsToUseTool`，不等主机确认，否则客户端要晚一个来回才停。
 - 合搬时人站在箱子一端，走路时箱子总在身侧。看得到把手时手搭在上面，看不到时两只手朝箱子的方向伸，箱子在身后时手放到视野外（`CoCarryPoses`）。
 
 看手的动作要用连拍（`-ccSwingBurst`），单张截图看不出协不协调。自己的身体只投影子（`ShadowsOnly`），别人看到的还是 Animator 动作。
@@ -148,8 +159,8 @@ grep CCTEST /tmp/cargo-match.log
 | `-ccAgain` | 结算后点“再来一局”或“回大厅”，测重新进入的流程 |
 | `-ccForceCoCarry` | 每个半场强制两名正方合搬大件，第二个半场放在货车附近，测运送得分 |
 | `-ccWaitHostLeave` | 客户端等主机退出，测回到主菜单和提示 |
-| `-ccDriveInput` | 用真实的键盘和鼠标事件玩一局：转视角、走路、拿货送到货车、抡锤砸货、打人，并检查 V、方向键、Esc、灵敏度滑块，以及按住左键不会挥不动。最后要看到 `CHECK ok`，这是测 `HumanInput` 和按键绑定的唯一办法。两台机器都加这个参数，主机打客户端和客户端打主机就都测到了 |
-| `-ccSwingBurst 秒` | 配合 `-ccDriveInput`、`-ccShotDir` 和 `-ccView first`：每半场按这个间隔连拍跑步、站立、挥击，合搬时转一圈拍，用来看手的动作 |
+| `-ccDriveInput` | 用真实的键盘和鼠标事件玩一局：转视角、走路、拿货送到货车、抡锤砸货、打人、击败和重生、吸货吸人、蓄力重锤、检视，并检查 V、方向键、Esc、灵敏度滑块，以及按住左键不会挥不动。最后要看到 `CHECK ok`，这是测 `HumanInput` 和按键绑定的唯一办法。两台机器都加这个参数，主机打客户端和客户端打主机就都测到了 |
+| `-ccSwingBurst 秒` | 配合 `-ccDriveInput`、`-ccShotDir` 和 `-ccView first`：每半场按这个间隔连拍跑步、站立、挥击、检视、右键，拿货和合搬时也拍，用来看手的动作 |
 | `-ccView first` / `third` | 这一局用第一人称或肩后视角，不保存。不加就用上次玩时存下的视角，截图时记得加 |
 | `-ccEyeTour "x,z,yaw;x,z,yaw"` | 站在这些位置平视并截图，用来检查场景从地面看是什么样 |
 | `-ccTour "x,z;x,z"` | 用老的高空镜头依次看这些位置并截图（要配合 `-ccShotDir`），用来检查场景的每个角落 |

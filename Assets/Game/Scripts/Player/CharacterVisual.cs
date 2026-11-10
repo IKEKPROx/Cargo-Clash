@@ -15,13 +15,19 @@ namespace CargoClash
         private const int UpperSmash = 2;
         private const int UpperToss = 3;
         private const int UpperCarryBig = 4;
-        private const int UpperPunch = 5;
         private const int UpperFlinch = 6;
+        private const int UpperReadyHammer = 7;
+        private const int UpperReadyVacuum = 8;
+        private const int UpperBlast = 9;
+        private const int UpperCharge = 10;
+        private const int UpperSlam = 11;
         private const int MoodCheer = 1;
         private const int MoodGrumble = 2;
 
-        /// <summary>Where the blow lands in the Smash and Punch clips, as a fraction of their length.</summary>
+        /// <summary>Where the blow lands in the Smash clip, as a fraction of its length.</summary>
         private const float SwingHitTime = 0.55f;
+        /// <summary>Where the air comes out in the Blast clip, as a fraction of its length.</summary>
+        private const float BlastTime = 0.18f;
         /// <summary>Where it starts coming down, for the sound of it going through the air.</summary>
         private const float SwingWhooshTime = 0.36f;
         private const float TossSeconds = 0.36f;
@@ -36,7 +42,8 @@ namespace CargoClash
         private static readonly int MoodParam = Animator.StringToHash("Mood");
         private static readonly int UpperPoseParam = Animator.StringToHash("UpperPose");
         private static readonly int SmashState = Animator.StringToHash("Smash");
-        private static readonly int PunchState = Animator.StringToHash("Punch");
+        private static readonly int BlastState = Animator.StringToHash("Blast");
+        private static readonly int OutParam = Animator.StringToHash("Out");
 
         [Header("Model")]
         public Transform pivot;
@@ -49,6 +56,7 @@ namespace CargoClash
         public GameObject collectorHat;
         public GameObject interrupterHat;
         public GameObject hammer;
+        public GameObject vacuum;
         public Transform handLeft;
         public Transform handRight;
 
@@ -77,12 +85,24 @@ namespace CargoClash
         private bool wasKnockedDown;
         private bool bodyHidden;
         private CargoItem lastCarried;
+        private float nextWispAt;
+        private bool wasSucking;
 
         /// <summary>How far through a swing the character is, from 0 to 1. The first-person hands follow this.</summary>
         public float SwingCycle { get; private set; }
 
-        /// <summary>How many swings since it started swinging. In first person, the hands take turns punching.</summary>
-        public int SwingIndex { get; private set; }
+        /// <summary>Where the vacuum's air goes in and out, for the effects. On your own computer, that's the one in your hands.</summary>
+        private Vector3 VacuumMouth
+        {
+            get
+            {
+                FirstPersonRig rig = FirstPersonRig.Instance;
+                if (avatar == PlayerAvatar.Local && rig != null && rig.ShowsTool) return rig.VacuumMouthWorld;
+                return handRight.position + transform.forward * 0.75f + Vector3.up * 0.12f;
+            }
+        }
+
+        private Vector3 VacuumAim => avatar == PlayerAvatar.Local ? avatar.LookDirection : transform.forward;
 
         /// <summary>Where held cargo goes for anyone watching: between the hands, against the belly.</summary>
         public Vector3 CarryPoint(float cargoHalfDepth)
@@ -126,9 +146,30 @@ namespace CargoClash
             animator.SetInteger(CarryParam, coCarrying ? 2 : carried != null ? 1 : 0);
             animator.SetBool(DashParam, avatar.IsDashing);
             animator.SetBool(KnockedParam, knockedDown);
+            animator.SetBool(OutParam, avatar.KnockedOut.Value);
             animator.SetInteger(MoodParam, CurrentMood());
 
             UpdateUpperBody(carried, coCarrying, knockedDown, deltaTime);
+            UpdateSuction();
+        }
+
+        private void UpdateSuction()
+        {
+            bool sucking = avatar.Sucking.Value;
+            if (avatar == PlayerAvatar.Local && sucking != wasSucking) GameAudio.SetLoop(sucking ? "suck" : null, 0.32f);
+            wasSucking = sucking;
+            if (!sucking || Time.time < nextWispAt) return;
+            nextWispAt = Time.time + 0.025f;
+            FxBurst.PlaySuction(VacuumMouth, VacuumAim);
+        }
+
+        /// <summary>Holding a tool the way you would in this half of the match, between the whistles and with nothing else in your hands.</summary>
+        private bool ToolOut(CargoItem carried, bool knockedDown)
+        {
+            MatchDirector director = MatchDirector.Instance;
+            if (director == null || carried != null || knockedDown || Time.time < tossUntil) return false;
+            MatchPhase phase = director.Phase.Value;
+            return phase == MatchPhase.Playing || phase == MatchPhase.HalfIntro;
         }
 
         /// <summary>The upper-body layer covers carrying and smashing, so the legs can keep running below it.</summary>
@@ -143,13 +184,20 @@ namespace CargoClash
                 lastCarried = carried;
             }
 
+            // A ram is all in the base layer, so it shows through.
             int pose = 0;
-            if (!knockedDown)
+            if (!knockedDown && !avatar.IsDashing)
             {
                 if (avatar.IsStaggered) pose = UpperFlinch;
-                else if (avatar.Swinging.Value) pose = avatar.Side == Side.Interrupter ? UpperSmash : UpperPunch;
                 else if (carried != null && !coCarrying) pose = carried.Definition.size == CargoSize.Small ? UpperCarry : UpperCarryBig;
                 else if (Time.time < tossUntil) pose = UpperToss;
+                else if (ToolOut(carried, knockedDown))
+                {
+                    if (avatar.Side == Side.Collector) pose = avatar.Swinging.Value ? UpperBlast : UpperReadyVacuum;
+                    else if (avatar.IsSlamming) pose = UpperSlam;
+                    else if (avatar.IsCharging) pose = UpperCharge;
+                    else pose = avatar.Swinging.Value ? UpperSmash : UpperReadyHammer;
+                }
             }
             if (pose != 0) animator.SetInteger(UpperPoseParam, pose);
 
@@ -158,26 +206,40 @@ namespace CargoClash
             upperWeight = Mathf.MoveTowards(upperWeight, target, speed * deltaTime);
             animator.SetLayerWeight(UpperBodyLayer, upperWeight);
 
-            if (pose == UpperSmash || pose == UpperPunch)
-            {
-                CheckSwingLanding();
-            }
+            if (pose == UpperSmash) CheckSwingLanding();
+            else if (pose == UpperBlast) CheckBlast();
             else
             {
                 lastSwingCycle = 0f;
                 SwingCycle = 0f;
-                SwingIndex = 0;
             }
+        }
+
+        /// <summary>The air comes out, whether or not it gets anyone. That part is up to the host.</summary>
+        private void CheckBlast()
+        {
+            AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(UpperBodyLayer);
+            if (state.shortNameHash != BlastState) return;
+            float cycle = Mathf.Repeat(state.normalizedTime, 1f);
+            SwingCycle = cycle;
+            bool fired = lastSwingCycle < BlastTime && cycle >= BlastTime;
+            lastSwingCycle = cycle;
+            if (!fired) return;
+
+            Vector3 mouth = VacuumMouth;
+            FxBurst.PlayBlast(mouth, VacuumAim);
+            GameAudio.PlayAt("blast", mouth, 0.8f);
+            squash = Mathf.Max(squash, 0.2f);
+            if (avatar == PlayerAvatar.Local) FollowCamera.Kick(-1.3f);
         }
 
         /// <summary>Sound and debris happen when the blow lands, not whenever durability ticks down.</summary>
         private void CheckSwingLanding()
         {
             AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(UpperBodyLayer);
-            if (state.shortNameHash != SmashState && state.shortNameHash != PunchState) return;
+            if (state.shortNameHash != SmashState) return;
             float cycle = Mathf.Repeat(state.normalizedTime, 1f);
             SwingCycle = cycle;
-            SwingIndex = Mathf.FloorToInt(state.normalizedTime);
             if (lastSwingCycle < SwingWhooshTime && cycle >= SwingWhooshTime) GameAudio.PlayAt("swing", transform.position, 0.5f);
             bool landed = lastSwingCycle < SwingHitTime && cycle >= SwingHitTime;
             lastSwingCycle = cycle;
@@ -284,8 +346,10 @@ namespace CargoClash
                 if (interrupterHat.activeSelf == collector) interrupterHat.SetActive(!collector);
             }
 
-            bool hammerOut = avatar.Swinging.Value && !avatar.IsKnockedDown && avatar.Side == Side.Interrupter;
-            if (hammer.activeSelf != hammerOut) hammer.SetActive(hammerOut);
+            bool toolOut = ToolOut(avatar.CarriedCargo, avatar.IsKnockedDown);
+            bool interrupter = avatar.Side == Side.Interrupter;
+            if (hammer.activeSelf != (toolOut && interrupter)) hammer.SetActive(toolOut && interrupter);
+            if (vacuum.activeSelf != (toolOut && !interrupter)) vacuum.SetActive(toolOut && !interrupter);
 
             // Flicker during the short immunity after getting up, so attackers can see it.
             bool visible = avatar.IsKnockedDown || !avatar.IsImmune || Mathf.Repeat(Time.time * 9f, 1f) > 0.35f;

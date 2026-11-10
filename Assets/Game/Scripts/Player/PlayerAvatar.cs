@@ -30,6 +30,13 @@ namespace CargoClash
         public readonly NetworkVariable<bool> Swinging = new NetworkVariable<bool>();
         public readonly NetworkVariable<ulong> SmashTargetId = new NetworkVariable<ulong>(NetIds.None);
         public readonly NetworkVariable<ulong> HitTargetId = new NetworkVariable<ulong>(NetIds.None);
+        public readonly NetworkVariable<int> Health = new NetworkVariable<int>(100);
+        /// <summary>Out of health: lying there until they come back at their own side's start.</summary>
+        public readonly NetworkVariable<bool> KnockedOut = new NetworkVariable<bool>();
+        public readonly NetworkVariable<bool> Sucking = new NetworkVariable<bool>();
+        /// <summary>When the hammer started charging, or 0 if it isn't.</summary>
+        public readonly NetworkVariable<double> ChargingSince = new NetworkVariable<double>();
+        public readonly NetworkVariable<double> SlammingUntil = new NetworkVariable<double>();
 
         public Team Team => TeamVar.Value;
         public string DisplayName => NameVar.Value.ToString();
@@ -47,6 +54,19 @@ namespace CargoClash
         public bool IsKnockedDown => Now < KnockedUntil.Value;
         public bool IsImmune => Now < ImmuneUntil.Value;
         public bool IsStaggered => Now < StaggeredUntil.Value;
+        public bool IsCharging => ChargingSince.Value > 0.0;
+        public bool IsSlamming => Now < SlammingUntil.Value;
+
+        /// <summary>
+        /// Only meaningful on the owner's computer: the tool has been asked for and the host hasn't answered yet,
+        /// or it has. On a client the answer takes a round trip, so anything that should react to the click itself uses this.
+        /// </summary>
+        public bool WantsToUseTool => lastSwing || lastSuck || lastCharge;
+
+        public float Health01 => Mathf.Clamp01((float)Health.Value / config.maxHealth);
+
+        /// <summary>From 0 to 1 once the hammer has charged enough to slam.</summary>
+        public float Charge01 => IsCharging ? Mathf.Clamp01((float)((Now - ChargingSince.Value) / config.chargeSeconds)) : 0f;
         public bool RamReady => Now >= RamReadyAt.Value;
         public bool IsDashing => Time.time < dashVisualUntil;
         public CargoItem CarriedCargo => CargoItem.Find(CarriedCargoId.Value);
@@ -71,6 +91,9 @@ namespace CargoClash
 
         /// <summary>The enemy a swing would land on right now. They come before cargo. Only set on the owner's computer.</summary>
         public PlayerAvatar AimedEnemy { get; private set; }
+
+        /// <summary>Cargo the vacuum would pull in right now. Only set on the owner's computer.</summary>
+        public CargoItem AimedSuck { get; private set; }
 
         public Vector3 EyePosition => transform.position + Vector3.up * config.eyeHeight;
         public Vector3 LookDirection => Quaternion.Euler(LookPitch, LookYaw, 0f) * Vector3.forward;
@@ -104,6 +127,12 @@ namespace CargoClash
         private bool lastAttackHeld;
         private float swingCommittedUntil;
         private float nextSwingAskAt;
+        private bool lastSuck;
+        private float nextSuckAskAt;
+        private bool lastCharge;
+        private float nextChargeAskAt;
+        private Vector3 pull;
+        private float pullUntil;
         private ulong lastSmashTarget = NetIds.None;
         private ulong lastHitTarget = NetIds.None;
         private Vector2 lastCoCarry;
@@ -117,6 +146,14 @@ namespace CargoClash
         private double serverLastHitAt = double.NegativeInfinity;
         private int hitsInARow;
         private double lastHitTakenAt = double.NegativeInfinity;
+        private double serverRespawnAt;
+        private Vector3 serverLastPosition;
+        private bool serverPositionKnown;
+        private double serverSlamAt;
+        private float nextPullSendAt;
+
+        /// <summary>How fast this person is moving as the host sees them. Only kept on the host.</summary>
+        public float ServerSpeed { get; private set; }
 
         public static PlayerAvatar Find(ulong networkObjectId)
         {
@@ -137,6 +174,7 @@ namespace CargoClash
         /// <summary>Host only, before spawning.</summary>
         public void ServerInit(RosterEntry entry)
         {
+            Health.Value = config.maxHealth;
             TeamVar.Value = entry.Team;
             NameVar.Value = entry.Name;
             IsBotVar.Value = entry.IsBot;
@@ -190,6 +228,7 @@ namespace CargoClash
             MatchDirector director = MatchDirector.Instance;
             bool canAct = director != null && director.Phase.Value == MatchPhase.Playing && !IsKnockedDown && !IsStaggered;
             if (input.SwitchViewPressed && IsLocalPlayer) FollowCamera.ToggleView();
+            if (input.InspectPressed && IsLocalPlayer && FirstPersonRig.Instance != null) FirstPersonRig.Instance.StartInspecting();
             UpdateLook(director);
 
             Vector2 rawMove = canAct ? Vector2.ClampMagnitude(input.Move, 1f) : Vector2.zero;
@@ -211,24 +250,32 @@ namespace CargoClash
                 else if (AimedGrab != null) InteractRpc(AimedGrab.NetworkObjectId);
             }
 
-            UpdateSwing(canAct, carried, wish, deltaTime);
+            UpdateTools(canAct, carried, wish, deltaTime);
         }
 
         /// <summary>
-        /// Left click: both sides can hit people, and Interrupters can smash cargo too. Your hands have to
-        /// be empty. If someone's in front of you, they get it rather than the cargo.
+        /// The tool in your hands. Interrupters hit people and smash cargo with the hammer on the left button,
+        /// and charge a slam on the right. Collectors blast people with the vacuum on the left, and suck on the
+        /// right. Your hands have to be empty. If someone's in front of you, they get it rather than the cargo.
         /// </summary>
-        private void UpdateSwing(bool canAct, CargoItem carried, Vector3 wish, float deltaTime)
+        private void UpdateTools(bool canAct, CargoItem carried, Vector3 wish, float deltaTime)
         {
+            bool free = canAct && carried == null;
+            bool collector = Side == Side.Collector;
+            bool secondary = input.SecondaryHeld;
+            UpdateSuck(free && collector && secondary);
+            UpdateCharge(free && !collector && secondary && !IsSlamming);
+
             // A quick click still finishes its swing, even though the button has already come back up.
             bool held = input.AttackHeld;
             // It stays up a little past the moment the blow lands, in case this message reaches the host faster than the first.
-            if (held && !lastAttackHeld) swingCommittedUntil = Time.time + config.smashFirstHitSeconds + 0.12f;
+            if (held && !lastAttackHeld) swingCommittedUntil = Time.time + FirstHitSeconds + 0.12f;
             lastAttackHeld = held;
 
-            bool swing = canAct && carried == null && (held || Time.time < swingCommittedUntil);
+            bool busy = secondary || IsSlamming;
+            bool swing = free && !busy && (held || Time.time < swingCommittedUntil);
             ulong hitTarget = swing && AimedEnemy != null ? AimedEnemy.NetworkObjectId : NetIds.None;
-            ulong smashTarget = swing && hitTarget == NetIds.None && Side == Side.Interrupter && AimedSmash != null
+            ulong smashTarget = swing && hitTarget == NetIds.None && !collector && AimedSmash != null
                 ? AimedSmash.NetworkObjectId
                 : NetIds.None;
 
@@ -245,6 +292,40 @@ namespace CargoClash
             }
             if (swing && !input.LooksAround && wish.sqrMagnitude <= 0.01f) FaceSwingTarget(deltaTime);
         }
+
+        private void UpdateSuck(bool suck)
+        {
+            bool hostDisagrees = suck != Sucking.Value && Time.time >= nextSuckAskAt;
+            if (suck == lastSuck && !hostDisagrees) return;
+            lastSuck = suck;
+            nextSuckAskAt = Time.time + 0.2f;
+            SetSuckingRpc(suck);
+        }
+
+        private void UpdateCharge(bool charge)
+        {
+            if (charge != lastCharge)
+            {
+                lastCharge = charge;
+                nextChargeAskAt = Time.time + 0.2f;
+                if (charge) StartChargingRpc();
+                else ReleaseChargeRpc();
+            }
+            else if (charge && !IsCharging && Time.time >= nextChargeAskAt)
+            {
+                nextChargeAskAt = Time.time + 0.2f;
+                StartChargingRpc();
+            }
+        }
+
+        /// <summary>For the automatic tests, when a button seems to do nothing.</summary>
+        public string ToolState => input == null ? "no input" :
+            $"side={Side} attack={input.AttackHeld} secondary={input.SecondaryHeld} lastSwing={lastSwing} swinging={Swinging.Value} " +
+            $"slamming={IsSlamming} charging={IsCharging} lastCharge={lastCharge} sucking={Sucking.Value} lastSuck={lastSuck} carrying={CarriedCargoId.Value != NetIds.None} " +
+            $"knocked={IsKnockedDown} out={KnockedOut.Value} staggered={IsStaggered} immune={IsImmune} dashing={IsDashing} askIn={nextSwingAskAt - Time.time:0.00} committed={swingCommittedUntil - Time.time:0.00}";
+
+        private float FirstHitSeconds => Side == Side.Collector ? config.blastFirstSeconds : config.smashFirstHitSeconds;
+        private float SwingSeconds => Side == Side.Collector ? config.blastCycleSeconds : config.smashSwingSeconds;
 
         private void UpdateLook(MatchDirector director)
         {
@@ -279,10 +360,16 @@ namespace CargoClash
                 AimedSmash = CargoItem.FindSmashable(transform.position, config.smashRange);
             }
             AimedEnemy = FindEnemyInReach();
+            AimedSuck = input.LooksAround && Side == Side.Collector
+                ? CargoItem.FindSuckable(transform.position, Quaternion.Euler(0f, LookYaw, 0f) * Vector3.forward)
+                : null;
         }
 
         private PlayerAvatar FindEnemyInReach()
         {
+            bool collector = Side == Side.Collector;
+            float range = collector ? config.blastRange : config.hitRange;
+            float aim = collector ? config.blastAimDegrees : config.hitAimDegrees;
             PlayerAvatar best = null;
             float bestScore = float.MaxValue;
             foreach (PlayerAvatar other in All)
@@ -291,11 +378,11 @@ namespace CargoClash
                 Vector3 to = other.transform.position - transform.position;
                 to.y = 0f;
                 float distance = to.magnitude;
-                if (distance > config.hitRange) continue;
+                if (distance > range) continue;
 
                 // People have to be looking at who they hit. A bot turns to face them when it swings.
                 float sideways = input.LooksAround ? Mathf.Abs(Mathf.DeltaAngle(LookYaw, Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg)) : 0f;
-                if (sideways > config.hitAimDegrees) continue;
+                if (sideways > aim) continue;
                 float score = sideways + distance * 8f;
                 if (score < bestScore)
                 {
@@ -324,7 +411,10 @@ namespace CargoClash
 
             float speed = config.runSpeed;
             if (carried != null) speed *= carried.Definition.carrySpeedMultiplier;
+            if (Sucking.Value) speed *= config.suckMoveMultiplier;
+            else if (IsCharging) speed *= config.chargeMoveMultiplier;
             Vector3 velocity = wish * speed;
+            if (Time.time < pullUntil && !IsKnockedDown) velocity += pull;
             if (Time.time < dashUntil) velocity = dashDirection * config.ramSpeed;
             if (slide.sqrMagnitude > 0.01f)
             {
@@ -427,15 +517,26 @@ namespace CargoClash
         }
 
         [Rpc(SendTo.Owner)]
-        private void StaggerRpc(Vector3 direction)
+        private void StaggerRpc(Vector3 push)
         {
             dashUntil = 0f;
-            slide = direction * config.hitPushSpeed;
+            slide = push;
             if (!IsLocalPlayer) return;
+            Vector3 direction = push.normalized;
             if (MatchHud.Instance != null) MatchHud.Instance.ShowHitFrom(-direction);
             if (FirstPersonRig.Instance != null) FirstPersonRig.Instance.Flinch(direction);
             FollowCamera.Flinch(direction);
         }
+
+        /// <summary>Someone's vacuum has got you. Your own computer moves you, so this keeps coming for as long as it does.</summary>
+        [Rpc(SendTo.Owner, Delivery = RpcDelivery.Unreliable)]
+        private void PullRpc(Vector3 velocity)
+        {
+            pull = velocity;
+            pullUntil = Time.time + 0.25f;
+        }
+
+        public bool IsBeingPulled => Time.time < pullUntil;
 
         [Rpc(SendTo.Owner)]
         private void KnockbackRpc(Vector3 direction)
@@ -480,6 +581,33 @@ namespace CargoClash
             HitTargetId.Value = Swinging.Value ? hitTargetId : NetIds.None;
         }
 
+        [Rpc(SendTo.Server)]
+        private void SetSuckingRpc(bool sucking)
+        {
+            Sucking.Value = sucking && ServerCanAct() && CarriedCargo == null && Side == Side.Collector;
+            if (Sucking.Value) ServerStopSwinging();
+        }
+
+        [Rpc(SendTo.Server)]
+        private void StartChargingRpc()
+        {
+            if (IsCharging || IsSlamming || !ServerCanAct() || CarriedCargo != null || Side != Side.Interrupter) return;
+            ChargingSince.Value = Now;
+            ServerStopSwinging();
+        }
+
+        /// <summary>Let go too early and nothing happens, which makes it possible to bluff.</summary>
+        [Rpc(SendTo.Server)]
+        private void ReleaseChargeRpc()
+        {
+            if (!IsCharging) return;
+            bool ready = Now - ChargingSince.Value >= config.chargeSeconds - 0.05;
+            ChargingSince.Value = 0.0;
+            if (!ready || !ServerCanAct()) return;
+            SlammingUntil.Value = Now + config.slamSeconds;
+            serverSlamAt = Now + config.slamLandSeconds;
+        }
+
         [Rpc(SendTo.Server, Delivery = RpcDelivery.Unreliable)]
         private void CoCarryInputRpc(Vector2 move)
         {
@@ -497,14 +625,24 @@ namespace CargoClash
             RamReadyAt.Value = Now + director.RamCooldownFor(Team);
             serverRamUntil = Now + config.ramDuration + 0.1;
             serverRamDirection = direction;
-            ServerStopSwinging();
+            ServerStopTools();
             director.ServerOnRam(this);
             RamVisualRpc();
         }
 
         private void TickServer(float deltaTime)
         {
+            TrackSpeed(deltaTime);
             if (Now < serverRamUntil) ServerCheckRamHit();
+            if (serverRespawnAt > 0.0 && Now >= serverRespawnAt) ServerRespawn();
+            if (serverSlamAt > 0.0 && Now >= serverSlamAt) ServerSlam();
+            if (IsCharging && (!ServerCanAct() || CarriedCargo != null)) ChargingSince.Value = 0.0;
+
+            if (Sucking.Value)
+            {
+                if (ServerCanAct() && CarriedCargo == null && Side == Side.Collector) ServerSuck(deltaTime);
+                else Sucking.Value = false;
+            }
 
             if (!Swinging.Value)
             {
@@ -520,7 +658,7 @@ namespace CargoClash
         }
 
         /// <summary>
-        /// A swing lands once, when the hammer comes down or the fist goes out. Letting go and pressing again
+        /// A swing lands once, when the hammer comes down or the air comes out. Letting go and pressing again
         /// doesn't swing any faster, because the next hit can't come sooner than a full swing after the last.
         /// </summary>
         private void ServerSwing()
@@ -528,20 +666,108 @@ namespace CargoClash
             if (!serverSwinging)
             {
                 serverSwinging = true;
-                serverNextHitAt = System.Math.Max(Now + config.smashFirstHitSeconds, serverLastHitAt + config.smashSwingSeconds);
+                serverNextHitAt = System.Math.Max(Now + FirstHitSeconds, serverLastHitAt + SwingSeconds);
             }
             if (Now < serverNextHitAt) return;
             serverLastHitAt = Now;
-            serverNextHitAt = Now + config.smashSwingSeconds;
+            serverNextHitAt = Now + SwingSeconds;
 
-            float reach = config.hitRange + config.reachTolerance;
+            bool collector = Side == Side.Collector;
             PlayerAvatar person = HitTarget;
-            if (person != null && person.Team != Team && (person.transform.position - transform.position).sqrMagnitude <= reach * reach && person.ServerTakeHit(this))
-                return;
+            if (person != null && person.Team != Team)
+            {
+                float reach = (collector ? config.blastRange : config.hitRange) + config.reachTolerance + LagAllowance(person);
+                float distance = HorizontalDistance(person);
+                if (distance <= reach && person.ServerTakeHit(this, collector ? Weapon.Blast : Weapon.Hammer)) return;
+                if (distance > reach) AutoPilot.Log($"MISS {DisplayName} at {person.DisplayName} distance={distance:0.00} reach={reach:0.00}");
+            }
 
             CargoItem target = SmashTarget;
             if (target != null && target.IsWithin(transform.position, config.smashRange + config.reachTolerance))
                 target.ServerApplySmash(this, config.smashSwingSeconds);
+        }
+
+        /// <summary>Everything in front of you gets pulled in, and the first cargo to reach your hands stays there.</summary>
+        private void ServerSuck(float deltaTime)
+        {
+            Vector3 forward = transform.forward;
+            Vector3 mouth = transform.position + forward * 0.7f + Vector3.up * 0.9f;
+            foreach (CargoItem cargo in CargoItem.All)
+            {
+                if (!cargo.CanBeSuckedFrom(transform.position, forward)) continue;
+                cargo.ServerPullToward(mouth, cargo.Definition.size == CargoSize.Small ? config.suckSpeedSmall : config.suckSpeedMedium, deltaTime);
+                if (cargo.EdgeDistance(transform.position) > config.suckGrabRange) continue;
+                if (cargo.ServerTryGrab(this)) return;
+            }
+
+            if (Time.time < nextPullSendAt) return;
+            nextPullSendAt = Time.time + 0.1f;
+            foreach (PlayerAvatar other in All)
+            {
+                if (other.Team == Team || other.IsKnockedDown) continue;
+                Vector3 to = other.transform.position - transform.position;
+                to.y = 0f;
+                float distance = to.magnitude;
+                if (distance > config.suckPersonRange || distance < config.suckPersonStop) continue;
+                if (Vector3.Angle(forward, to) > config.suckAimDegrees) continue;
+                other.PullRpc(-to / distance * config.suckPersonSpeed);
+            }
+        }
+
+        /// <summary>It comes down in front of you and gets everything there at once, cargo included.</summary>
+        private void ServerSlam()
+        {
+            serverSlamAt = 0.0;
+            if (!ServerCanAct()) return;
+            Vector3 impact = transform.position + transform.forward * config.slamReach;
+            float radius = config.slamRadius;
+            foreach (PlayerAvatar other in All)
+            {
+                if (other.Team == Team) continue;
+                Vector3 offset = other.transform.position - impact;
+                offset.y = 0f;
+                float reach = radius + LagAllowance(other);
+                if (offset.sqrMagnitude <= reach * reach) other.ServerTakeHit(this, Weapon.Slam);
+            }
+            for (int i = CargoItem.All.Count - 1; i >= 0; i--)
+            {
+                CargoItem cargo = CargoItem.All[i];
+                if (cargo.IsWithin(impact, radius)) cargo.ServerApplySmash(this, config.smashSwingSeconds * config.slamCargoSwings);
+            }
+            SlamRpc(impact);
+        }
+
+        /// <summary>
+        /// Someone playing on another computer sees everyone where they were a moment ago, and the host sees
+        /// them a moment late as well. Without allowing for that, their swings at anyone running away never land.
+        /// The host and the bots see what's really there, so they get nothing extra.
+        /// </summary>
+        private float LagAllowance(PlayerAvatar target)
+        {
+            if (IsOwnedByServer) return 0f;
+            return Mathf.Min((ServerSpeed + target.ServerSpeed) * config.lagCompensationSeconds, config.maxLagCompensation);
+        }
+
+        private float HorizontalDistance(PlayerAvatar other)
+        {
+            Vector3 offset = other.transform.position - transform.position;
+            offset.y = 0f;
+            return offset.magnitude;
+        }
+
+        private void TrackSpeed(float deltaTime)
+        {
+            Vector3 position = transform.position;
+            if (serverPositionKnown && deltaTime > 0f)
+            {
+                Vector3 moved = position - serverLastPosition;
+                moved.y = 0f;
+                // A teleport isn't running, and a ram is the fastest anyone really goes.
+                float speed = Mathf.Min(moved.magnitude / deltaTime, config.ramSpeed);
+                ServerSpeed = Mathf.Lerp(ServerSpeed, speed, 1f - Mathf.Exp(-deltaTime / 0.12f));
+            }
+            serverLastPosition = position;
+            serverPositionKnown = true;
         }
 
         private void ServerStopSwinging()
@@ -551,11 +777,21 @@ namespace CargoClash
             HitTargetId.Value = NetIds.None;
         }
 
+        private void ServerStopTools()
+        {
+            ServerStopSwinging();
+            Sucking.Value = false;
+            ChargingSince.Value = 0.0;
+            SlammingUntil.Value = 0.0;
+            serverSlamAt = 0.0;
+        }
+
         /// <summary>
-        /// A punch or a hammer. One pushes you back and stops what you're doing, and another straight after
-        /// knocks you down the same as a ram. Returns false if it had no effect.
+        /// Every hit takes health. One also pushes you back and stops what you're doing, and another straight
+        /// after knocks you down. A ram or a slam knocks you down by itself, and running out of health knocks
+        /// you out. Returns false if it had no effect.
         /// </summary>
-        public bool ServerTakeHit(PlayerAvatar attacker)
+        public bool ServerTakeHit(PlayerAvatar attacker, Weapon weapon)
         {
             if (IsKnockedDown || IsImmune) return false;
 
@@ -564,22 +800,58 @@ namespace CargoClash
             direction = direction.sqrMagnitude > 0.01f ? direction.normalized : attacker.transform.forward;
             Vector3 where = transform.position + Vector3.up * 1.1f;
 
+            int damage = config.DamageOf(weapon);
+            Health.Value = Mathf.Max(0, Health.Value - damage);
             hitsInARow = Now - lastHitTakenAt <= config.hitComboSeconds ? hitsInARow + 1 : 1;
             lastHitTakenAt = Now;
-            bool knockedDown = hitsInARow >= config.hitsToKnockDown;
-            MatchDirector.Instance.ServerOnHit(attacker, this, knockedDown);
+
+            bool knockedOut = Health.Value == 0;
+            bool knockedDown = knockedOut || weapon == Weapon.Ram || weapon == Weapon.Slam || hitsInARow >= config.hitsToKnockDown;
+            MatchDirector.Instance.ServerOnHit(attacker, this, weapon, knockedDown, knockedOut);
+            if (knockedOut)
+            {
+                ServerKnockOut(attacker, weapon, direction);
+                attacker.BonkRpc(where, damage);
+                return true;
+            }
             if (knockedDown)
             {
                 ServerKnockDown(direction);
-                attacker.BonkRpc(where);
+                attacker.BonkRpc(where, damage);
                 return true;
             }
 
             StaggeredUntil.Value = Now + config.hitStaggerSeconds;
-            ServerStopSwinging();
-            StaggerRpc(direction);
-            attacker.PowRpc(where);
+            ServerStopTools();
+            StaggerRpc(direction * (weapon == Weapon.Blast ? config.blastPushSpeed : config.hitPushSpeed));
+            attacker.PowRpc(where, damage);
             return true;
+        }
+
+        private void ServerKnockOut(PlayerAvatar attacker, Weapon weapon, Vector3 direction)
+        {
+            KnockedOut.Value = true;
+            KnockedUntil.Value = Now + config.respawnSeconds;
+            ImmuneUntil.Value = KnockedUntil.Value + config.immuneSeconds;
+            serverRespawnAt = KnockedUntil.Value;
+            StaggeredUntil.Value = 0.0;
+            hitsInARow = 0;
+            ServerStopTools();
+
+            CargoItem carried = CarriedCargo;
+            if (carried != null) carried.ServerDropAll(direction);
+            MatchDirector.Instance.ServerOnKnockedOut(attacker, this, weapon, carried != null);
+            KnockbackRpc(direction * 1.7f);
+        }
+
+        private void ServerRespawn()
+        {
+            serverRespawnAt = 0.0;
+            KnockedOut.Value = false;
+            Health.Value = config.maxHealth;
+            Transform spot = MatchDirector.Instance.RespawnSpot(this);
+            PoofRpc(transform.position, spot.position);
+            TeleportRpc(spot.position, spot.rotation);
         }
 
         private void ServerCheckRamHit()
@@ -594,10 +866,8 @@ namespace CargoClash
                 // You charge what's in front of you, not someone you just ran past.
                 if (Vector3.Dot(offset, serverRamDirection) < 0f) continue;
 
-                Vector3 direction = offset.sqrMagnitude > 0.01f ? offset.normalized : serverRamDirection;
                 serverRamUntil = 0;
-                other.ServerKnockDown(direction);
-                BonkRpc(other.transform.position + Vector3.up);
+                other.ServerTakeHit(this, Weapon.Ram);
                 return;
             }
         }
@@ -608,7 +878,7 @@ namespace CargoClash
             ImmuneUntil.Value = Now + config.knockdownSeconds + config.immuneSeconds;
             StaggeredUntil.Value = 0;
             hitsInARow = 0;
-            ServerStopSwinging();
+            ServerStopTools();
 
             CargoItem carried = CarriedCargo;
             if (carried != null) carried.ServerDropAll(direction);
@@ -619,7 +889,7 @@ namespace CargoClash
         public void ServerSetCarry(CargoItem cargo)
         {
             CarriedCargoId.Value = cargo.NetworkObjectId;
-            ServerStopSwinging();
+            ServerStopTools();
             ServerCoCarryInput = Vector2.zero;
         }
 
@@ -632,7 +902,7 @@ namespace CargoClash
         /// <summary>The whistle blew: let go of everything.</summary>
         public void ServerStopActions()
         {
-            ServerStopSwinging();
+            ServerStopTools();
             serverRamUntil = 0;
             CargoItem carried = CarriedCargo;
             if (carried != null) carried.ServerDropAll(transform.forward);
@@ -646,6 +916,9 @@ namespace CargoClash
             ImmuneUntil.Value = 0;
             StaggeredUntil.Value = 0;
             hitsInARow = 0;
+            KnockedOut.Value = false;
+            serverRespawnAt = 0.0;
+            Health.Value = config.maxHealth;
             RamReadyAt.Value = 0;
             TeleportRpc(position, rotation);
         }
@@ -660,10 +933,15 @@ namespace CargoClash
         }
 
         [Rpc(SendTo.Everyone)]
-        private void PowRpc(Vector3 position)
+        private void PowRpc(Vector3 position, int damage)
         {
             MatchHud hud = MatchHud.Instance;
-            if (hud != null) hud.ShowPopup(position, GameText.Pow, new Color(1f, 0.95f, 0.6f), 0.9f);
+            if (hud != null)
+            {
+                hud.ShowPopup(position, GameText.Pow, new Color(1f, 0.95f, 0.6f), 0.9f);
+                hud.ShowPopup(position + Vector3.right * 0.5f, GameText.Damage(damage), new Color(1f, 0.4f, 0.32f), 0.75f);
+                if (IsLocalPlayer) hud.ShowHitMarker(false);
+            }
             GameAudio.PlayAt("punch", position);
             FxBurst.Play(position, Color.white, 6);
             FxBurst.PlayFlash(position, new Color(1f, 0.95f, 0.7f), 0.9f);
@@ -671,15 +949,41 @@ namespace CargoClash
         }
 
         [Rpc(SendTo.Everyone)]
-        private void BonkRpc(Vector3 position)
+        private void BonkRpc(Vector3 position, int damage)
         {
             if (IsOwner) dashUntil = 0f;
             MatchHud hud = MatchHud.Instance;
-            if (hud != null) hud.ShowPopup(position, GameText.Bonk, new Color(1f, 0.9f, 0.2f), 1.5f);
+            if (hud != null)
+            {
+                hud.ShowPopup(position, GameText.Bonk, new Color(1f, 0.9f, 0.2f), 1.5f);
+                hud.ShowPopup(position + Vector3.right * 0.7f, GameText.Damage(damage), new Color(1f, 0.4f, 0.32f), 0.9f);
+                if (IsLocalPlayer) hud.ShowHitMarker(true);
+            }
             GameAudio.PlayAt("bonk", position);
             FxBurst.Play(position, Color.white, 14);
             FxBurst.PlayFlash(position, new Color(1f, 0.92f, 0.45f), 1.5f);
             FollowCamera.Shake(position, 0.9f);
+        }
+
+        [Rpc(SendTo.Everyone)]
+        private void SlamRpc(Vector3 impact)
+        {
+            MatchHud hud = MatchHud.Instance;
+            if (hud != null) hud.ShowPopup(impact, GameText.Slam, new Color(1f, 0.55f, 0.2f), 1.6f);
+            GameAudio.PlayAt("slam", impact);
+            FxBurst.PlaySlam(impact);
+            FollowCamera.Shake(impact, 1.2f);
+            if (IsLocalPlayer) FollowCamera.Kick(2.2f);
+        }
+
+        /// <summary>Where someone vanished from and where they came back.</summary>
+        [Rpc(SendTo.Everyone)]
+        private void PoofRpc(Vector3 from, Vector3 to)
+        {
+            Color smoke = new Color(0.92f, 0.92f, 0.95f);
+            FxBurst.PlayPuff(from + Vector3.up * 0.7f, smoke, 10);
+            FxBurst.PlayPuff(to + Vector3.up * 0.7f, smoke, 10);
+            GameAudio.PlayAt("respawn", to, 0.8f);
         }
     }
 }

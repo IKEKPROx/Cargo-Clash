@@ -13,7 +13,7 @@ public static class CargoClashCharacterAnimator
 
     private static readonly HashSet<string> LoopingClips = new HashSet<string>
     {
-        "Idle", "Run", "Carry", "CarryBig", "CoCarryIdle", "CoCarryWalk", "Smash", "Punch", "Cheer", "Grumble",
+        "Idle", "Run", "Carry", "CarryBig", "CoCarryIdle", "CoCarryWalk", "Smash", "ReadyHammer", "ReadyVacuum", "Blast", "Charge", "Cheer", "Grumble",
     };
 
     public static void ConfigureImport(string modelPath)
@@ -55,7 +55,7 @@ public static class CargoClashCharacterAnimator
         {
             if (asset is AnimationClip clip && !clip.name.StartsWith("__preview__")) clips[clip.name] = clip;
         }
-        foreach (string needed in new[] { "Idle", "Run", "Carry", "CarryBig", "CoCarryIdle", "CoCarryWalk", "Ram", "Knocked", "Smash", "Toss", "Punch", "Flinch", "Cheer", "Grumble" })
+        foreach (string needed in new[] { "Idle", "Run", "Carry", "CarryBig", "CoCarryIdle", "CoCarryWalk", "Ram", "Knocked", "KnockedOut", "Smash", "Toss", "ReadyHammer", "ReadyVacuum", "Blast", "Charge", "Slam", "Flinch", "Cheer", "Grumble" })
         {
             if (!clips.ContainsKey(needed)) Debug.LogError($"[Builder] The character model has no {needed} clip.");
         }
@@ -69,6 +69,7 @@ public static class CargoClashCharacterAnimator
         controller.AddParameter("Dash", AnimatorControllerParameterType.Bool);
         controller.AddParameter("Knocked", AnimatorControllerParameterType.Bool);
         controller.AddParameter("KnockedRate", AnimatorControllerParameterType.Float);
+        controller.AddParameter("Out", AnimatorControllerParameterType.Bool);
         controller.AddParameter("Mood", AnimatorControllerParameterType.Int);
         controller.AddParameter("UpperPose", AnimatorControllerParameterType.Int);
 
@@ -90,14 +91,19 @@ public static class CargoClashCharacterAnimator
         AnimatorState knocked = ClipState(machine, "Knocked", clips["Knocked"]);
         knocked.speedParameterActive = true;
         knocked.speedParameter = "KnockedRate";
+        AnimatorState knockedOut = ClipState(machine, "KnockedOut", clips["KnockedOut"]);
         AnimatorState cheer = ClipState(machine, "Cheer", clips["Cheer"]);
         AnimatorState grumble = ClipState(machine, "Grumble", clips["Grumble"]);
 
         Transition(locomotion, coCarry, 0.12f).AddCondition(AnimatorConditionMode.Equals, 2, "Carry");
         Transition(coCarry, locomotion, 0.12f).AddCondition(AnimatorConditionMode.NotEqual, 2, "Carry");
 
-        AnyTransition(machine, knocked, 0.04f).AddCondition(AnimatorConditionMode.If, 0, "Knocked");
+        AnimatorStateTransition toKnocked = AnyTransition(machine, knocked, 0.04f);
+        toKnocked.AddCondition(AnimatorConditionMode.If, 0, "Knocked");
+        toKnocked.AddCondition(AnimatorConditionMode.IfNot, 0, "Out");
         Transition(knocked, locomotion, 0.12f).AddCondition(AnimatorConditionMode.IfNot, 0, "Knocked");
+        AnyTransition(machine, knockedOut, 0.04f).AddCondition(AnimatorConditionMode.If, 0, "Out");
+        Transition(knockedOut, locomotion, 0.05f).AddCondition(AnimatorConditionMode.IfNot, 0, "Out");
 
         AnimatorStateTransition toRam = AnyTransition(machine, ram, 0.04f);
         toRam.AddCondition(AnimatorConditionMode.If, 0, "Dash");
@@ -127,7 +133,11 @@ public static class CargoClashCharacterAnimator
         AnimatorState smash = ClipState(machine, "Smash", clips["Smash"]);
         AnimatorState toss = ClipState(machine, "Toss", clips["Toss"]);
         AnimatorState carryBig = ClipState(machine, "CarryBig", clips["CarryBig"]);
-        AnimatorState punch = ClipState(machine, "Punch", clips["Punch"]);
+        AnimatorState readyHammer = ClipState(machine, "ReadyHammer", clips["ReadyHammer"]);
+        AnimatorState readyVacuum = ClipState(machine, "ReadyVacuum", clips["ReadyVacuum"]);
+        AnimatorState blast = ClipState(machine, "Blast", clips["Blast"]);
+        AnimatorState charge = ClipState(machine, "Charge", clips["Charge"]);
+        AnimatorState slam = ClipState(machine, "Slam", clips["Slam"]);
         AnimatorState flinch = ClipState(machine, "Flinch", clips["Flinch"]);
         machine.defaultState = carry;
 
@@ -135,8 +145,12 @@ public static class CargoClashCharacterAnimator
         AnyTransition(machine, smash, 0.08f).AddCondition(AnimatorConditionMode.Equals, 2, "UpperPose");
         AnyTransition(machine, toss, 0.04f).AddCondition(AnimatorConditionMode.Equals, 3, "UpperPose");
         AnyTransition(machine, carryBig, 0.08f).AddCondition(AnimatorConditionMode.Equals, 4, "UpperPose");
-        AnyTransition(machine, punch, 0.06f).AddCondition(AnimatorConditionMode.Equals, 5, "UpperPose");
         AnyTransition(machine, flinch, 0.03f).AddCondition(AnimatorConditionMode.Equals, 6, "UpperPose");
+        AnyTransition(machine, readyHammer, 0.14f).AddCondition(AnimatorConditionMode.Equals, 7, "UpperPose");
+        AnyTransition(machine, readyVacuum, 0.14f).AddCondition(AnimatorConditionMode.Equals, 8, "UpperPose");
+        AnyTransition(machine, blast, 0.04f).AddCondition(AnimatorConditionMode.Equals, 9, "UpperPose");
+        AnyTransition(machine, charge, 0.12f).AddCondition(AnimatorConditionMode.Equals, 10, "UpperPose");
+        AnyTransition(machine, slam, 0.03f).AddCondition(AnimatorConditionMode.Equals, 11, "UpperPose");
     }
 
     /// <summary>The spine, head and arms. The face stays with the base layer, so its expressions keep playing.</summary>

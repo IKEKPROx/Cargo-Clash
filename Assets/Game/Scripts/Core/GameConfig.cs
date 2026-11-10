@@ -73,9 +73,9 @@ namespace CargoClash
         public float ramHitRadius = 1.5f;
 
         [Header("Hitting people")]
-        [Tooltip("How close someone has to be for a punch or hammer to reach them, from the middle of one person to the middle of the other.")]
+        [Tooltip("How close someone has to be for the hammer to reach them, from the middle of one person to the middle of the other.")]
         public float hitRange = 2.1f;
-        [Tooltip("How far off the middle of the view someone can be and still get hit.")]
+        [Tooltip("How far off the middle of the view someone can be and still get hit by the hammer.")]
         public float hitAimDegrees = 38f;
         [Tooltip("How long a hit stops someone from moving or doing anything.")]
         public float hitStaggerSeconds = 0.4f;
@@ -84,21 +84,72 @@ namespace CargoClash
         public int hitsToKnockDown = 2;
         public float hitComboSeconds = 2.5f;
 
+        [Header("Health")]
+        public int maxHealth = 100;
+        public int hammerDamage = 34;
+        public int blastDamage = 25;
+        public int slamDamage = 60;
+        public int ramDamage = 20;
+        [Tooltip("How long someone stays down after losing all their health, before they come back at their own side's start.")]
+        public float respawnSeconds = 3f;
+
         [Header("Knockdown")]
         public float knockdownSeconds = 1.5f;
         public float immuneSeconds = 2f;
         public float knockbackSpeed = 8f;
+
+        [Header("Collectors' vacuum: blast")]
+        [Tooltip("How far a blast reaches, from the middle of one person to the middle of the other.")]
+        public float blastRange = 3.2f;
+        [Tooltip("A blast has to be aimed better than the hammer, because it reaches farther.")]
+        public float blastAimDegrees = 24f;
+        public float blastPushSpeed = 9f;
+        [Tooltip("One blast. Should match the Blast clip's length in make_character.py.")]
+        public float blastCycleSeconds = 0.55f;
+        [Tooltip("From clicking until the air comes out. Should match the Blast clip.")]
+        public float blastFirstSeconds = 0.1f;
+
+        [Header("Collectors' vacuum: suction")]
+        public float suckRange = 8f;
+        [Tooltip("How far off the middle of the view it pulls, as well as the size of the cargo.")]
+        public float suckAimDegrees = 22f;
+        public float suckSpeedSmall = 7f;
+        public float suckSpeedMedium = 3.5f;
+        [Tooltip("Cargo this close to the person sucking it, edge to feet, goes into their hands.")]
+        public float suckGrabRange = 0.9f;
+        public float suckPersonRange = 6f;
+        public float suckPersonSpeed = 3.5f;
+        [Tooltip("How close it pulls someone before they stop coming.")]
+        public float suckPersonStop = 1.6f;
+        public float suckMoveMultiplier = 0.6f;
+
+        [Header("Interrupters' hammer: charged slam")]
+        public float chargeSeconds = 0.7f;
+        public float chargeMoveMultiplier = 0.55f;
+        [Tooltip("The whole slam, from letting go until the hammer is back up. Should match the Slam clip.")]
+        public float slamSeconds = 0.5f;
+        [Tooltip("From letting go until it lands. Should match the Slam clip.")]
+        public float slamLandSeconds = 0.14f;
+        [Tooltip("How far in front of the person the middle of the slam is.")]
+        public float slamReach = 1.5f;
+        public float slamRadius = 2f;
+        [Tooltip("How many ordinary hammer swings a slam is worth against cargo.")]
+        public float slamCargoSwings = 3f;
 
         [Header("Interaction")]
         public float pickupRange = 1.6f;
         public float smashRange = 1.8f;
         [Tooltip("Allowance when the host checks a reach, because it sees people slightly later than their owners do.")]
         public float reachTolerance = 0.6f;
+        [Tooltip("Roughly how far behind someone on another computer sees everyone else. When they hit someone, the host allows for both having moved that long.")]
+        public float lagCompensationSeconds = 0.3f;
+        [Tooltip("The most that allowance can add to a reach, in metres.")]
+        public float maxLagCompensation = 2.5f;
         [Tooltip("Scales every cargo type's smash time. Playtesting tunes this before individual values.")]
         public float smashTimeMultiplier = 1f;
-        [Tooltip("One swing of a hammer or a fist. Should match the Smash and Punch clips' length in make_character.py.")]
+        [Tooltip("One swing of the hammer. Should match the Smash clip's length in make_character.py.")]
         public float smashSwingSeconds = 0.5f;
-        [Tooltip("From starting to swing until the first hit. Should match where the hit lands in the Smash and Punch clips.")]
+        [Tooltip("From starting to swing until the first hit. Should match where the hit lands in the Smash clip.")]
         public float smashFirstHitSeconds = 0.275f;
 
         [Header("Cargo")]
@@ -122,6 +173,17 @@ namespace CargoClash
 
         [Header("Input")]
         public InputActionAsset inputActions;
+
+        public int DamageOf(Weapon weapon)
+        {
+            switch (weapon)
+            {
+                case Weapon.Blast: return blastDamage;
+                case Weapon.Slam: return slamDamage;
+                case Weapon.Ram: return ramDamage;
+                default: return hammerDamage;
+            }
+        }
 
         /// <summary>Half length for this run. AutoPilot shortens it for automated tests.</summary>
         public float EffectiveHalfSeconds => AutoPilot.HalfSecondsOverride > 0f ? AutoPilot.HalfSecondsOverride : halfSeconds;

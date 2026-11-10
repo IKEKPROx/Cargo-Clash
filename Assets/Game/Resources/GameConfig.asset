@@ -66,9 +66,36 @@ MonoBehaviour:
   hitPushSpeed: 6
   hitsToKnockDown: 2
   hitComboSeconds: 2.5
+  maxHealth: 100
+  hammerDamage: 34
+  blastDamage: 25
+  slamDamage: 60
+  ramDamage: 20
+  respawnSeconds: 3
   knockdownSeconds: 1.5
   immuneSeconds: 2
   knockbackSpeed: 8
+  blastRange: 3.2
+  blastAimDegrees: 24
+  blastPushSpeed: 9
+  blastCycleSeconds: 0.55
+  blastFirstSeconds: 0.1
+  suckRange: 8
+  suckAimDegrees: 22
+  suckSpeedSmall: 7
+  suckSpeedMedium: 3.5
+  suckGrabRange: 0.9
+  suckPersonRange: 6
+  suckPersonSpeed: 3.5
+  suckPersonStop: 1.6
+  suckMoveMultiplier: 0.6
+  chargeSeconds: 0.7
+  chargeMoveMultiplier: 0.55
+  slamSeconds: 0.5
+  slamLandSeconds: 0.14
+  slamReach: 1.5
+  slamRadius: 2
+  slamCargoSwings: 3
   pickupRange: 1.6
   smashRange: 1.8
   reachTolerance: 0.6

@@ -49,6 +49,9 @@ namespace CargoClash
         private bool driveInput;
         private float burstEvery;
         private int peopleHit;
+        private int cargoSucked;
+        private bool suckUntested;
+        private int slamsLanded;
         private string startView;
         private int errorCount;
         private int shotNumber;
@@ -303,6 +306,9 @@ namespace CargoClash
             bool wasAimingAtPerson = false;
             int testedHitInHalf = 0;
             bool photographedCoCarry = false;
+            bool photographedPickUp = false;
+            int timesKnockedOut = 0;
+            bool wasKnockedOut = false;
             int timesStaggered = 0;
             bool wasStaggered = false;
             float holdAfterHitUntil = 0f;
@@ -363,28 +369,55 @@ namespace CargoClash
                     continue;
                 }
 
+                if (local.KnockedOut.Value && !wasKnockedOut) timesKnockedOut++;
+                wasKnockedOut = local.KnockedOut.Value;
+
                 // Someone who's just been hit usually keeps the button held, and the next swing has to happen.
                 bool staggeredNow = local.IsStaggered;
                 if (staggeredNow && !wasStaggered) timesStaggered++;
                 wasStaggered = staggeredNow;
                 if (staggeredNow || local.IsKnockedDown) holdAfterHitUntil = Time.time + 1.2f;
-                bool shouldBeSwinging = mouse.leftButton.isPressed && local.CarriedCargo == null && !staggeredNow && !local.IsKnockedDown;
+                // A slam takes up the hammer until it's finished.
+                bool shouldBeSwinging = mouse.leftButton.isPressed && local.CarriedCargo == null && !staggeredNow && !local.IsKnockedDown && !local.IsSlamming;
                 stuckFor = shouldBeSwinging && !local.Swinging.Value ? stuckFor + Time.deltaTime : 0f;
+                if (stuckFor > 0.7f && longestStuck <= 0.7f) Log("STUCK " + local.ToolState);
                 longestStuck = Mathf.Max(longestStuck, stuckFor);
 
                 // Once a half, as each side: hitting someone, and pictures of the hands if asked for.
-                // A client goes later, so that two computers testing this don't get in each other's way.
-                float testHitAfter = NetworkManager.Singleton.IsServer ? 9f : 13f;
+                // After the other keys, and a client goes later, so that two computers testing this don't get in each other's way.
+                float testHitAfter = NetworkManager.Singleton.IsServer ? 12f : 22f;
                 if (testedHitInHalf != director.Half.Value && Time.time - halfStartedAt > testHitAfter && local.CarriedCargo == null && !local.IsKnockedDown)
                 {
                     testedHitInHalf = director.Half.Value;
                     if (burstEvery > 0f) yield return PhotographTheHands(keyboard, mouse);
+                    yield return LetGoOfCargo(keyboard, local);
                     yield return TestHittingSomeone(keyboard, mouse, local);
+                    yield return LetGoOfCargo(keyboard, local);
+                    yield return TestKnockingSomeoneOut(keyboard, mouse, local);
+                    yield return LetGoOfCargo(keyboard, local);
+                    if (local.Side == Side.Collector)
+                    {
+                        yield return TestPullingSomeone(keyboard, mouse, local);
+                        yield return TestSucking(keyboard, mouse, local);
+                    }
+                    else
+                    {
+                        yield return TestSlamming(keyboard, mouse, local);
+                    }
+                    target = null;
+                    first = true;
                     lastPosition = local.transform.position;
                     continue;
                 }
 
                 CargoItem carried = local.CarriedCargo;
+                if (burstEvery > 0f && !photographedPickUp && carried != null && carried.Definition.requiredCarriers == 1 && carrying == null)
+                {
+                    photographedPickUp = true;
+                    yield return PhotographPickingUp(keyboard, mouse);
+                    lastYaw = local.LookYaw;
+                    lastPosition = local.transform.position;
+                }
                 if (burstEvery > 0f && !photographedCoCarry && carried != null && carried.Definition.requiredCarriers > 1)
                 {
                     photographedCoCarry = true;
@@ -473,12 +506,12 @@ namespace CargoClash
                 if (aimingAtPerson && !wasAimingAtPerson) swingsAtPeople++;
                 wasAimingAtPerson = aimingAtPerson;
 
-                SendKeys(keyboard, go && facing ? Key.W : Key.None, interact ? Key.E : Key.None);
-                SendMouse(mouse, delta, wantSmash || aimingAtPerson || Time.time < holdAfterHitUntil, ram);
+                SendKeys(keyboard, go && facing ? Key.W : Key.None, interact ? Key.E : Key.None, ram ? Key.Space : Key.None);
+                SendMouse(mouse, delta, wantSmash || aimingAtPerson || Time.time < holdAfterHitUntil, false);
                 yield return null;
             }
 
-            Log($"DRIVEN turned={turned:0} walked={walked:0} grabs={grabs} delivered={delivered} hits={hits} broken={broken} rams={rams} swingsAtPeople={swingsAtPeople} peopleHit={peopleHit} timesStaggered={timesStaggered} longestStuck={longestStuck:0.00}");
+            Log($"DRIVEN turned={turned:0} walked={walked:0} grabs={grabs} delivered={delivered} hits={hits} broken={broken} rams={rams} swingsAtPeople={swingsAtPeople} peopleHit={peopleHit} timesStaggered={timesStaggered} timesKnockedOut={timesKnockedOut} sucked={cargoSucked} slams={slamsLanded} longestStuck={longestStuck:0.00}");
             Expect(turned > 90f, "the mouse turned the view");
             Expect(walked > 10f, "W walked the character forward, whichever way it was looking");
             Expect(grabs > 0, "E picked up the cargo being aimed at");
@@ -486,8 +519,35 @@ namespace CargoClash
             if (!forceCoCarry) Expect(delivered > 0, "cargo carried by hand reached the truck");
             Expect(hits > 0, "holding the mouse button landed hammer hits");
             Expect(broken > 0, "hammer hits broke cargo");
-            if (!forceCoCarry) Expect(peopleHit > 0, "hitting someone got tested");
-            Expect(longestStuck < 0.6f, "a held button keeps swinging after being hit or ramming");
+            if (!forceCoCarry)
+            {
+                Expect(peopleHit > 0, "hitting someone got tested");
+                // Only when there was nothing left to try it on. Hanging on for 3 s with nothing coming in is a failure.
+                Expect(cargoSucked > 0 || suckUntested, "right click sucked cargo into the hands");
+                Expect(slamsLanded > 0, "a charged slam landed");
+            }
+            // A slow frame can take up a good part of this by itself, as it can for anyone.
+            Expect(longestStuck < 1f, "a held button keeps swinging after being hit or ramming");
+        }
+
+        /// <summary>Just after picking something up, and walking with it. For checking how the hands hold it.</summary>
+        private IEnumerator PhotographPickingUp(Keyboard keyboard, Mouse mouse)
+        {
+            SendMouse(mouse, Vector2.zero, false, false);
+            for (int i = 0; i < 4; i++)
+            {
+                yield return null;
+                Shot();
+                yield return new WaitForSeconds(0.04f);
+            }
+            float ends = Time.time + 0.8f;
+            while (Time.time < ends)
+            {
+                SendKeys(keyboard, Key.W);
+                yield return new WaitForSeconds(0.2f);
+                Shot();
+            }
+            SendKeys(keyboard);
         }
 
         /// <summary>A run of pictures close together: running, standing still, then swinging. For checking that the hands move well.</summary>
@@ -512,7 +572,37 @@ namespace CargoClash
                 Shot();
             }
             SendMouse(mouse, Vector2.zero, false, false);
-            yield return new WaitForSeconds(0.4f);
+            yield return new WaitForSeconds(0.5f);
+
+            // The flourish on F, all the way through.
+            FirstPersonRig rig = FirstPersonRig.Instance;
+            if (rig == null || !rig.ShowsTool) yield break;
+            SendKeys(keyboard, Key.F);
+            yield return null;
+            yield return null;
+            SendKeys(keyboard);
+            while (rig.Inspecting)
+            {
+                yield return new WaitForSeconds(burstEvery * 2.5f);
+                Shot();
+            }
+
+            // The right button, held and then let go.
+            SendMouse(mouse, Vector2.zero, false, true);
+            ends = Time.time + 1.1f;
+            while (Time.time < ends)
+            {
+                yield return new WaitForSeconds(burstEvery * 2f);
+                Shot();
+            }
+            SendMouse(mouse, Vector2.zero, false, false);
+            ends = Time.time + 0.6f;
+            while (Time.time < ends)
+            {
+                yield return new WaitForSeconds(burstEvery);
+                Shot();
+            }
+            yield return new WaitForSeconds(0.3f);
         }
 
         /// <summary>A look all the way round while carrying the big chest, for checking the hands from every side of it.</summary>
@@ -548,6 +638,10 @@ namespace CargoClash
                 // So that a passing bot can't knock the tester over halfway through.
                 if (host) local.ImmuneUntil.Value = local.Now + 3.5;
 
+                bool collector = local.Side == Side.Collector;
+                // A blast has to reach farther than the hammer could.
+                float apart = collector ? GameConfig.Get().hitRange + 0.5f : 1.5f;
+                int healthBefore = enemy.Health.Value;
                 bool staggered = false;
                 bool heldStaggered = false;
                 bool interrupted = false;
@@ -559,12 +653,12 @@ namespace CargoClash
                         SendMouse(mouse, Vector2.zero, false, false);
                         yield break;
                     }
-                    interrupted = local.IsKnockedDown || local.IsStaggered;
+                    interrupted = local.IsKnockedDown || local.IsStaggered || (enemy.IsImmune && !enemy.IsKnockedDown);
 
                     // Keeps them just in front, however they try to walk away. Only the host can move other people.
                     if (host)
                     {
-                        Vector3 inFront = local.transform.position + Quaternion.Euler(0f, local.LookYaw, 0f) * Vector3.forward * 1.5f;
+                        Vector3 inFront = local.transform.position + Quaternion.Euler(0f, local.LookYaw, 0f) * Vector3.forward * apart;
                         enemy.TeleportRpc(inFront, Quaternion.LookRotation(local.transform.position - inFront));
                     }
                     else
@@ -572,7 +666,7 @@ namespace CargoClash
                         Vector3 away = local.transform.position - enemy.transform.position;
                         away.y = 0f;
                         away = away.sqrMagnitude > 0.01f ? away.normalized : Vector3.forward;
-                        local.TeleportRpc(enemy.transform.position + away * 1.5f, Quaternion.LookRotation(-away));
+                        local.TeleportRpc(enemy.transform.position + away * apart, Quaternion.LookRotation(-away));
                     }
                     if (enemy.IsStaggered)
                     {
@@ -596,6 +690,7 @@ namespace CargoClash
                 string where = host ? "host" : "client";
                 Expect(staggered && heldStaggered, $"as {side} on the {where}, the first hit staggers someone and stops them swinging");
                 Expect(enemy.IsKnockedDown, $"as {side} on the {where}, a second hit in a row knocks them down");
+                Expect(enemy.Health.Value < healthBefore, $"as {side} on the {where}, hits take health");
                 peopleHit++;
 
                 // Flat on the ground, or just back up, they can't be hit again.
@@ -608,6 +703,220 @@ namespace CargoClash
                 Expect(!local.Swinging.Value, "the swing stops when the button comes up");
                 yield break;
             }
+        }
+
+        /// <summary>Out of health: down for a while, everyone hears about it, and back at the start with full health. Only the host can set someone's health.</summary>
+        private IEnumerator TestKnockingSomeoneOut(Keyboard keyboard, Mouse mouse, PlayerAvatar local)
+        {
+            if (!NetworkManager.Singleton.IsServer) yield break;
+            GameConfig config = GameConfig.Get();
+            float waited = 0f;
+            PlayerAvatar enemy = ChooseSomeoneToHit(local);
+            while (enemy == null && waited < 4f)
+            {
+                waited += Time.deltaTime;
+                yield return null;
+                enemy = ChooseSomeoneToHit(local);
+            }
+            if (enemy == null || MatchDirector.Instance.Phase.Value != MatchPhase.Playing) yield break;
+
+            local.ImmuneUntil.Value = local.Now + 3f;
+            enemy.Health.Value = 1;
+            float apart = local.Side == Side.Collector ? 2.5f : 1.5f;
+            float ends = Time.time + 2f;
+            while (Time.time < ends && !enemy.KnockedOut.Value)
+            {
+                Vector3 inFront = local.transform.position + Quaternion.Euler(0f, local.LookYaw, 0f) * Vector3.forward * apart;
+                enemy.TeleportRpc(inFront, Quaternion.LookRotation(local.transform.position - inFront));
+                SendKeys(keyboard);
+                SendMouse(mouse, Vector2.zero, true, false);
+                yield return null;
+            }
+            SendMouse(mouse, Vector2.zero, false, false);
+            Expect(enemy.KnockedOut.Value, "running out of health knocks someone out");
+            Expect(enemy.Health.Value == 0, "someone knocked out has no health");
+            Vector3 fellAt = enemy.transform.position;
+
+            ends = Time.time + config.respawnSeconds + 0.6f;
+            while (Time.time < ends)
+            {
+                if (MatchDirector.Instance.Phase.Value != MatchPhase.Playing) yield break;
+                yield return null;
+            }
+            Expect(!enemy.KnockedOut.Value && enemy.Health.Value == config.maxHealth, "someone knocked out comes back with full health");
+            Expect(enemy.IsImmune, "someone who's just come back can't be hit straight away");
+            Expect(Vector3.Distance(enemy.transform.position, fellAt) > 2f, "someone knocked out comes back at their own start");
+        }
+
+        /// <summary>Most of what these tests try needs empty hands.</summary>
+        private static IEnumerator LetGoOfCargo(Keyboard keyboard, PlayerAvatar local)
+        {
+            if (local.CarriedCargo == null) yield break;
+            SendKeys(keyboard, Key.E);
+            yield return null;
+            yield return null;
+            SendKeys(keyboard);
+            yield return new WaitForSeconds(0.5f);
+        }
+
+        /// <summary>From a good way off, cargo comes to you and ends up in your hands.</summary>
+        private IEnumerator TestSucking(Keyboard keyboard, Mouse mouse, PlayerAvatar local)
+        {
+            GameConfig config = GameConfig.Get();
+            string untested = "interrupted every time";
+            // Standing still with both hands busy, this is the easiest time for a bot to knock you over.
+            for (int attempt = 0; attempt < 8; attempt++)
+            {
+                if (MatchDirector.Instance.Phase.Value != MatchPhase.Playing)
+                {
+                    untested = "the half ended";
+                    break;
+                }
+                while (local.IsKnockedDown || local.IsStaggered) yield return null;
+                yield return LetGoOfCargo(keyboard, local);
+
+                // Late in a half, everything small may already have been carried off or broken.
+                CargoItem cargo = NearestSmallCargoFor(local);
+                if (cargo == null)
+                {
+                    untested = "no small cargo left on the ground";
+                    break;
+                }
+                Vector3 away = local.transform.position - cargo.transform.position;
+                away.y = 0f;
+                away = away.sqrMagnitude > 0.01f ? away.normalized : Vector3.forward;
+                float distance = config.suckRange * 0.6f;
+                Vector3 spot = cargo.transform.position + away * distance;
+                if (NavMesh.SamplePosition(spot, out NavMeshHit onGround, 3f, NavMesh.AllAreas)) spot = onGround.position;
+                Vector3 toCargo = cargo.transform.position - spot;
+                toCargo.y = 0f;
+                local.TeleportRpc(spot, Quaternion.LookRotation(toCargo));
+                yield return null;
+                yield return null;
+
+                bool interrupted = false;
+                float ends = Time.time + 3f;
+                while (Time.time < ends && local.CarriedCargo == null)
+                {
+                    if (MatchDirector.Instance.Phase.Value != MatchPhase.Playing || local.IsKnockedDown || local.IsStaggered)
+                    {
+                        interrupted = true;
+                        break;
+                    }
+                    SendKeys(keyboard);
+                    SendMouse(mouse, Vector2.zero, false, true);
+                    yield return null;
+                }
+                SendMouse(mouse, Vector2.zero, false, false);
+                yield return null;
+                // Something nearer the mouth may have come in first, which is just as good.
+                if (local.CarriedCargo != null)
+                {
+                    cargoSucked++;
+                    yield break;
+                }
+                // Someone else picking it up or breaking it first isn't the vacuum's fault either.
+                if (interrupted || cargo.State.Value != CargoState.Ground) continue;
+                Log($"SUCK nothing came in: {cargo.name} distance={cargo.EdgeDistance(local.transform.position):0.00}");
+                yield break;
+            }
+            suckUntested = true;
+            Log("SUCK untested: " + untested);
+        }
+
+        /// <summary>The vacuum also drags people. Only a bot's owner is this computer, so only the host can see that happening.</summary>
+        private IEnumerator TestPullingSomeone(Keyboard keyboard, Mouse mouse, PlayerAvatar local)
+        {
+            if (!NetworkManager.Singleton.IsServer) yield break;
+
+            PlayerAvatar enemy = null;
+            foreach (PlayerAvatar other in PlayerAvatar.All)
+                if (other.Team != local.Team && other.IsBotVar.Value && !other.IsKnockedDown) enemy = other;
+            if (enemy == null) yield break;
+
+            local.ImmuneUntil.Value = local.Now + 1.5;
+            bool pulled = false;
+            float ends = Time.time + 1f;
+            while (Time.time < ends && !pulled)
+            {
+                Vector3 inFront = local.transform.position + Quaternion.Euler(0f, local.LookYaw, 0f) * Vector3.forward * 4f;
+                enemy.TeleportRpc(inFront, Quaternion.LookRotation(local.transform.position - inFront));
+                SendKeys(keyboard);
+                SendMouse(mouse, Vector2.zero, false, true);
+                pulled = enemy.IsBeingPulled;
+                yield return null;
+            }
+            SendMouse(mouse, Vector2.zero, false, false);
+            Expect(pulled, "the vacuum drags people in front of it");
+        }
+
+        /// <summary>Hold the right button until it's ready, and letting go knocks down whoever's in front.</summary>
+        private IEnumerator TestSlamming(Keyboard keyboard, Mouse mouse, PlayerAvatar local)
+        {
+            GameConfig config = GameConfig.Get();
+            bool host = NetworkManager.Singleton.IsServer;
+            for (int attempt = 0; attempt < 4; attempt++)
+            {
+                if (MatchDirector.Instance.Phase.Value != MatchPhase.Playing) yield break;
+                while (local.IsKnockedDown || local.IsStaggered) yield return null;
+                PlayerAvatar enemy = ChooseSomeoneToHit(local);
+                if (enemy == null)
+                {
+                    yield return new WaitForSeconds(0.6f);
+                    continue;
+                }
+
+                if (host) local.ImmuneUntil.Value = local.Now + 2.5;
+                bool interrupted = false;
+                float ready = Time.time + config.chargeSeconds + 0.2f;
+                float ends = ready + 0.5f;
+                bool charged = false;
+                while (Time.time < ends && !enemy.IsKnockedDown && !interrupted)
+                {
+                    if (MatchDirector.Instance.Phase.Value != MatchPhase.Playing) break;
+                    interrupted = local.IsKnockedDown || local.IsStaggered;
+                    if (host)
+                    {
+                        Vector3 inFront = local.transform.position + Quaternion.Euler(0f, local.LookYaw, 0f) * Vector3.forward * 1.6f;
+                        enemy.TeleportRpc(inFront, Quaternion.LookRotation(local.transform.position - inFront));
+                    }
+                    else
+                    {
+                        Vector3 away = local.transform.position - enemy.transform.position;
+                        away.y = 0f;
+                        away = away.sqrMagnitude > 0.01f ? away.normalized : Vector3.forward;
+                        local.TeleportRpc(enemy.transform.position + away * 1.6f, Quaternion.LookRotation(-away));
+                    }
+                    charged |= local.IsCharging && local.Charge01 >= 1f;
+                    SendKeys(keyboard);
+                    SendMouse(mouse, Vector2.zero, false, Time.time < ready && !interrupted);
+                    yield return null;
+                }
+                SendMouse(mouse, Vector2.zero, false, false);
+                if (charged && enemy.IsKnockedDown)
+                {
+                    slamsLanded++;
+                    yield break;
+                }
+                yield return new WaitForSeconds(0.5f);
+            }
+        }
+
+        private static CargoItem NearestSmallCargoFor(PlayerAvatar local)
+        {
+            CargoItem best = null;
+            float bestDistance = float.MaxValue;
+            foreach (CargoItem cargo in CargoItem.All)
+            {
+                if (cargo.State.Value != CargoState.Ground || cargo.Definition.size != CargoSize.Small) continue;
+                float distance = cargo.EdgeDistance(local.transform.position);
+                if (distance < bestDistance)
+                {
+                    best = cargo;
+                    bestDistance = distance;
+                }
+            }
+            return best;
         }
 
         /// <summary>Another person if there is one, because that's what goes over the network.</summary>
@@ -654,8 +963,42 @@ namespace CargoClash
                 float quickClickEnds = Time.time + 0.7f;
                 while (Time.time < quickClickEnds) yield return null;
                 Expect(!local.Swinging.Value, "the swing ends once the button is up");
+
+                // Switching input method changes the keyboard's layout, and the Input System rebinds every action
+                // when that happens. Someone holding a button down shouldn't have to let go and press it again.
+                SendMouse(mouse, Vector2.zero, true, false);
+                yield return new WaitForSeconds(0.1f);
+                InputSystem.QueueConfigChangeEvent(keyboard);
+                yield return new WaitForSeconds(0.5f);
+                if (!local.IsKnockedDown && !local.IsStaggered) Expect(local.Swinging.Value, "a held button survives the keyboard layout changing");
+                SendMouse(mouse, Vector2.zero, false, false);
+                yield return new WaitForSeconds(0.7f);
             }
 
+
+            // F shows off what's in your hands, and using it stops that. Only in first person, where you can see them.
+            FirstPersonRig rig = FirstPersonRig.Instance;
+            if (rig != null && rig.ShowsTool)
+            {
+                yield return new WaitForSeconds(0.3f);
+                SendKeys(keyboard, Key.F);
+                yield return null;
+                yield return null;
+                SendKeys(keyboard);
+                yield return null;
+                Expect(rig.Inspecting, "F starts inspecting what's in your hands");
+                yield return new WaitForSeconds(0.25f);
+                Expect(rig.Inspecting, "inspecting carries on by itself");
+                SendMouse(mouse, Vector2.zero, true, false);
+                yield return null;
+                yield return null;
+                SendMouse(mouse, Vector2.zero, false, false);
+                yield return null;
+                yield return null;
+                yield return null;
+                Expect(!rig.Inspecting, "attacking stops inspecting");
+                yield return new WaitForSeconds(0.7f);
+            }
 
             // A real mouse sends nothing while it's still, and the view has to stop turning when it does.
             SendMouse(mouse, new Vector2(60f, 0f), false, false);
@@ -666,15 +1009,18 @@ namespace CargoClash
             Expect(Mathf.Abs(Mathf.DeltaAngle(yawAfterMove, local.LookYaw)) < 0.01f, "the view stops turning when the mouse stops");
 
             // Turning with the arrow keys, for anyone without a mouse.
+            // Knocked flat, you can't look around, so that wouldn't say anything about the key.
             float yawBefore = local.LookYaw;
+            bool leftAlone = !local.IsKnockedDown;
             for (int i = 0; i < 12; i++)
             {
                 SendKeys(keyboard, Key.RightArrow);
                 yield return null;
+                leftAlone &= !local.IsKnockedDown;
             }
             SendKeys(keyboard);
             yield return null;
-            Expect(Mathf.DeltaAngle(yawBefore, local.LookYaw) > 1f, "the right arrow key turns the view");
+            if (leftAlone) Expect(Mathf.DeltaAngle(yawBefore, local.LookYaw) > 1f, "the right arrow key turns the view");
 
             // With the pause menu open, the game ignores the keys and the mouse.
             SendKeys(keyboard, Key.Escape);
@@ -713,13 +1059,12 @@ namespace CargoClash
             Expect(!MatchHud.Instance.MenuOpen, "Esc closes the pause menu");
         }
 
-        private static void SendKeys(Keyboard keyboard, Key first = Key.None, Key second = Key.None)
+        private static void SendKeys(Keyboard keyboard, params Key[] keys)
         {
-            KeyboardState state = first != Key.None && second != Key.None ? new KeyboardState(first, second)
-                : first != Key.None ? new KeyboardState(first)
-                : second != Key.None ? new KeyboardState(second)
-                : new KeyboardState();
-            InputSystem.QueueStateEvent(keyboard, state);
+            List<Key> down = new List<Key>();
+            foreach (Key key in keys)
+                if (key != Key.None) down.Add(key);
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState(down.ToArray()));
         }
 
         private static void SendMouse(Mouse mouse, Vector2 delta, bool left, bool right)

@@ -25,6 +25,8 @@ namespace CargoClash
         private bool interact;
         private bool ram;
         private bool attack;
+        private bool secondary;
+        private float nextSlamAt;
 
         private bool hasGoal;
         private Vector3 goal;
@@ -59,6 +61,8 @@ namespace CargoClash
         public bool InteractPressed => interact;
         public bool RamPressed => ram;
         public bool AttackHeld => attack;
+        public bool SecondaryHeld => secondary;
+        public bool InspectPressed => false;
 
         public void Tick()
         {
@@ -80,6 +84,7 @@ namespace CargoClash
             {
                 hasGoal = false;
                 attack = false;
+                secondary = false;
                 return;
             }
 
@@ -88,6 +93,7 @@ namespace CargoClash
             if (carried != null)
             {
                 attack = false;
+                secondary = false;
                 ThinkCarrying(carried);
                 return;
             }
@@ -128,6 +134,7 @@ namespace CargoClash
         private void ThinkCollector()
         {
             attack = false;
+            secondary = false;
             PlayerAvatar smasher = NearestEnemy(9f, enemy => enemy.Swinging.Value);
             if (smasher != null && self.RamReady)
             {
@@ -142,8 +149,8 @@ namespace CargoClash
                 return;
             }
 
-            // No ram ready, but someone's busy swinging or carrying within reach: give them a punch.
-            PlayerAvatar busy = NearestEnemy(config.hitRange, enemy => !enemy.IsImmune && (enemy.Swinging.Value || enemy.CarriedCargoId.Value != NetIds.None));
+            // No ram ready, but someone's busy swinging or carrying within reach: give them a blast.
+            PlayerAvatar busy = NearestEnemy(config.blastRange, enemy => !enemy.IsImmune && (enemy.Swinging.Value || enemy.IsCharging || enemy.CarriedCargoId.Value != NetIds.None));
             if (busy != null)
             {
                 attack = true;
@@ -159,7 +166,10 @@ namespace CargoClash
             }
 
             SetGoal(target.transform.position, 0.9f + target.Radius * 0.5f);
-            if (target.EdgeDistance(self.transform.position) <= config.pickupRange - 0.2f) interact = true;
+            float distance = target.EdgeDistance(self.transform.position);
+            if (distance <= config.pickupRange - 0.2f) interact = true;
+            // Walking toward cargo it can reach, it sucks it in the rest of the way.
+            else secondary = target.CanBeSuckedFrom(self.transform.position, self.transform.forward);
         }
 
         private CargoItem PickCargoForCollector()
@@ -197,6 +207,9 @@ namespace CargoClash
 
         private void ThinkInterrupter()
         {
+            secondary = false;
+            if (ThinkSlam()) return;
+
             PlayerAvatar carrier = NearestEnemy(14f, enemy => enemy.CarriedCargoId.Value != NetIds.None && !enemy.IsImmune);
             if (carrier != null && self.RamReady)
             {
@@ -243,6 +256,30 @@ namespace CargoClash
             float distance = target.EdgeDistance(self.transform.position);
             SetGoal(target.transform.position, 0.8f + target.Radius * 0.5f);
             attack = distance <= config.smashRange - 0.2f;
+        }
+
+        /// <summary>Now and then, with someone close, it charges up a slam and walks at them. Returns true while it's doing that.</summary>
+        private bool ThinkSlam()
+        {
+            PlayerAvatar enemy = NearestEnemy(5f, other => !other.IsImmune);
+            if (self.IsCharging)
+            {
+                attack = false;
+                if (enemy == null) return false;
+                SetGoal(enemy.transform.position, 1f);
+                bool inReach = Vector3.Distance(enemy.transform.position, self.transform.position) <= config.slamReach + config.slamRadius - 0.4f;
+                // Keeps holding until it's ready and they're in reach. Not holding any more is what lets it go.
+                secondary = self.Charge01 < 1f || !inReach;
+                return true;
+            }
+
+            if (enemy == null || Time.time < nextSlamAt) return false;
+            nextSlamAt = Time.time + Random.Range(5f, 10f);
+            if (Random.value > 0.6f) return false;
+            attack = false;
+            secondary = true;
+            SetGoal(enemy.transform.position, 1f);
+            return true;
         }
 
         private CargoItem PickCargoForInterrupter()

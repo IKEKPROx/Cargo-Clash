@@ -20,6 +20,11 @@ namespace CargoClash
         bool InteractPressed { get; }
         bool RamPressed { get; }
         bool AttackHeld { get; }
+
+        /// <summary>Right click: sucks with the vacuum, or charges the hammer.</summary>
+        bool SecondaryHeld { get; }
+
+        bool InspectPressed { get; }
         bool SwitchViewPressed { get; }
 
         /// <summary>Called once a frame before the character reads the values above.</summary>
@@ -35,6 +40,8 @@ namespace CargoClash
         private readonly InputAction interact;
         private readonly InputAction ram;
         private readonly InputAction attack;
+        private readonly InputAction secondary;
+        private readonly InputAction inspect;
         private readonly InputAction switchView;
         private Vector2 lookThisFrame;
 
@@ -49,6 +56,8 @@ namespace CargoClash
             interact = map.FindAction("Interact", true);
             ram = map.FindAction("Ram", true);
             attack = map.FindAction("Attack", true);
+            secondary = map.FindAction("Secondary", true);
+            inspect = map.FindAction("Inspect", true);
             switchView = map.FindAction("SwitchView", true);
         }
 
@@ -62,6 +71,8 @@ namespace CargoClash
         public bool InteractPressed => !Blocked && interact.WasPressedThisFrame();
         public bool RamPressed => !Blocked && ram.WasPressedThisFrame();
         public bool AttackHeld => !Blocked && attack.IsPressed();
+        public bool SecondaryHeld => !Blocked && secondary.IsPressed();
+        public bool InspectPressed => !Blocked && inspect.WasPressedThisFrame();
         public bool SwitchViewPressed => !Blocked && switchView.WasPressedThisFrame();
 
         public void Tick()

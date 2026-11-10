@@ -4,7 +4,7 @@ using UnityEngine;
 namespace CargoClash
 {
     /// <summary>
-    /// The arms, gloves and hammer you see in first person, posed in code because where the hands go
+    /// The arms, gloves and tools you see in first person, posed in code because where the hands go
     /// depends on the cargo. It only runs on the local player's computer and affects no rules: everyone
     /// else sees the Animator clips on the character model.
     ///
@@ -30,6 +30,8 @@ namespace CargoClash
 
         private enum HandShape { Relaxed, Open, Fist }
 
+        private enum Tool { None, Hammer, Vacuum }
+
         private enum Motion { Smooth, Accelerate, Decelerate, Linear }
 
         private enum HandAim
@@ -38,8 +40,10 @@ namespace CargoClash
             Fixed,
             /// <summary>The hand carries straight on from the forearm, so the wrist never looks broken.</summary>
             AlongForearm,
-            /// <summary>The hand is closed round the hammer's handle, turned so it's as straight as the handle allows.</summary>
+            /// <summary>The hand is closed round a handle, turned so it's as straight as the handle allows.</summary>
             OnHandle,
+            /// <summary>Flat against something, with `Handle` the way the back of the hand faces and the fingers pointing away from you.</summary>
+            FlatOn,
         }
 
         private struct ArmPose
@@ -61,6 +65,9 @@ namespace CargoClash
             public static ArmPose OnHandleAt(Vector3 grip, Vector3 handle) =>
                 new ArmPose { Wrist = grip, Aim = HandAim.OnHandle, Handle = handle, Direction = Quaternion.identity, Shape = HandShape.Fist };
 
+            public static ArmPose FlatAgainst(Vector3 wrist, Vector3 backOfHand, HandShape shape) =>
+                new ArmPose { Wrist = wrist, Aim = HandAim.FlatOn, Handle = backOfHand, Direction = Quaternion.identity, Shape = shape };
+
             public static ArmPose Lerp(ArmPose a, ArmPose b, float t)
             {
                 ArmPose result = t < 0.5f ? a : b;
@@ -80,10 +87,12 @@ namespace CargoClash
             public Quaternion Hand = Quaternion.identity;
             public HandShape Shape;
             public bool ShapeSet;
+            /// <summary>From 0 when it has just taken hold of a handle to 1 once it's there. Until then it moves there on a spring.</summary>
+            public float Attached;
         }
 
-        /// <summary>One moment of the two-handed hammer swing. Handle is the way the head is from the hands, and Strike is the way its face points.</summary>
-        private struct HammerKey
+        /// <summary>One moment of a tool's swing, held in both hands. Handle is the way the grip runs, and Strike is the way its business end points.</summary>
+        private struct ToolKey
         {
             public float Time;
             public Vector3 Grip;
@@ -91,73 +100,179 @@ namespace CargoClash
             public Vector3 Torso;
             public Motion Into;
 
-            public HammerKey(float time, Vector3 grip, Vector3 handle, Vector3 strike, Vector3 torso, Motion into)
+            public ToolKey(float time, Vector3 grip, Vector3 handle, Vector3 strike, Vector3 torso, Motion into)
             {
                 Time = time;
                 Grip = grip;
-                Rotation = HammerRotation(handle, strike);
+                Rotation = ToolRotation(handle, strike);
                 Torso = torso;
                 Into = into;
             }
         }
 
-        /// <summary>One moment of a punch, written for the right hand. Left-hand punches are the mirror of it.</summary>
-        private struct PunchKey
+        /// <summary>
+        /// One moment of the flourish you get by pressing F. Angles are the tool's way up, with the grip straight
+        /// up and the business end pointing away from you at 0, 0, 0. Flip then spins it around the hand and Twist
+        /// turns it around the grip's own axis, which are separate so they can go past a whole turn.
+        /// </summary>
+        private struct InspectKey
         {
             public float Time;
-            public Vector3 Punching;
-            public float PunchingRoll;
-            public Vector3 Guarding;
-            public float GuardingRoll;
+            public Vector3 Grip;
+            public Vector3 Angles;
+            public float Flip;
+            public float Twist;
             public Vector3 Torso;
+            public bool RightLetGo;
+            public bool LeftLetGo;
+            public Vector3 LeftWrist;
+            public HandShape LeftShape;
             public Motion Into;
+            public string Sound;
 
-            public PunchKey(float time, Vector3 punching, float punchingRoll, Vector3 guarding, float guardingRoll, Vector3 torso, Motion into)
+            public InspectKey(float time, Vector3 grip, Vector3 angles, float flip = 0f, float twist = 0f, Vector3 torso = default,
+                bool rightLetGo = false, bool leftLetGo = false, Vector3 leftWrist = default, HandShape leftShape = HandShape.Relaxed,
+                Motion into = Motion.Smooth, string sound = null)
             {
                 Time = time;
-                Punching = punching;
-                PunchingRoll = punchingRoll;
-                Guarding = guarding;
-                GuardingRoll = guardingRoll;
+                Grip = grip;
+                Angles = angles;
+                Flip = flip;
+                Twist = twist;
                 Torso = torso;
+                RightLetGo = rightLetGo;
+                LeftLetGo = leftLetGo;
+                LeftWrist = leftWrist;
+                LeftShape = leftShape;
                 Into = into;
+                Sound = sound;
             }
         }
 
-        // These lengths and the hammer's grips have to match Tools/blender/make_hands.py.
+        // These lengths and the tools' grips have to match Tools/blender/make_hands.py.
         private const float ForearmLength = 0.62f;
         private const float UpperArmLength = 0.54f;
         private const float FistToHandle = 0.105f;
         private const float LeftGripAlongHandle = -0.27f;
+        private const float VacuumForeGrip = 0.185f;
+        private static readonly Vector3 VacuumMouth = new Vector3(0f, 0.112f, 0.436f);
 
-        /// <summary>How far out from the side of held cargo the wrists are, which leaves the fingers wrapped round its corners.</summary>
-        private const float GripReach = 0.15f;
+        /// <summary>How far out from the side of held cargo the wrists are: the thickness of the hand, so its palm is flat against it.</summary>
+        private const float HoldSideGap = 0.05f;
+
+        /// <summary>How far back from the near edge of held cargo the wrists are, so you can see the hands holding it.</summary>
+        private const float HoldWristBack = 0.13f;
 
         // In step with the Smash clip in make_character.py: the same moments, with the hit at 0.55.
         // Torso angles are lean forward, turn right and tilt left, in degrees.
-        private static readonly HammerKey[] HammerKeys =
+        private static readonly ToolKey[] HammerKeys =
         {
-            new HammerKey(0f, new Vector3(0.3f, -0.27f, 0.54f), new Vector3(0.3f, 0.85f, 0.42f), new Vector3(-0.3f, -0.4f, 0.87f), new Vector3(-2f, 3f, 0f), Motion.Smooth),
-            new HammerKey(0.38f, new Vector3(0.27f, -0.07f, 0.38f), new Vector3(0.14f, 0.8f, -0.58f), new Vector3(-0.1f, 0.6f, 0.79f), new Vector3(-7f, 11f, 3f), Motion.Smooth),
-            new HammerKey(0.55f, new Vector3(0.08f, -0.29f, 0.6f), new Vector3(-0.07f, 0.06f, 0.995f), new Vector3(0f, -0.99f, 0.06f), new Vector3(7f, -8f, -2f), Motion.Accelerate),
-            new HammerKey(0.6f, new Vector3(0.08f, -0.3f, 0.6f), new Vector3(-0.07f, 0.04f, 0.995f), new Vector3(0f, -0.99f, 0.04f), new Vector3(8f, -8f, -2f), Motion.Linear),
-            new HammerKey(0.74f, new Vector3(0.13f, -0.27f, 0.58f), new Vector3(-0.02f, 0.3f, 0.95f), new Vector3(0f, -0.95f, 0.3f), new Vector3(5f, -5f, -1f), Motion.Decelerate),
-            new HammerKey(1f, new Vector3(0.3f, -0.27f, 0.54f), new Vector3(0.3f, 0.85f, 0.42f), new Vector3(-0.3f, -0.4f, 0.87f), new Vector3(-2f, 3f, 0f), Motion.Smooth),
+            new ToolKey(0f, new Vector3(0.3f, -0.27f, 0.54f), new Vector3(0.3f, 0.85f, 0.42f), new Vector3(-0.3f, -0.4f, 0.87f), new Vector3(-2f, 3f, 0f), Motion.Smooth),
+            new ToolKey(0.38f, new Vector3(0.27f, -0.07f, 0.38f), new Vector3(0.14f, 0.8f, -0.58f), new Vector3(-0.1f, 0.6f, 0.79f), new Vector3(-7f, 11f, 3f), Motion.Smooth),
+            new ToolKey(0.55f, new Vector3(0.08f, -0.29f, 0.6f), new Vector3(-0.07f, 0.06f, 0.995f), new Vector3(0f, -0.99f, 0.06f), new Vector3(7f, -8f, -2f), Motion.Accelerate),
+            new ToolKey(0.6f, new Vector3(0.08f, -0.3f, 0.6f), new Vector3(-0.07f, 0.04f, 0.995f), new Vector3(0f, -0.99f, 0.04f), new Vector3(8f, -8f, -2f), Motion.Linear),
+            new ToolKey(0.74f, new Vector3(0.13f, -0.27f, 0.58f), new Vector3(-0.02f, 0.3f, 0.95f), new Vector3(0f, -0.95f, 0.3f), new Vector3(5f, -5f, -1f), Motion.Decelerate),
+            new ToolKey(1f, new Vector3(0.3f, -0.27f, 0.54f), new Vector3(0.3f, 0.85f, 0.42f), new Vector3(-0.3f, -0.4f, 0.87f), new Vector3(-2f, 3f, 0f), Motion.Smooth),
         };
 
         private static readonly Vector3 HammerReadyGrip = new Vector3(0.28f, -0.37f, 0.6f);
-        private static readonly Quaternion HammerReadyRotation = HammerRotation(new Vector3(0.4f, 0.62f, 0.68f), new Vector3(-0.55f, -0.35f, 0.76f));
+        private static readonly Quaternion HammerReadyRotation = ToolRotation(new Vector3(0.4f, 0.62f, 0.68f), new Vector3(-0.55f, -0.35f, 0.76f));
         private static readonly Vector3 HammerChargeGrip = new Vector3(0.24f, -0.38f, 0.48f);
-        private static readonly Quaternion HammerChargeRotation = HammerRotation(new Vector3(0.2f, 0.85f, 0.48f), new Vector3(-0.6f, -0.3f, 0.74f));
+        private static readonly Quaternion HammerChargeRotation = ToolRotation(new Vector3(0.2f, 0.85f, 0.48f), new Vector3(-0.6f, -0.3f, 0.74f));
 
-        private static readonly Vector3 GuardWrist = new Vector3(0.21f, -0.32f, 0.4f);
-        private static readonly PunchKey[] PunchKeys =
+        // Hauled up where you can see it, ready to come down.
+        private static readonly Vector3 HammerRaisedGrip = new Vector3(0.25f, -0.2f, 0.52f);
+        private static readonly Vector3 HammerRaisedHandle = new Vector3(-0.3f, 0.82f, 0.1f);
+        private static readonly Vector3 HammerRaisedStrike = new Vector3(-0.05f, 0.25f, 0.96f);
+        private static readonly Quaternion HammerRaisedRotation = ToolRotation(HammerRaisedHandle, HammerRaisedStrike);
+        private static readonly Vector3 HammerRaisedTorso = new Vector3(-9f, 9f, 2f);
+
+        // As a fraction of GameConfig.slamSeconds, with the hit at 0.28 to match the Slam clip.
+        private static readonly ToolKey[] SlamKeys =
         {
-            new PunchKey(0f, GuardWrist, 25f, new Vector3(-0.21f, -0.32f, 0.4f), -25f, Vector3.zero, Motion.Smooth),
-            new PunchKey(0.3f, new Vector3(0.28f, -0.36f, 0.28f), 15f, new Vector3(-0.19f, -0.29f, 0.45f), -30f, new Vector3(-2f, 10f, 1f), Motion.Smooth),
-            new PunchKey(0.55f, new Vector3(0.06f, -0.17f, 0.82f), 75f, new Vector3(-0.25f, -0.35f, 0.3f), -15f, new Vector3(4f, -14f, -2f), Motion.Accelerate),
-            new PunchKey(0.64f, new Vector3(0.06f, -0.18f, 0.8f), 75f, new Vector3(-0.25f, -0.35f, 0.3f), -15f, new Vector3(4f, -13f, -2f), Motion.Linear),
-            new PunchKey(1f, GuardWrist, 25f, new Vector3(-0.21f, -0.32f, 0.4f), -25f, Vector3.zero, Motion.Smooth),
+            new ToolKey(0f, HammerRaisedGrip, HammerRaisedHandle, HammerRaisedStrike, HammerRaisedTorso, Motion.Smooth),
+            new ToolKey(0.28f, new Vector3(0.05f, -0.45f, 0.72f), new Vector3(-0.05f, -0.28f, 0.96f), new Vector3(0f, -0.96f, -0.28f), new Vector3(14f, -7f, -2f), Motion.Accelerate),
+            new ToolKey(0.46f, new Vector3(0.06f, -0.42f, 0.7f), new Vector3(-0.05f, -0.12f, 0.99f), new Vector3(0f, -0.99f, -0.12f), new Vector3(12f, -6f, -2f), Motion.Linear),
+            new ToolKey(1f, HammerReadyGrip, new Vector3(0.4f, 0.62f, 0.68f), new Vector3(-0.55f, -0.35f, 0.76f), new Vector3(-2f, 3f, 0f), Motion.Smooth),
+        };
+
+        // Levelled at whatever's in the middle of the view, low enough to see past.
+        private static readonly Vector3 VacuumReadyGrip = new Vector3(0.24f, -0.42f, 0.5f);
+        private static readonly Vector3 VacuumReadyHandle = new Vector3(0.05f, 1f, -0.03f);
+        private static readonly Vector3 VacuumReadyStrike = new Vector3(-0.05f, 0.06f, 1f);
+        private static readonly Quaternion VacuumReadyRotation = ToolRotation(VacuumReadyHandle, VacuumReadyStrike);
+        private static readonly Vector3 VacuumChargeGrip = new Vector3(0.2f, -0.46f, 0.42f);
+        private static readonly Quaternion VacuumChargeRotation = ToolRotation(new Vector3(0.2f, 0.95f, 0.2f), new Vector3(-0.25f, -0.2f, 0.95f));
+
+        // In step with the Blast clip: the air comes out at 0.18 and throws it up and back.
+        private static readonly ToolKey[] BlastKeys =
+        {
+            new ToolKey(0f, VacuumReadyGrip, VacuumReadyHandle, VacuumReadyStrike, Vector3.zero, Motion.Smooth),
+            new ToolKey(0.1f, new Vector3(0.24f, -0.43f, 0.53f), VacuumReadyHandle, new Vector3(-0.05f, 0.02f, 1f), new Vector3(2f, 0f, 0f), Motion.Smooth),
+            new ToolKey(0.18f, new Vector3(0.25f, -0.385f, 0.41f), new Vector3(0.05f, 0.96f, -0.28f), new Vector3(-0.05f, 0.27f, 0.96f), new Vector3(-5f, 3f, 1f), Motion.Accelerate),
+            new ToolKey(0.42f, new Vector3(0.24f, -0.41f, 0.47f), new Vector3(0.05f, 0.99f, -0.1f), new Vector3(-0.05f, 0.12f, 0.99f), new Vector3(-1f, 1f, 0f), Motion.Decelerate),
+            new ToolKey(1f, VacuumReadyGrip, VacuumReadyHandle, VacuumReadyStrike, Vector3.zero, Motion.Smooth),
+        };
+
+        // The hammer goes round in the plane of the view, because end over end would bring its head into your face.
+        private static readonly InspectKey[] HammerInspect =
+        {
+            // Up in front of you, and a slow look at one side of the head.
+            new InspectKey(0f, new Vector3(0.2f, -0.32f, 0.62f), new Vector3(6f, 0f, 20f), twist: 30f),
+            new InspectKey(0.42f, new Vector3(0.14f, -0.25f, 0.62f), new Vector3(0f, 0f, 34f), twist: -45f, torso: new Vector3(-2f, 3f, 0f)),
+            // Turned round in the fingers to look at the other.
+            new InspectKey(0.98f, new Vector3(0.14f, -0.24f, 0.63f), new Vector3(-4f, 0f, 32f), twist: 135f, torso: new Vector3(-2f, -2f, 0f)),
+            // Let go with the left, and tip it back to throw it round.
+            new InspectKey(1.24f, new Vector3(0.22f, -0.3f, 0.62f), new Vector3(4f, 0f, 8f), flip: -42f, twist: 180f, torso: new Vector3(-3f, 5f, 0f),
+                leftLetGo: true, leftWrist: new Vector3(-0.32f, -0.54f, 0.36f), rightLetGo: true, sound: "swing"),
+            // Twice round the hand, the way M9 owners do.
+            new InspectKey(1.62f, new Vector3(0.2f, -0.22f, 0.63f), new Vector3(4f, 0f, 8f), flip: 318f, twist: 180f, torso: new Vector3(1f, 0f, 0f),
+                leftLetGo: true, leftWrist: new Vector3(-0.32f, -0.54f, 0.36f), rightLetGo: true, into: Motion.Linear, sound: "swing"),
+            new InspectKey(1.96f, new Vector3(0.21f, -0.24f, 0.63f), new Vector3(4f, 0f, 8f), flip: 700f, twist: 180f, torso: new Vector3(3f, -3f, 0f),
+                leftLetGo: true, leftWrist: new Vector3(-0.32f, -0.54f, 0.36f), into: Motion.Linear),
+            // Caught, with the weight of it pulling the hand down.
+            new InspectKey(2.1f, new Vector3(0.24f, -0.36f, 0.62f), new Vector3(10f, 0f, 10f), flip: 734f, twist: 180f, torso: new Vector3(5f, -3f, 0f),
+                leftLetGo: true, leftWrist: new Vector3(-0.32f, -0.54f, 0.36f), into: Motion.Decelerate, sound: "clunk"),
+            new InspectKey(2.34f, new Vector3(0.22f, -0.31f, 0.62f), new Vector3(6f, 0f, 14f), flip: 720f, twist: 180f,
+                leftLetGo: true, leftWrist: new Vector3(-0.3f, -0.5f, 0.38f)),
+            // Weighed in the other palm, twice.
+            new InspectKey(2.72f, new Vector3(0.2f, -0.28f, 0.62f), new Vector3(8f, 0f, 66f), flip: 720f, twist: 180f, torso: new Vector3(1f, 4f, 0f),
+                leftLetGo: true, leftWrist: new Vector3(-0.2f, -0.32f, 0.56f), leftShape: HandShape.Open, sound: "smash"),
+            new InspectKey(2.92f, new Vector3(0.21f, -0.22f, 0.62f), new Vector3(6f, 0f, 52f), flip: 720f, twist: 180f, torso: new Vector3(-1f, 3f, 0f),
+                leftLetGo: true, leftWrist: new Vector3(-0.2f, -0.29f, 0.56f), leftShape: HandShape.Open),
+            new InspectKey(3.08f, new Vector3(0.2f, -0.28f, 0.62f), new Vector3(8f, 0f, 66f), flip: 720f, twist: 180f, torso: new Vector3(1f, 4f, 0f),
+                leftLetGo: true, leftWrist: new Vector3(-0.2f, -0.32f, 0.56f), leftShape: HandShape.Open, into: Motion.Accelerate, sound: "smash"),
+            new InspectKey(3.5f, new Vector3(0.26f, -0.36f, 0.6f), new Vector3(22f, 0f, -28f), flip: 720f, twist: 180f),
+        };
+
+        private static readonly InspectKey[] VacuumInspect =
+        {
+            // Brought up to look along one side.
+            new InspectKey(0f, new Vector3(0.22f, -0.4f, 0.52f), new Vector3(-3f, -4f, 0f)),
+            new InspectKey(0.46f, new Vector3(0.2f, -0.3f, 0.54f), new Vector3(-6f, -62f, 12f), torso: new Vector3(-2f, 4f, 0f),
+                leftLetGo: true, leftWrist: new Vector3(-0.3f, -0.52f, 0.38f)),
+            // And the other.
+            new InspectKey(1.02f, new Vector3(0.12f, -0.3f, 0.56f), new Vector3(-8f, 52f, -14f), torso: new Vector3(-2f, -4f, 0f),
+                leftLetGo: true, leftWrist: new Vector3(-0.3f, -0.52f, 0.38f)),
+            // Twirled on the hand like a pistol.
+            new InspectKey(1.26f, new Vector3(0.24f, -0.36f, 0.5f), new Vector3(-4f, 0f, 0f), flip: -34f, torso: new Vector3(-3f, 4f, 0f),
+                leftLetGo: true, leftWrist: new Vector3(-0.32f, -0.54f, 0.36f), rightLetGo: true, sound: "swing"),
+            new InspectKey(1.64f, new Vector3(0.23f, -0.32f, 0.52f), new Vector3(-4f, 0f, 0f), flip: 326f, torso: new Vector3(1f, 0f, 0f),
+                leftLetGo: true, leftWrist: new Vector3(-0.32f, -0.54f, 0.36f), rightLetGo: true, into: Motion.Linear, sound: "swing"),
+            new InspectKey(1.98f, new Vector3(0.23f, -0.33f, 0.52f), new Vector3(-4f, 0f, 0f), flip: 704f, torso: new Vector3(3f, -3f, 0f),
+                leftLetGo: true, leftWrist: new Vector3(-0.32f, -0.54f, 0.36f), into: Motion.Linear),
+            new InspectKey(2.12f, new Vector3(0.25f, -0.44f, 0.52f), new Vector3(4f, 0f, 2f), flip: 732f, torso: new Vector3(4f, -3f, 0f),
+                leftLetGo: true, leftWrist: new Vector3(-0.32f, -0.54f, 0.36f), into: Motion.Decelerate, sound: "clunk"),
+            new InspectKey(2.34f, new Vector3(0.24f, -0.4f, 0.5f), new Vector3(-2f, 0f, 0f), flip: 720f,
+                leftLetGo: true, leftWrist: new Vector3(-0.3f, -0.5f, 0.38f)),
+            // A look down the wrong end of it, and it blows in your face.
+            new InspectKey(2.78f, new Vector3(0.1f, -0.42f, 0.88f), new Vector3(-14f, 176f, 0f), flip: 720f, torso: new Vector3(3f, 0f, 0f),
+                leftLetGo: true, leftWrist: new Vector3(-0.3f, -0.5f, 0.4f)),
+            new InspectKey(3f, new Vector3(0.1f, -0.42f, 0.88f), new Vector3(-14f, 176f, 0f), flip: 720f, torso: new Vector3(3f, 0f, 0f),
+                leftLetGo: true, leftWrist: new Vector3(-0.3f, -0.5f, 0.4f), sound: "blast"),
+            new InspectKey(3.16f, new Vector3(0.12f, -0.46f, 0.82f), new Vector3(-30f, 176f, 0f), flip: 720f, torso: new Vector3(-6f, 0f, 0f),
+                leftLetGo: true, leftWrist: new Vector3(-0.3f, -0.5f, 0.4f), into: Motion.Decelerate),
+            new InspectKey(3.6f, VacuumReadyGrip, new Vector3(-3f, -4f, 0f), flip: 720f),
         };
 
         public static FirstPersonRig Instance { get; private set; }
@@ -168,6 +283,7 @@ namespace CargoClash
         public ArmParts rightArm;
         public ArmParts leftArm;
         public Transform hammer;
+        public Transform vacuum;
 
         [Header("Holding cargo")]
         [Tooltip("How far in front of your eyes the near side of held cargo is. Wider cargo goes farther out, as well as this much for each metre of half width.")]
@@ -190,10 +306,6 @@ namespace CargoClash
         [Header("Running")]
         [Tooltip("How far the shoulders turn with each stride, in degrees.")]
         public float runTwist = 3.2f;
-        public Vector3 restWrist = new Vector3(0.3f, -0.35f, 0.5f);
-        public Vector3 runWristForward = new Vector3(0.2f, -0.2f, 0.5f);
-        public Vector3 runWristMiddle = new Vector3(0.34f, -0.4f, 0.46f);
-        public Vector3 runWristBack = new Vector3(0.42f, -0.62f, 0.22f);
 
         [Header("Feel")]
         public float swayPerDegree = 0.0028f;
@@ -210,12 +322,18 @@ namespace CargoClash
         private Vector3 torso;
         private Vector3 torsoVelocity;
         private Vector3 torsoTarget;
-        private Vector3 hammerPosition;
-        private Vector3 hammerVelocity;
-        private Quaternion hammerRotation = Quaternion.identity;
-        private bool hammerPlaced;
-        private float gripBlend;
+        private Vector3 toolPosition;
+        private Vector3 toolVelocity;
+        private Quaternion toolRotation = Quaternion.identity;
+        private bool toolPlaced;
+        private Tool toolInHand;
         private float swingWeight;
+        private float suckWeight;
+        private float inspectTime = -1f;
+        private float inspectWeight;
+        private int inspectSoundsPlayed;
+        private InspectKey inspectNow;
+        private float inspectRegrab;
         private CargoItem lastCarried;
         private float tossUntil;
         private float pushUntil;
@@ -225,6 +343,13 @@ namespace CargoClash
         private bool placed;
 
         public float PickUpSeconds => pickUpSeconds;
+
+        /// <summary>Where the vacuum's air comes out, in the world.</summary>
+        public Vector3 VacuumMouthWorld => vacuum.TransformPoint(VacuumMouth);
+
+        public bool ShowsTool => content.activeSelf && toolInHand != Tool.None;
+
+        public bool Inspecting => inspectTime >= 0f;
 
         private Quaternion HoldTilt => Quaternion.Euler(holdTiltDegrees, 0f, 0f);
 
@@ -242,6 +367,14 @@ namespace CargoClash
             Quaternion tilt = Quaternion.Euler(Mathf.Sin(phase * 2f) * 2f * jiggle, Mathf.Cos(phase) * 1.5f * jiggle, Mathf.Cos(phase) * 3.5f * jiggle);
             position = transform.TransformPoint(anchor);
             rotation = transform.rotation * HoldTilt * tilt;
+        }
+
+        /// <summary>F: a look at whatever's in your hands. Anything you do with it stops the show.</summary>
+        public void StartInspecting()
+        {
+            if (!ShowsTool || Inspecting || swingWeight > 0.1f) return;
+            inspectTime = 0f;
+            inspectSoundsPlayed = 0;
         }
 
         /// <summary>A hit from this direction in the world throws the upper body back and round.</summary>
@@ -286,7 +419,10 @@ namespace CargoClash
             if (!show)
             {
                 placed = false;
-                hammerPlaced = false;
+                toolPlaced = false;
+                toolInHand = Tool.None;
+                inspectTime = -1f;
+                inspectWeight = 0f;
                 return;
             }
 
@@ -297,15 +433,20 @@ namespace CargoClash
 
             CargoItem carried = local.CarriedCargo;
             bool knocked = local.IsKnockedDown;
-            bool swinging = local.Swinging.Value && !knocked && carried == null;
-            bool holdsHammer = local.Side == Side.Interrupter && carried == null && !knocked;
-            swingWeight = Mathf.MoveTowards(swingWeight, swinging ? 1f : 0f, deltaTime * (swinging ? 16f : 8f));
-            gripBlend = Mathf.MoveTowards(gripBlend, holdsHammer ? 1f : 0f, deltaTime / 0.14f);
-            if (hammer.gameObject.activeSelf != holdsHammer)
+            Tool tool = ToolFor(local, carried, knocked);
+            if (tool != toolInHand)
             {
-                hammer.gameObject.SetActive(holdsHammer);
-                hammerPlaced = false;
+                toolInHand = tool;
+                toolPlaced = false;
+                inspectTime = -1f;
+                if (hammer.gameObject.activeSelf != (tool == Tool.Hammer)) hammer.gameObject.SetActive(tool == Tool.Hammer);
+                if (vacuum.gameObject.activeSelf != (tool == Tool.Vacuum)) vacuum.gameObject.SetActive(tool == Tool.Vacuum);
             }
+
+            bool swinging = local.Swinging.Value && tool != Tool.None;
+            swingWeight = Mathf.MoveTowards(swingWeight, swinging ? 1f : 0f, deltaTime * (swinging ? 16f : 8f));
+            suckWeight = Mathf.MoveTowards(suckWeight, local.Sucking.Value ? 1f : 0f, deltaTime * 7f);
+            UpdateInspect(local, swinging, deltaTime);
 
             float stride = FollowCamera.Stride;
             float walk = FollowCamera.WalkAmount;
@@ -313,16 +454,10 @@ namespace CargoClash
 
             ArmPose rightPose;
             ArmPose leftPose;
-            float stiffness;
-            if (holdsHammer)
-            {
-                HammerPoses(local, stride, walk, deltaTime, out rightPose, out leftPose);
-                stiffness = 500f;
-            }
-            else
-            {
-                ChoosePoses(local, carried, knocked, stride, walk, out rightPose, out leftPose, out stiffness);
-            }
+            float stiffness = 500f;
+            if (tool == Tool.Hammer) HammerPoses(local, stride, walk, deltaTime, out rightPose, out leftPose);
+            else if (tool == Tool.Vacuum) VacuumPoses(local, stride, walk, deltaTime, out rightPose, out leftPose);
+            else ChoosePoses(carried, knocked, walk, stride, out rightPose, out leftPose, out stiffness);
 
             if (!placed)
             {
@@ -378,7 +513,14 @@ namespace CargoClash
             lastCarried = carried;
         }
 
-        // ---- The hammer: held in both hands, so the hands simply go where it goes ----
+        /// <summary>What's in your hands: nothing while they're busy or you're on the ground, and otherwise what your side carries.</summary>
+        private Tool ToolFor(PlayerAvatar local, CargoItem carried, bool knocked)
+        {
+            if (carried != null || knocked || Time.time < tossUntil || Time.time < pushUntil) return Tool.None;
+            return local.Side == Side.Interrupter ? Tool.Hammer : Tool.Vacuum;
+        }
+
+        // ---- The tools: held in both hands, so the hands simply go where they go ----
 
         private void HammerPoses(PlayerAvatar local, float stride, float walk, float deltaTime, out ArmPose rightPose, out ArmPose leftPose)
         {
@@ -391,69 +533,220 @@ namespace CargoClash
                 torsoTarget = new Vector3(5f, 18f, -3f);
             }
 
+            bool sharp = swingWeight >= 1f;
             if (swingWeight > 0f)
             {
-                SampleHammer(local.Visual != null ? local.Visual.SwingCycle : 0f, out Vector3 swingGrip, out Quaternion swingRotation, out Vector3 swingTorso);
+                SampleTool(HammerKeys, local.Visual != null ? local.Visual.SwingCycle : 0f, out Vector3 swingGrip, out Quaternion swingRotation, out Vector3 swingTorso);
                 grip = Vector3.Lerp(grip, swingGrip, swingWeight);
                 rotation = Quaternion.Slerp(rotation, swingRotation, swingWeight);
                 torsoTarget = Vector3.Lerp(torsoTarget, swingTorso, swingWeight);
             }
 
-            if (!hammerPlaced)
+            if (local.IsCharging)
             {
-                hammerPlaced = true;
-                hammerPosition = grip + Vector3.down * 0.3f;
-                hammerRotation = rotation;
-                hammerVelocity = Vector3.zero;
+                // Shaking more the longer you hold it, until it's ready.
+                float charge = local.Charge01;
+                float up = Mathf.SmoothStep(0f, 1f, charge * 2.2f);
+                float shake = charge * 0.006f;
+                grip = Vector3.Lerp(grip, HammerRaisedGrip, up) + new Vector3(Mathf.Sin(Time.time * 41f), Mathf.Sin(Time.time * 53f), 0f) * shake;
+                rotation = Quaternion.Slerp(rotation, HammerRaisedRotation, up);
+                torsoTarget = Vector3.Lerp(torsoTarget, HammerRaisedTorso, up);
+                sharp = false;
+            }
+            else if (local.IsSlamming)
+            {
+                float t = 1f - Mathf.Clamp01((float)((local.SlammingUntil.Value - local.Now) / config.slamSeconds));
+                SampleTool(SlamKeys, t, out grip, out rotation, out Vector3 slamTorso);
+                torsoTarget = slamTorso;
+                sharp = true;
             }
 
-            if (swingWeight >= 1f)
+            ApplyInspect(HammerInspect, ref grip, ref rotation, ref sharp);
+            PlaceTool(hammer, grip, rotation, sharp, deltaTime);
+            Vector3 handle = toolRotation * Vector3.up;
+            rightPose = ArmPose.OnHandleAt(toolPosition, handle);
+            leftPose = ArmPose.OnHandleAt(toolPosition + handle * LeftGripAlongHandle, handle);
+            InspectHands(ref rightPose, ref leftPose);
+        }
+
+        private void VacuumPoses(PlayerAvatar local, float stride, float walk, float deltaTime, out ArmPose rightPose, out ArmPose leftPose)
+        {
+            Vector3 grip = VacuumReadyGrip + new Vector3(0f, Mathf.Abs(stride) * 0.008f * walk, stride * 0.018f * walk);
+            Quaternion rotation = VacuumReadyRotation * Quaternion.Euler(stride * 1.5f * walk, 0f, -stride * 1.5f * walk);
+            if (local.IsDashing)
+            {
+                grip = VacuumChargeGrip;
+                rotation = VacuumChargeRotation;
+                torsoTarget = new Vector3(5f, 18f, -3f);
+            }
+
+            if (suckWeight > 0f)
+            {
+                // Braced against it and shaking with the pull.
+                Vector3 shake = new Vector3(Mathf.Sin(Time.time * 47f), Mathf.Sin(Time.time * 61f), Mathf.Sin(Time.time * 37f)) * 0.0055f;
+                grip += (new Vector3(-0.03f, 0.02f, 0.05f) + shake) * suckWeight;
+                rotation *= Quaternion.Euler(Mathf.Sin(Time.time * 53f) * 0.8f * suckWeight, Mathf.Sin(Time.time * 43f) * 0.8f * suckWeight, 0f);
+                torsoTarget = Vector3.Lerp(torsoTarget, new Vector3(4f, 0f, 0f), suckWeight);
+            }
+
+            bool sharp = swingWeight >= 1f;
+            if (swingWeight > 0f)
+            {
+                SampleTool(BlastKeys, local.Visual != null ? local.Visual.SwingCycle : 0f, out Vector3 blastGrip, out Quaternion blastRotation, out Vector3 blastTorso);
+                grip = Vector3.Lerp(grip, blastGrip, swingWeight);
+                rotation = Quaternion.Slerp(rotation, blastRotation, swingWeight);
+                torsoTarget = Vector3.Lerp(torsoTarget, blastTorso, swingWeight);
+            }
+
+            ApplyInspect(VacuumInspect, ref grip, ref rotation, ref sharp);
+            PlaceTool(vacuum, grip, rotation, sharp, deltaTime);
+            Vector3 handle = toolRotation * Vector3.up;
+            rightPose = ArmPose.OnHandleAt(toolPosition, handle);
+            leftPose = ArmPose.OnHandleAt(toolPosition + toolRotation * Vector3.forward * VacuumForeGrip, handle);
+            InspectHands(ref rightPose, ref leftPose);
+        }
+
+        private void PlaceTool(Transform tool, Vector3 grip, Quaternion rotation, bool sharp, float deltaTime)
+        {
+            if (!toolPlaced)
+            {
+                toolPlaced = true;
+                toolPosition = grip + Vector3.down * 0.3f;
+                toolRotation = rotation;
+                toolVelocity = Vector3.zero;
+            }
+
+            if (sharp)
             {
                 // The keyframes are sharp on purpose, so they aren't softened by a spring.
-                hammerPosition = grip;
-                hammerRotation = rotation;
-                hammerVelocity = Vector3.zero;
+                toolPosition = grip;
+                toolRotation = rotation;
+                toolVelocity = Vector3.zero;
             }
             else
             {
                 const float stiffness = 300f;
                 float damping = 2f * Mathf.Sqrt(stiffness) * 0.85f;
-                hammerVelocity += (grip - hammerPosition) * (stiffness * deltaTime);
-                hammerVelocity *= Mathf.Exp(-damping * deltaTime);
-                hammerPosition += hammerVelocity * deltaTime;
-                hammerRotation = Quaternion.Slerp(hammerRotation, rotation, 1f - Mathf.Exp(-20f * deltaTime));
+                toolVelocity += (grip - toolPosition) * (stiffness * deltaTime);
+                toolVelocity *= Mathf.Exp(-damping * deltaTime);
+                toolPosition += toolVelocity * deltaTime;
+                toolRotation = Quaternion.Slerp(toolRotation, rotation, 1f - Mathf.Exp(-20f * deltaTime));
             }
-
-            hammer.SetLocalPositionAndRotation(hammerPosition, hammerRotation);
-            Vector3 handle = hammerRotation * Vector3.up;
-            rightPose = ArmPose.OnHandleAt(hammerPosition, handle);
-            leftPose = ArmPose.OnHandleAt(hammerPosition + handle * LeftGripAlongHandle, handle);
+            tool.SetLocalPositionAndRotation(toolPosition, toolRotation);
         }
 
-        private static void SampleHammer(float cycle, out Vector3 grip, out Quaternion rotation, out Vector3 bodyTurn)
+        private static void SampleTool(ToolKey[] keys, float cycle, out Vector3 grip, out Quaternion rotation, out Vector3 bodyTurn)
         {
-            for (int i = 0; i < HammerKeys.Length - 1; i++)
+            for (int i = 0; i < keys.Length - 1; i++)
             {
-                HammerKey to = HammerKeys[i + 1];
+                ToolKey to = keys[i + 1];
                 if (cycle > to.Time) continue;
-                HammerKey from = HammerKeys[i];
+                ToolKey from = keys[i];
                 float t = Ease(Mathf.InverseLerp(from.Time, to.Time, cycle), to.Into);
                 grip = Vector3.Lerp(from.Grip, to.Grip, t);
                 rotation = Quaternion.Slerp(from.Rotation, to.Rotation, t);
                 bodyTurn = Vector3.Lerp(from.Torso, to.Torso, t);
                 return;
             }
-            grip = HammerKeys[0].Grip;
-            rotation = HammerKeys[0].Rotation;
-            bodyTurn = HammerKeys[0].Torso;
+            ToolKey last = keys[keys.Length - 1];
+            grip = last.Grip;
+            rotation = last.Rotation;
+            bodyTurn = last.Torso;
         }
 
         /// <summary>The handle comes out exactly as asked. The strike direction is only used to decide which way the head faces.</summary>
-        private static Quaternion HammerRotation(Vector3 handle, Vector3 strike)
+        private static Quaternion ToolRotation(Vector3 handle, Vector3 strike)
         {
             Vector3 up = handle.normalized;
             Vector3 forward = Vector3.ProjectOnPlane(strike, up).normalized;
             return Quaternion.LookRotation(forward, up);
+        }
+
+        // ---- F: looking at what's in your hands. Only you see this, as in CS2 ----
+
+        private void UpdateInspect(PlayerAvatar local, bool swinging, float deltaTime)
+        {
+            // The click itself ends it. Waiting for the host would leave a client's flourish running into the swing.
+            bool stop = swinging || local.WantsToUseTool || local.IsCharging || local.IsSlamming || local.Sucking.Value || local.IsDashing || local.IsStaggered;
+            if (stop) inspectTime = -1f;
+            if (inspectTime >= 0f)
+            {
+                inspectTime += deltaTime;
+                InspectKey[] keys = toolInHand == Tool.Hammer ? HammerInspect : VacuumInspect;
+                if (inspectTime >= keys[keys.Length - 1].Time) inspectTime = -1f;
+            }
+            inspectWeight = Mathf.MoveTowards(inspectWeight, inspectTime >= 0f ? 1f : 0f, deltaTime * (inspectTime >= 0f ? 7f : stop ? 10f : 4f));
+        }
+
+        private void ApplyInspect(InspectKey[] keys, ref Vector3 grip, ref Quaternion rotation, ref bool sharp)
+        {
+            if (inspectWeight <= 0f) return;
+            // Blending out after the end, it holds where it finished.
+            float time = inspectTime >= 0f ? inspectTime : keys[keys.Length - 1].Time;
+            inspectRegrab = SampleInspect(keys, time, toolInHand == Tool.Hammer ? Vector3.forward : Vector3.right, out inspectNow, out Quaternion shown);
+            if (inspectTime >= 0f) PlayInspectSounds(keys);
+
+            grip = Vector3.Lerp(grip, inspectNow.Grip, inspectWeight);
+            rotation = Quaternion.Slerp(rotation, shown, inspectWeight);
+            torsoTarget = Vector3.Lerp(torsoTarget, inspectNow.Torso, inspectWeight);
+            sharp = inspectWeight >= 1f;
+        }
+
+        /// <summary>Returns how far the left hand has got going back to the handle, from 0 to 1, when the next key holds the tool again.</summary>
+        private static float SampleInspect(InspectKey[] keys, float time, Vector3 flipAxis, out InspectKey now, out Quaternion rotation)
+        {
+            InspectKey from = keys[0];
+            InspectKey to = keys[keys.Length - 1];
+            for (int i = 0; i < keys.Length - 1; i++)
+            {
+                if (time > keys[i + 1].Time) continue;
+                from = keys[i];
+                to = keys[i + 1];
+                break;
+            }
+            float t = Ease(Mathf.InverseLerp(from.Time, to.Time, time), to.Into);
+            now = from;
+            now.Grip = Vector3.Lerp(from.Grip, to.Grip, t);
+            now.Torso = Vector3.Lerp(from.Torso, to.Torso, t);
+            // A key that holds the tool again has no wrist of its own. Heading for its zero would bring the hand into your face.
+            bool regrab = from.LeftLetGo && !to.LeftLetGo;
+            now.LeftWrist = regrab ? from.LeftWrist : Vector3.Lerp(from.LeftWrist, to.LeftWrist, t);
+            Vector3 angles = Vector3.Lerp(from.Angles, to.Angles, t);
+            float flip = Mathf.Lerp(from.Flip, to.Flip, t);
+            float twist = Mathf.Lerp(from.Twist, to.Twist, t);
+            rotation = Quaternion.Euler(angles) * Quaternion.AngleAxis(flip, flipAxis) * Quaternion.AngleAxis(twist, Vector3.up);
+            return regrab ? t : 0f;
+        }
+
+        private void PlayInspectSounds(InspectKey[] keys)
+        {
+            while (inspectSoundsPlayed < keys.Length && keys[inspectSoundsPlayed].Time <= inspectTime)
+            {
+                string sound = keys[inspectSoundsPlayed].Sound;
+                inspectSoundsPlayed++;
+                if (string.IsNullOrEmpty(sound)) continue;
+                GameAudio.Play(sound, sound == "blast" ? 0.35f : 0.3f);
+                if (sound == "blast")
+                {
+                    // Right in the face.
+                    FollowCamera.Flinch(Vector3.zero);
+                    FxBurst.PlayBlast(VacuumMouthWorld, -transform.forward);
+                }
+            }
+        }
+
+        /// <summary>The right hand lets go to throw the tool round, and the left hand lets go to get out of the way.</summary>
+        private void InspectHands(ref ArmPose rightPose, ref ArmPose leftPose)
+        {
+            if (inspectWeight < 1f) return;
+            if (inspectNow.RightLetGo)
+                rightPose = ArmPose.Straight(toolPosition + new Vector3(0.02f, -0.03f, -0.12f), 0f, HandShape.Open);
+            if (inspectNow.LeftLetGo)
+            {
+                // Reaching back for the handle near the end. Taking hold of it happens at the next key, where the grip springs on.
+                Vector3 wrist = Vector3.Lerp(inspectNow.LeftWrist, leftPose.Wrist, inspectRegrab * 0.8f);
+                leftPose = ArmPose.Straight(wrist, inspectNow.LeftShape == HandShape.Open ? -150f : 30f, inspectNow.LeftShape);
+            }
         }
 
         private static float Ease(float t, Motion motion)
@@ -469,28 +762,14 @@ namespace CargoClash
 
         // ---- Everything else ----
 
-        private void ChoosePoses(PlayerAvatar local, CargoItem carried, bool knocked, float stride, float walk,
+        private void ChoosePoses(CargoItem carried, bool knocked, float walk, float stride,
             out ArmPose rightPose, out ArmPose leftPose, out float stiffness)
         {
-            stiffness = 200f;
-            rightPose = RunPose(1f, stride, walk);
-            leftPose = RunPose(-1f, -stride, walk);
-
             if (knocked)
             {
                 KnockedPoses(out rightPose, out leftPose);
                 torsoTarget = new Vector3(-10f, 0f, 0f);
                 stiffness = 130f;
-                return;
-            }
-
-            if (local.IsDashing)
-            {
-                // Fists up and the shoulder leading into the charge.
-                rightPose = ArmPose.Straight(new Vector3(0.25f, -0.35f, 0.34f), 35f, HandShape.Fist);
-                leftPose = ArmPose.Straight(new Vector3(-0.03f, -0.27f, 0.52f), -55f, HandShape.Fist);
-                torsoTarget = new Vector3(5f, 18f, -3f);
-                stiffness = 500f;
                 return;
             }
 
@@ -510,73 +789,20 @@ namespace CargoClash
                 return;
             }
 
+            stiffness = 340f;
             if (Time.time < tossUntil)
             {
                 // Heaving it up and away, toward the truck.
                 rightPose = ArmPose.Fixed(new Vector3(0.22f, -0.1f, 0.7f), Quaternion.Euler(-72f, -8f, -12f), HandShape.Open);
                 leftPose = ArmPose.Fixed(new Vector3(-0.22f, -0.1f, 0.7f), Quaternion.Euler(-72f, 8f, 12f), HandShape.Open);
                 torsoTarget = new Vector3(-8f, 0f, 0f);
-                stiffness = 340f;
                 return;
             }
 
-            if (Time.time < pushUntil)
-            {
-                rightPose = ArmPose.Fixed(new Vector3(0.26f, -0.28f, 0.7f), Quaternion.Euler(-30f, -8f, -12f), HandShape.Open);
-                leftPose = ArmPose.Fixed(new Vector3(-0.26f, -0.28f, 0.7f), Quaternion.Euler(-30f, 8f, 12f), HandShape.Open);
-                torsoTarget = new Vector3(5f, 0f, 0f);
-                stiffness = 340f;
-                return;
-            }
-
-            if (swingWeight > 0f) PunchPoses(local, ref rightPose, ref leftPose, ref stiffness);
-        }
-
-        /// <summary>
-        /// Arms pumping in time with the feet: `stride` is 1 with this hand as far forward as it goes, which
-        /// is when the opposite foot lands. It comes up into view going forward and drops out of it going back.
-        /// </summary>
-        private ArmPose RunPose(float side, float stride, float walk)
-        {
-            float u = (stride + 1f) * 0.5f;
-            Vector3 running = Vector3.Lerp(Vector3.Lerp(runWristBack, runWristMiddle, u), Vector3.Lerp(runWristMiddle, runWristForward, u), u);
-            Vector3 wrist = Vector3.Lerp(restWrist, running, walk);
-            wrist.x *= side;
-            // Palms turned in toward each other, as hands are when they swing.
-            return ArmPose.Straight(wrist, -side * 70f, HandShape.Relaxed);
-        }
-
-        private void PunchPoses(PlayerAvatar local, ref ArmPose rightPose, ref ArmPose leftPose, ref float stiffness)
-        {
-            float cycle = local.Visual != null ? local.Visual.SwingCycle : 0f;
-            // Right, left, right, left.
-            float side = local.Visual != null && local.Visual.SwingIndex % 2 != 0 ? -1f : 1f;
-
-            PunchKey from = PunchKeys[0];
-            PunchKey to = PunchKeys[1];
-            for (int i = 0; i < PunchKeys.Length - 1; i++)
-            {
-                if (cycle > PunchKeys[i + 1].Time) continue;
-                from = PunchKeys[i];
-                to = PunchKeys[i + 1];
-                break;
-            }
-            float t = Ease(Mathf.InverseLerp(from.Time, to.Time, cycle), to.Into);
-
-            Vector3 punching = Vector3.Lerp(from.Punching, to.Punching, t);
-            Vector3 guarding = Vector3.Lerp(from.Guarding, to.Guarding, t);
-            float punchingRoll = Mathf.Lerp(from.PunchingRoll, to.PunchingRoll, t);
-            float guardingRoll = Mathf.Lerp(from.GuardingRoll, to.GuardingRoll, t);
-            Vector3 bodyTurn = Vector3.Lerp(from.Torso, to.Torso, t);
-
-            ArmPose main = ArmPose.Straight(new Vector3(punching.x * side, punching.y, punching.z), punchingRoll * side, HandShape.Fist);
-            ArmPose other = ArmPose.Straight(new Vector3(guarding.x * side, guarding.y, guarding.z), guardingRoll * side, HandShape.Fist);
-            ArmPose rightTarget = side > 0f ? main : other;
-            ArmPose leftTarget = side > 0f ? other : main;
-            rightPose = ArmPose.Lerp(rightPose, rightTarget, swingWeight);
-            leftPose = ArmPose.Lerp(leftPose, leftTarget, swingWeight);
-            torsoTarget = Vector3.Lerp(torsoTarget, new Vector3(bodyTurn.x, bodyTurn.y * side, bodyTurn.z * side), swingWeight);
-            stiffness = Mathf.Lerp(stiffness, 1000f, swingWeight);
+            // Just let go of something, pushing it away.
+            rightPose = ArmPose.Fixed(new Vector3(0.26f, -0.28f, 0.7f), Quaternion.Euler(-30f, -8f, -12f), HandShape.Open);
+            leftPose = ArmPose.Fixed(new Vector3(-0.26f, -0.28f, 0.7f), Quaternion.Euler(-30f, 8f, 12f), HandShape.Open);
+            torsoTarget = new Vector3(5f, 0f, 0f);
         }
 
         private void KnockedPoses(out ArmPose rightPose, out ArmPose leftPose)
@@ -592,20 +818,19 @@ namespace CargoClash
 
         private void HoldPoses(CargoItem carried, out ArmPose rightPose, out ArmPose leftPose)
         {
-            // Holds on to wherever the cargo really is, so the hands bring it up from the ground.
+            // Cargo flies up into the hands, and they come up to meet it. Reaching down to the ground for
+            // it would swing a whole arm across the view.
             Vector3 half = carried.HalfExtents;
-            Vector3 anchor = Vector3.Lerp(transform.InverseTransformPoint(carried.CarryFrom), HoldPoint(carried), carried.CarryBlend);
+            float rising = 1f - Mathf.Clamp01(carried.CarryBlend);
+            Vector3 anchor = HoldPoint(carried) + new Vector3(0f, -0.4f, -0.1f) * rising;
             Quaternion tilt = HoldTilt;
             float shift = Mathf.Cos(FollowCamera.WalkPhase) * 0.008f * FollowCamera.WalkAmount;
-            // Hands round the near corners with the fingers curling onto the side facing you, because
-            // anything farther back along the sides would be hidden behind the cargo.
-            float outward = half.x + GripReach;
-            float up = half.y * 0.02f;
-            float near = -half.z - 0.035f;
-            rightPose = ArmPose.Fixed(anchor + tilt * new Vector3(outward, up + shift, near),
-                tilt * Quaternion.LookRotation(new Vector3(-1f, 0.2f, 0f), Vector3.back), HandShape.Open);
-            leftPose = ArmPose.Fixed(anchor + tilt * new Vector3(-outward, up - shift, near),
-                tilt * Quaternion.LookRotation(new Vector3(1f, 0.2f, 0f), Vector3.back), HandShape.Open);
+            // The way anyone carries a box: palms flat on its sides, fingers going away from you and thumbs on top.
+            float outward = half.x + HoldSideGap;
+            float low = -half.y * 0.3f;
+            float near = -half.z - HoldWristBack;
+            rightPose = ArmPose.FlatAgainst(anchor + tilt * new Vector3(outward, low + shift, near), tilt * Vector3.right, HandShape.Open);
+            leftPose = ArmPose.FlatAgainst(anchor + tilt * new Vector3(-outward, low - shift, near), tilt * Vector3.left, HandShape.Open);
         }
 
         private void CoCarryPoses(CargoItem carried, float walk, float stride, out ArmPose rightPose, out ArmPose leftPose)
@@ -659,6 +884,11 @@ namespace CargoClash
                     direction = Quaternion.LookRotation(across.normalized, pose.Handle);
                     wrist = pose.Wrist - direction * Vector3.forward * FistToHandle;
                     break;
+                case HandAim.FlatOn:
+                    // Mostly straight ahead. Following the forearm, which comes up from below, stands the fingers on end.
+                    Vector3 fingers = Vector3.ProjectOnPlane(Vector3.Lerp(Vector3.forward, along, 0.2f), pose.Handle);
+                    direction = Quaternion.LookRotation(fingers.normalized, pose.Handle);
+                    break;
                 case HandAim.AlongForearm:
                     direction = LookAlong(along) * Quaternion.Euler(0f, 0f, pose.Roll);
                     break;
@@ -667,9 +897,10 @@ namespace CargoClash
                     break;
             }
 
-            if (pose.Aim == HandAim.OnHandle && gripBlend >= 1f)
+            arm.Attached = pose.Aim == HandAim.OnHandle ? Mathf.MoveTowards(arm.Attached, 1f, deltaTime / 0.14f) : 0f;
+            if (arm.Attached >= 1f)
             {
-                // Locked to the hammer, or the fists would slide along its handle in a fast swing.
+                // Locked to the tool, or the fists would slide along its handle in a fast swing.
                 arm.Wrist = wrist;
                 arm.Velocity = Vector3.zero;
                 arm.Hand = direction;

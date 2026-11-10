@@ -57,12 +57,30 @@
                     "expectedControlType": "Button",
                     "processors": "",
                     "interactions": "",
-                    "initialStateCheck": false
+                    "initialStateCheck": true
                 },
                 {
                     "name": "SwitchView",
                     "type": "Button",
                     "id": "1a1b5c3d-0d1e-4a6f-8b21-5c8e7d6f1107",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Secondary",
+                    "type": "Button",
+                    "id": "b0fb0187-c5c4-4227-9970-e11e9a35c720",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                },
+                {
+                    "name": "Inspect",
+                    "type": "Button",
+                    "id": "6c0de5a1-1e4f-4741-bfe5-5ce742083a8b",
                     "expectedControlType": "Button",
                     "processors": "",
                     "interactions": "",
@@ -237,17 +255,6 @@
                 },
                 {
                     "name": "",
-                    "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2216",
-                    "path": "<Keyboard>/f",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Attack",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
                     "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2217",
                     "path": "<Gamepad>/buttonWest",
                     "interactions": "",
@@ -292,17 +299,6 @@
                 },
                 {
                     "name": "",
-                    "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2221",
-                    "path": "<Mouse>/rightButton",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Ram",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
                     "id": "2b2c6d4e-1e2f-4b7a-9c32-6d9f8e7a2222",
                     "path": "<Keyboard>/v",
                     "interactions": "",
@@ -320,6 +316,50 @@
                     "processors": "",
                     "groups": "",
                     "action": "SwitchView",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "c5c2de7c-11f4-47e8-9d0d-b39bd6320d86",
+                    "path": "<Mouse>/rightButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Secondary",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "5edf2069-2102-426a-b0ac-870b26945ac0",
+                    "path": "<Gamepad>/rightTrigger",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Secondary",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "2c0ca891-b0ca-4b8b-bb83-6f1c9fd870d0",
+                    "path": "<Keyboard>/f",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Inspect",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "a78288f3-1b4d-403e-a258-f41c3d3ed7a6",
+                    "path": "<Gamepad>/buttonNorth",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Inspect",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

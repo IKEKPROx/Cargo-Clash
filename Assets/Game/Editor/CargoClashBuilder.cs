@@ -359,6 +359,7 @@ public static partial class CargoClashBuilder
         visual.collectorHat = FindInModel(model, "HatCollector").gameObject;
         visual.interrupterHat = FindInModel(model, "HatInterrupter").gameObject;
         visual.hammer = FindInModel(model, "Hammer").gameObject;
+        visual.vacuum = FindInModel(model, "Vacuum").gameObject;
         visual.handLeft = FindInModel(model, "Hand.L");
         visual.handRight = FindInModel(model, "Hand.R");
         visual.dizzyStars = FindInModel(model, "DizzyStars").gameObject;
@@ -367,6 +368,7 @@ public static partial class CargoClashBuilder
         visual.eyeRight = FindInModel(model, "Eye.R");
         visual.interrupterHat.SetActive(false);
         visual.hammer.SetActive(false);
+        visual.vacuum.SetActive(false);
         visual.dizzyStars.SetActive(false);
 
         SetLayerRecursively(root, GameLayers.Player);
@@ -1023,6 +1025,7 @@ public static partial class CargoClashBuilder
         rig.rightArm = BuildFirstPersonArm(model, "R");
         rig.leftArm = BuildFirstPersonArm(model, "L");
         rig.hammer = FindInModel(model, "Hammer");
+        rig.vacuum = FindInModel(model, "Vacuum");
 
         SetLayerRecursively(model, GameLayers.ViewModel);
         foreach (Renderer part in model.GetComponentsInChildren<Renderer>(true))
@@ -1622,6 +1625,11 @@ public static partial class CargoClashBuilder
         hud.playHud = play.gameObject;
         BuildCrosshair(play, hud);
         BuildRamChip(play, hud);
+        BuildHealthChip(play, hud);
+        // To the left of the map, where it's clear of the scoreboard.
+        hud.feedRoot = UiGroup(play, "Feed", Vector2.one, new Vector2(-226f, -56f), new Vector2(10f, 10f));
+        hud.streakText = UiText(play, "Streak", "", 72, new Color(1f, 0.82f, 0.25f), 4f);
+        Rect(hud.streakText.gameObject, play, AnchorCentre, new Vector2(0f, 220f), new Vector2(1200f, 100f));
         BuildMiniMap(play);
         BuildRoleChip(play, hud);
 
@@ -1751,6 +1759,26 @@ public static partial class CargoClashBuilder
         Rect(hud.ramLabel.gameObject, chip, AnchorCentre, new Vector2(56f, 0f), new Vector2(200f, 50f));
     }
 
+    private static void BuildHealthChip(Transform parent, MatchHud hud)
+    {
+        Vector2 size = new Vector2(330f, 60f);
+        RectTransform chip = UiGroup(parent, "Health", Vector2.zero, new Vector2(30f + size.x * 0.5f, 30f + 74f + 12f + size.y * 0.5f), size);
+        AddSoftShadow(chip, 0.4f);
+        Image edge = UiImage(chip, "Edge", uiRound, UiNavy, 2f);
+        Fill(edge.rectTransform);
+        Image track = UiImage(edge.transform, "Track", uiRound, new Color(0.2f, 0.24f, 0.38f), 2.4f);
+        Fill(track.rectTransform, 7f, 7f, 7f, 7f);
+        hud.healthFill = UiImage(track.transform, "Fill", uiFace, UiGreen, 2.4f);
+        Fill(hud.healthFill.rectTransform);
+
+        Image key = UiImage(chip, "Key", uiFace, UiCream, 3f);
+        Rect(key.gameObject, chip, new Vector2(0f, 0.5f), new Vector2(50f, 1f), new Vector2(68f, 40f));
+        Text keyText = UiText(key.transform, "KeyText", GameText.HealthLabel, 25, UiNavy);
+        Fill(keyText.rectTransform);
+        hud.healthLabel = UiText(chip, "Label", "", 32, Color.white, 2.5f);
+        Rect(hud.healthLabel.gameObject, chip, AnchorCentre, new Vector2(30f, 0f), new Vector2(200f, 50f));
+    }
+
     private static void BuildMiniMap(Transform parent)
     {
         // The same shape as the level: 46 metres across and 98 long.
@@ -1808,7 +1836,7 @@ public static partial class CargoClashBuilder
         Rect(hud.introHeading.gameObject, card, AnchorTop, new Vector2(0f, -106f), new Vector2(1100f, 90f));
         hud.introGoal = UiText(card, "Goal", "", 44, UiNavy);
         Rect(hud.introGoal.gameObject, card, AnchorTop, new Vector2(0f, -182f), new Vector2(1100f, 56f));
-        Text keys = UiText(card, "Keys", GameText.KeysHint, 26, new Color(0.34f, 0.37f, 0.48f));
+        Text keys = UiText(card, "Keys", GameText.KeysHint, 23, new Color(0.34f, 0.37f, 0.48f));
         Rect(keys.gameObject, card, AnchorBottom, new Vector2(0f, 42f), new Vector2(1140f, 34f));
 
         RectTransform count = UiGroup(card, "Count", AnchorTop, new Vector2(0f, -272f), new Vector2(84f, 84f));
@@ -1831,7 +1859,7 @@ public static partial class CargoClashBuilder
         Rect(hud.resultsHeading.gameObject, inside, AnchorTop, new Vector2(0f, -100f), new Vector2(1080f, 110f));
         hud.resultsScore = UiText(inside, "Score", "", 78, UiNavy);
         Rect(hud.resultsScore.gameObject, inside, AnchorTop, new Vector2(0f, -212f), new Vector2(1080f, 90f));
-        hud.resultsTitles = UiText(inside, "Titles", "", 38, new Color(0.34f, 0.37f, 0.48f));
+        hud.resultsTitles = UiText(inside, "Titles", "", 32, new Color(0.34f, 0.37f, 0.48f));
         Rect(hud.resultsTitles.gameObject, inside, AnchorCentre, new Vector2(0f, -30f), new Vector2(1080f, 220f));
 
         hud.resultsWaiting = UiText(inside, "Waiting", GameText.WaitingForHost, 34, new Color(0.34f, 0.37f, 0.48f));

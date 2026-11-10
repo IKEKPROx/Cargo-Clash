@@ -13,13 +13,15 @@ CONTROLS
 WASD                 Move
 Mouse                Look around (the arrow keys turn too)
 E                    Pick up / put down cargo
-Space or right-click Ram
-Left-click or F      Hit someone (both sides): once pushes them back, twice in a row knocks them down.
-                     Interrupters can also hold it on cargo to smash it.
+Space                Ram
+Left-click           Attack with what's in your hands: once pushes someone back, twice in a row knocks them down.
+                     Collectors blast air from a distance. Interrupters swing a hammer, and hold it on cargo to smash it.
+Right-click          Collectors hold it to suck in cargo and people. Interrupters hold it to charge, and let go to slam.
+F                    Inspect what's in your hands (first person)
 V                    Switch between first person and over the shoulder
 Esc                  Pause menu, where you can change the look speed
 Alt+Enter            Full screen on / off
-A gamepad also works: left stick to move, right stick to look, A / B / X to pick up, ram, and hit or smash.
+A gamepad also works: left stick to move, right stick to look, A / B / X / Y to pick up, ram, attack and inspect, right trigger for right-click.
 
 PLAYING TOGETHER ON A LOCAL NETWORK
 One player clicks CREATE ROOM and chooses a level. The room code is that computer's IP address.

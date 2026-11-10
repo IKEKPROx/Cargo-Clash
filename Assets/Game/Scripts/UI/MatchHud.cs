@@ -23,6 +23,19 @@ namespace CargoClash
         private const float NameLabelRange = 38f;
         private const float ThreatRange = 10f;
         private const float MarkerHideWithin = 13f;
+        private const float HealthBarRange = 26f;
+
+        private const int FeedLines = 4;
+        private const float FeedSeconds = 5f;
+        private const float FeedLineHeight = 40f;
+        private const float StreakWindowSeconds = 7f;
+        private const float StreakShowSeconds = 1.8f;
+
+        private sealed class FeedLine
+        {
+            public Text Label;
+            public float Age;
+        }
 
         private sealed class Popup
         {
@@ -67,6 +80,13 @@ namespace CargoClash
         public GameObject playHud;
         public Image ramFill;
         public Text ramLabel;
+        public Image healthFill;
+        public Text healthLabel;
+
+        [Header("Knockouts")]
+        [Tooltip("Who knocked out whom. Each line is added here.")]
+        public RectTransform feedRoot;
+        public Text streakText;
 
         [Header("Being hit")]
         public Image speedLines;
@@ -104,6 +124,7 @@ namespace CargoClash
         private readonly List<Image> barPool = new List<Image>();
         private readonly List<Image> markerPool = new List<Image>();
         private readonly List<Popup> popups = new List<Popup>();
+        private readonly List<FeedLine> feed = new List<FeedLine>();
         private int labelsUsed;
         private int barsUsed;
         private int markersUsed;
@@ -118,6 +139,11 @@ namespace CargoClash
         private float hitAt = -100f;
         private float dashAmount;
         private float knockedAmount;
+        private float hitMarkerAt = -100f;
+        private bool hitMarkerBig;
+        private string knockedOutBy = "";
+        private int streak;
+        private float lastKnockOutAt = -100f;
 
         /// <summary>True while the pointer should be free for clicking, and looking around should stop.</summary>
         public bool MenuOpen => pausePanel.activeSelf || resultsShown;
@@ -145,6 +171,7 @@ namespace CargoClash
             promptA.Hide();
             promptB.Hide();
             targetBar.SetActive(false);
+            streakText.text = "";
         }
 
         private void OnDestroy()
@@ -165,6 +192,8 @@ namespace CargoClash
             UpdateBanner(director);
             UpdateIntroCard(director);
             UpdateRamBar();
+            UpdateHealthBar();
+            UpdateFeed();
             UpdateMusic(director);
             UpdateResults(director);
             UpdatePopups();
@@ -250,6 +279,13 @@ namespace CargoClash
                     else bannerText.text = director.CargoRanOut.Value ? GameText.NoCargoLeft : GameText.TimeUp;
                     break;
                 case MatchPhase.Playing:
+                    PlayerAvatar me = PlayerAvatar.Local;
+                    if (me != null && me.KnockedOut.Value)
+                    {
+                        int back = Mathf.Max(1, Mathf.CeilToInt((float)(me.KnockedUntil.Value - director.Now)));
+                        bannerText.text = GameText.KnockedOutBy(knockedOutBy, back);
+                        break;
+                    }
                     float left = director.SecondsLeft;
                     if (!finalStretchAnnounced && left <= config.finalStretchSeconds)
                     {
@@ -316,6 +352,92 @@ namespace CargoClash
             ramFill.rectTransform.anchorMax = new Vector2(Mathf.Lerp(0.09f, 1f, 1f - cooldown), 1f);
             ramFill.color = cooldown <= 0f ? new Color(0.35f, 0.85f, 0.42f) : new Color(0.6f, 0.65f, 0.75f);
             ramLabel.text = cooldown <= 0f ? GameText.RamReady : GameText.RamCooling;
+        }
+
+        private void UpdateHealthBar()
+        {
+            PlayerAvatar local = PlayerAvatar.Local;
+            if (local == null) return;
+            float health = local.Health01;
+            healthFill.rectTransform.anchorMax = new Vector2(Mathf.Lerp(0.09f, 1f, health), 1f);
+            Color color = Color.Lerp(new Color(0.95f, 0.22f, 0.18f), new Color(0.35f, 0.85f, 0.42f), Mathf.Clamp01(health * 1.6f - 0.2f));
+            // It throbs when you're nearly out.
+            if (health <= 0.34f) color = Color.Lerp(color, Color.white, 0.25f + Mathf.Sin(Time.time * 9f) * 0.25f);
+            healthFill.color = color;
+            healthLabel.text = local.Health.Value.ToString();
+        }
+
+        /// <summary>Called on every computer when someone's knocked out.</summary>
+        public void ShowKnockOut(PlayerAvatar attacker, PlayerAvatar victim, Weapon weapon)
+        {
+            PlayerAvatar local = PlayerAvatar.Local;
+            string first = ColoredName(attacker);
+            string second = ColoredName(victim);
+            FeedLine line = new FeedLine { Label = NewLabel("Feed") };
+            line.Label.rectTransform.SetParent(feedRoot, false);
+            line.Label.rectTransform.pivot = new Vector2(1f, 0.5f);
+            line.Label.alignment = TextAnchor.MiddleRight;
+            line.Label.fontSize = 28;
+            line.Label.color = Color.white;
+            line.Label.supportRichText = true;
+            line.Label.text = $"{first}  {GameText.KnockOutVerb(weapon)}  {second}";
+            feed.Add(line);
+            if (feed.Count > FeedLines)
+            {
+                Destroy(feed[0].Label.gameObject);
+                feed.RemoveAt(0);
+            }
+
+            if (victim == local) knockedOutBy = attacker.DisplayName;
+            if (attacker != local) return;
+
+            streak = Time.time - lastKnockOutAt < StreakWindowSeconds ? streak + 1 : 1;
+            lastKnockOutAt = Time.time;
+            streakText.text = GameText.Streak(streak);
+            GameAudio.Play("knockout", 0.7f);
+        }
+
+        private static string ColoredName(PlayerAvatar avatar) =>
+            $"<color=#{ColorUtility.ToHtmlStringRGB(avatar.Team.ToColor())}>{avatar.DisplayName}</color>";
+
+        private void UpdateFeed()
+        {
+            for (int i = feed.Count - 1; i >= 0; i--)
+            {
+                FeedLine line = feed[i];
+                line.Age += Time.deltaTime;
+                if (line.Age >= FeedSeconds)
+                {
+                    Destroy(line.Label.gameObject);
+                    feed.RemoveAt(i);
+                }
+            }
+            for (int i = 0; i < feed.Count; i++)
+            {
+                FeedLine line = feed[i];
+                line.Label.rectTransform.anchoredPosition = new Vector2(0f, -i * FeedLineHeight);
+                Color color = line.Label.color;
+                color.a = Mathf.Clamp01((FeedSeconds - line.Age) * 2f);
+                line.Label.color = color;
+            }
+
+            float t = (Time.time - lastKnockOutAt) / StreakShowSeconds;
+            bool show = t < 1f;
+            if (streakText.enabled != show) streakText.enabled = show;
+            if (!show) return;
+            float pop = 1f + 0.55f * Mathf.Max(0f, 1f - t * 7f);
+            streakText.rectTransform.localScale = Vector3.one * pop;
+            Color streakColor = streakText.color;
+            streakColor.a = Mathf.Clamp01((1f - t) * 4f);
+            streakText.color = streakColor;
+        }
+
+        /// <summary>A blow of yours landed.</summary>
+        public void ShowHitMarker(bool big)
+        {
+            hitMarkerAt = Time.time;
+            hitMarkerBig = big;
+            GameAudio.Play("tick", 0.55f);
         }
 
         private void UpdateMusic(MatchDirector director)
@@ -420,13 +542,39 @@ namespace CargoClash
                 crosshairRing.color = local.Side == Side.Interrupter && local.AimedSmash != null ? AimSmash : AimGrab;
             }
 
-            bool showBar = target != null && target.State.Value == CargoState.Ground && (target.Durability.Value < 1f || local.Swinging.Value);
+            // The ring closes in as the hammer charges, and swims about while the vacuum pulls.
+            if (local.IsCharging)
+            {
+                float charge = local.Charge01;
+                crosshairRing.enabled = true;
+                crosshairRing.rectTransform.localScale = Vector3.one * Mathf.Lerp(2.2f, 1f, charge);
+                crosshairRing.color = charge >= 1f ? AimSmash : Color.white;
+            }
+            else if (local.Sucking.Value)
+            {
+                crosshairRing.enabled = true;
+                crosshairRing.rectTransform.localScale = Vector3.one * (1.25f + Mathf.Sin(Time.time * 13f) * 0.12f);
+                crosshairRing.color = new Color(0.55f, 0.9f, 1f);
+            }
+
+            // A blow of yours landing outranks anything else it was showing.
+            float sinceMarker = (Time.time - hitMarkerAt) / 0.2f;
+            if (sinceMarker < 1f)
+            {
+                crosshairRing.enabled = true;
+                crosshairRing.rectTransform.localScale = Vector3.one * (hitMarkerBig ? Mathf.Lerp(2f, 1.2f, sinceMarker) : Mathf.Lerp(1.6f, 1.05f, sinceMarker));
+                crosshairRing.color = hitMarkerBig ? new Color(1f, 0.85f, 0.25f) : Color.white;
+            }
+
+            bool personBar = aimsAtPerson;
+            bool cargoBar = target != null && target.State.Value == CargoState.Ground && (target.Durability.Value < 1f || local.Swinging.Value);
+            bool showBar = personBar || cargoBar;
             if (targetBar.activeSelf != showBar) targetBar.SetActive(showBar);
             if (showBar)
             {
-                float durability = target.Durability.Value;
-                targetFill.rectTransform.anchorMax = new Vector2(Mathf.Lerp(0.05f, 1f, durability), 1f);
-                targetFill.color = Color.Lerp(new Color(1f, 0.25f, 0.2f), new Color(0.35f, 0.85f, 0.42f), durability);
+                float fraction = personBar ? local.AimedEnemy.Health01 : target.Durability.Value;
+                targetFill.rectTransform.anchorMax = new Vector2(Mathf.Lerp(0.05f, 1f, fraction), 1f);
+                targetFill.color = Color.Lerp(new Color(1f, 0.25f, 0.2f), new Color(0.35f, 0.85f, 0.42f), fraction);
             }
         }
 
@@ -445,10 +593,23 @@ namespace CargoClash
         {
             CargoItem grab = local.AimedGrab;
             CargoItem smash = local.AimedSmash;
+            if (local.Sucking.Value)
+            {
+                promptA.Show(GameText.KeySecondary, GameText.PromptSucking);
+                promptB.Hide();
+                return;
+            }
+            if (local.IsCharging)
+            {
+                promptA.Show(GameText.KeySecondary, local.Charge01 >= 1f ? GameText.PromptSlamReady : GameText.PromptCharging);
+                promptB.Hide();
+                return;
+            }
             if (local.AimedEnemy != null)
             {
-                promptA.Show(GameText.KeyAttack, GameText.PromptHit);
+                promptA.Show(GameText.KeyAttack, interrupter ? GameText.PromptHit : GameText.PromptBlast);
                 if (grab != null) promptB.Show(GameText.KeyInteract, GameText.PromptCarry);
+                else if (interrupter) promptB.Show(GameText.KeySecondary, GameText.PromptSlam);
                 else promptB.Hide();
                 return;
             }
@@ -463,7 +624,8 @@ namespace CargoClash
             promptB.Hide();
             if (grab == null)
             {
-                promptA.Hide();
+                if (!interrupter && local.AimedSuck != null) promptA.Show(GameText.KeySecondary, GameText.PromptSuck);
+                else promptA.Hide();
                 return;
             }
             string words;
@@ -644,7 +806,11 @@ namespace CargoClash
                 label.color = avatar.Team.ToColor();
                 label.fontSize = 30;
                 label.rectTransform.position = screen;
-                label.rectTransform.localScale = Vector3.one * LabelScale(screen.z, 7f);
+                float scale = LabelScale(screen.z, 7f);
+                label.rectTransform.localScale = Vector3.one * scale;
+
+                if (!avatar.KnockedOut.Value && screen.z <= HealthBarRange)
+                    DrawBar(screen - Vector3.up * (26f * scale * CanvasScale), avatar.Health01, scale);
             }
         }
 
