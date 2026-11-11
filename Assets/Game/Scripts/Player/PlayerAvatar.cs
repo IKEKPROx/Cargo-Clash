@@ -22,6 +22,7 @@ namespace CargoClash
         public readonly NetworkVariable<Team> TeamVar = new NetworkVariable<Team>();
         public readonly NetworkVariable<FixedString32Bytes> NameVar = new NetworkVariable<FixedString32Bytes>();
         public readonly NetworkVariable<bool> IsBotVar = new NetworkVariable<bool>();
+        public readonly NetworkVariable<CrewLook> LookVar = new NetworkVariable<CrewLook>(CrewLook.Default);
         public readonly NetworkVariable<double> KnockedUntil = new NetworkVariable<double>();
         public readonly NetworkVariable<double> ImmuneUntil = new NetworkVariable<double>();
         public readonly NetworkVariable<double> RamReadyAt = new NetworkVariable<double>();
@@ -40,6 +41,12 @@ namespace CargoClash
 
         public Team Team => TeamVar.Value;
         public string DisplayName => NameVar.Value.ToString();
+        /// <summary>What they picked before the match. The body type sets their health, speed and how hard they hit.</summary>
+        public CrewLook Look => LookVar.Value;
+        public BodyType Body => LookVar.Value.Body;
+        public BodyStats Stats => config.Stats(Body);
+        public int MaxHealth => Stats.maxHealth;
+        public float RunSpeed => config.runSpeed * Stats.speed;
 
         public Side Side
         {
@@ -63,7 +70,7 @@ namespace CargoClash
         /// </summary>
         public bool WantsToUseTool => lastSwing || lastSuck || lastCharge;
 
-        public float Health01 => Mathf.Clamp01((float)Health.Value / config.maxHealth);
+        public float Health01 => Mathf.Clamp01((float)Health.Value / MaxHealth);
 
         /// <summary>From 0 to 1 once the hammer has charged enough to slam.</summary>
         public float Charge01 => IsCharging ? Mathf.Clamp01((float)((Now - ChargingSince.Value) / config.chargeSeconds)) : 0f;
@@ -174,7 +181,8 @@ namespace CargoClash
         /// <summary>Host only, before spawning.</summary>
         public void ServerInit(RosterEntry entry)
         {
-            Health.Value = config.maxHealth;
+            LookVar.Value = entry.Look.Sanitized();
+            Health.Value = MaxHealth;
             TeamVar.Value = entry.Team;
             NameVar.Value = entry.Name;
             IsBotVar.Value = entry.IsBot;
@@ -409,7 +417,7 @@ namespace CargoClash
         {
             if (!controller.enabled) controller.enabled = true;
 
-            float speed = config.runSpeed;
+            float speed = RunSpeed;
             if (carried != null) speed *= carried.Definition.carrySpeedMultiplier;
             if (Sucking.Value) speed *= config.suckMoveMultiplier;
             else if (IsCharging) speed *= config.chargeMoveMultiplier;
@@ -800,7 +808,8 @@ namespace CargoClash
             direction = direction.sqrMagnitude > 0.01f ? direction.normalized : attacker.transform.forward;
             Vector3 where = transform.position + Vector3.up * 1.1f;
 
-            int damage = config.DamageOf(weapon);
+            // Heavier bodies hit harder.
+            int damage = Mathf.Max(1, Mathf.RoundToInt(config.DamageOf(weapon) * attacker.Stats.damage));
             Health.Value = Mathf.Max(0, Health.Value - damage);
             hitsInARow = Now - lastHitTakenAt <= config.hitComboSeconds ? hitsInARow + 1 : 1;
             lastHitTakenAt = Now;
@@ -848,7 +857,7 @@ namespace CargoClash
         {
             serverRespawnAt = 0.0;
             KnockedOut.Value = false;
-            Health.Value = config.maxHealth;
+            Health.Value = MaxHealth;
             Transform spot = MatchDirector.Instance.RespawnSpot(this);
             PoofRpc(transform.position, spot.position);
             TeleportRpc(spot.position, spot.rotation);
@@ -918,7 +927,7 @@ namespace CargoClash
             hitsInARow = 0;
             KnockedOut.Value = false;
             serverRespawnAt = 0.0;
-            Health.Value = config.maxHealth;
+            Health.Value = MaxHealth;
             RamReadyAt.Value = 0;
             TeleportRpc(position, rotation);
         }

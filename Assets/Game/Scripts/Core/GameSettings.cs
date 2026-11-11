@@ -13,9 +13,26 @@ namespace CargoClash
 
         private const string LookSpeedKey = "cc.lookSpeed";
         private const string FirstPersonKey = "cc.firstPerson";
+        private const string CrewKey = "cc.crew";
 
         private static float lookSpeed = -1f;
         private static int firstPerson = -1;
+        private static CrewLook? look;
+
+        /// <summary>The body type, hat, glasses and face picked on the crew page, for every match after.</summary>
+        public static CrewLook Look
+        {
+            get
+            {
+                look ??= CrewLook.Load(PlayerPrefs.GetString(CrewKey, ""));
+                return look.Value;
+            }
+            set
+            {
+                look = value.Sanitized();
+                if (!AutoPilot.Active) PlayerPrefs.SetString(CrewKey, look.Value.Save());
+            }
+        }
 
         /// <summary>Scales how far the view turns for a given mouse movement. 1 is the default.</summary>
         public static float LookSpeed

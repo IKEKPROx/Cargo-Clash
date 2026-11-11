@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: d7e9c84c819e441468bd6958bfa19a1d
+guid: 099cd24114ec84db1a20ca6511148f8e
 ModelImporter:
   serializedVersion: 24600
   internalIDToNameTable: []
@@ -585,7 +585,7 @@ ModelImporter:
     isReadable: 0
   meshes:
     lODScreenPercentages: []
-    globalScale: 1
+    globalScale: 0.84
     meshCompression: 0
     addColliders: 0
     useSRGBMaterialColor: 1
@@ -594,7 +594,7 @@ ModelImporter:
     preBakeTriangleCollisionMesh: 0
     importPhysicalCameras: 1
     importVisibility: 1
-    importBlendShapes: 0
+    importBlendShapes: 1
     importCameras: 0
     importLights: 0
     nodeNameCollisionStrategy: 1
@@ -648,7 +648,7 @@ ModelImporter:
     armStretch: 0.05
     legStretch: 0.05
     feetSpacing: 0
-    globalScale: 1
+    globalScale: 0.84
     rootMotionBoneName: 
     hasTranslationDoF: 0
     hasExtraRoot: 0

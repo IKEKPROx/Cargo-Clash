@@ -41,14 +41,27 @@ MonoBehaviour:
   helicopterWarningSeconds: 10
   helicopterArrivalDelay: 1.2
   helicopterHurrySeconds: 3
-  helicopterLowerSeconds: 1
-  helicopterClipSeconds: 0.4
-  helicopterLiftSeconds: 1.7
-  helicopterLeaveSeconds: 2.3
+  helicopterLowerSeconds: 1.5
+  helicopterClipSeconds: 0.7
+  helicopterLiftSeconds: 2
+  helicopterLeaveSeconds: 4
   runSpeed: 6.5
   turnDegreesPerSecond: 900
   personalSpace: 0.95
   personalSpacePush: 3.5
+  shortBody:
+    maxHealth: 140
+    speed: 0.86
+    damage: 1.3
+  mediumBody:
+    maxHealth: 100
+    speed: 1
+    damage: 1
+  tallBody:
+    maxHealth: 75
+    speed: 1.14
+    damage: 0.82
+  bodyOrder: 010002y
   eyeHeight: 1.28
   lookDegreesPerPixel: 0.1
   keyTurnDegreesPerSecond: 150
@@ -66,7 +79,6 @@ MonoBehaviour:
   hitPushSpeed: 6
   hitsToKnockDown: 2
   hitComboSeconds: 2.5
-  maxHealth: 100
   hammerDamage: 34
   blastDamage: 25
   slamDamage: 60
@@ -99,6 +111,8 @@ MonoBehaviour:
   pickupRange: 1.6
   smashRange: 1.8
   reachTolerance: 0.6
+  lagCompensationSeconds: 0.3
+  maxLagCompensation: 2.5
   smashTimeMultiplier: 1
   smashSwingSeconds: 0.5
   smashFirstHitSeconds: 0.275

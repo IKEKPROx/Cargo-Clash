@@ -187,9 +187,9 @@ namespace CargoClash
                 if (cargo != target && claims >= cargo.Definition.requiredCarriers) continue;
 
                 // Rough points per second: running there, carrying it back, and the risk of a fight.
-                float reachTime = cargo.EdgeDistance(self.transform.position) / config.runSpeed;
+                float reachTime = cargo.EdgeDistance(self.transform.position) / self.RunSpeed;
                 Vector3 truckPoint = LevelLayout.Instance.ClosestTruckZonePoint(cargo.transform.position);
-                float carrySpeed = config.runSpeed * cargo.Definition.carrySpeedMultiplier;
+                float carrySpeed = self.RunSpeed * cargo.Definition.carrySpeedMultiplier;
                 float carryTime = Vector3.Distance(cargo.transform.position, truckPoint) / carrySpeed;
                 float score = cargo.Definition.value / (reachTime + carryTime + 1.5f);
                 if (large && !waitingForHelp) score *= 0.5f;

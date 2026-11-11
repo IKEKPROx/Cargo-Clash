@@ -26,9 +26,11 @@ namespace CargoClash
             public GameObject relaxed;
             public GameObject open;
             public GameObject fist;
+            [Tooltip("Closed round a handle. A punching fist is tighter.")]
+            public GameObject grip;
         }
 
-        private enum HandShape { Relaxed, Open, Fist }
+        private enum HandShape { Relaxed, Open, Fist, Grip }
 
         private enum Tool { None, Hammer, Vacuum }
 
@@ -63,7 +65,7 @@ namespace CargoClash
                 new ArmPose { Wrist = wrist, Aim = HandAim.AlongForearm, Roll = roll, Direction = Quaternion.identity, Shape = shape };
 
             public static ArmPose OnHandleAt(Vector3 grip, Vector3 handle) =>
-                new ArmPose { Wrist = grip, Aim = HandAim.OnHandle, Handle = handle, Direction = Quaternion.identity, Shape = HandShape.Fist };
+                new ArmPose { Wrist = grip, Aim = HandAim.OnHandle, Handle = handle, Direction = Quaternion.identity, Shape = HandShape.Grip };
 
             public static ArmPose FlatAgainst(Vector3 wrist, Vector3 backOfHand, HandShape shape) =>
                 new ArmPose { Wrist = wrist, Aim = HandAim.FlatOn, Handle = backOfHand, Direction = Quaternion.identity, Shape = shape };
@@ -152,7 +154,8 @@ namespace CargoClash
         // These lengths and the tools' grips have to match Tools/blender/make_hands.py.
         private const float ForearmLength = 0.62f;
         private const float UpperArmLength = 0.54f;
-        private const float FistToHandle = 0.105f;
+        /// <summary>Where a handle runs through the right hand's grip, from the wrist: in front, and over toward the palm. The left is its mirror.</summary>
+        private static readonly Vector3 GripToHandle = new Vector3(-0.061f, 0f, 0.13f);
         private const float LeftGripAlongHandle = -0.27f;
         private const float VacuumForeGrip = 0.185f;
         private static readonly Vector3 VacuumMouth = new Vector3(0f, 0.112f, 0.436f);
@@ -163,7 +166,7 @@ namespace CargoClash
         /// <summary>How far back from the near edge of held cargo the wrists are, so you can see the hands holding it.</summary>
         private const float HoldWristBack = 0.13f;
 
-        // In step with the Smash clip in make_character.py: the same moments, with the hit at 0.55.
+        // In step with the Smash clip in make_crew.py: the same moments, with the hit at 0.55.
         // Torso angles are lean forward, turn right and tilt left, in degrees.
         private static readonly ToolKey[] HammerKeys =
         {
@@ -284,6 +287,8 @@ namespace CargoClash
         public ArmParts leftArm;
         public Transform hammer;
         public Transform vacuum;
+        [Tooltip("The upper arms and forearms, which take the material of the clothes you have on.")]
+        public Renderer[] sleeves;
 
         [Header("Holding cargo")]
         [Tooltip("How far in front of your eyes the near side of held cargo is. Wider cargo goes farther out, as well as this much for each metre of half width.")]
@@ -341,6 +346,7 @@ namespace CargoClash
         private bool wasKnocked;
         private bool colorsApplied;
         private bool placed;
+        private Material sleeveShown;
 
         public float PickUpSeconds => pickUpSeconds;
 
@@ -428,6 +434,7 @@ namespace CargoClash
 
             float deltaTime = Mathf.Clamp(Time.deltaTime, 0.0001f, 0.033f);
             ApplyTeamColor(local);
+            UpdateSleeves(local);
             NoticeChanges(local);
             MoveBody(local, deltaTime);
 
@@ -882,7 +889,7 @@ namespace CargoClash
                     Vector3 across = Vector3.ProjectOnPlane(along, pose.Handle);
                     if (across.sqrMagnitude < 0.001f) across = Vector3.ProjectOnPlane(Vector3.forward, pose.Handle);
                     direction = Quaternion.LookRotation(across.normalized, pose.Handle);
-                    wrist = pose.Wrist - direction * Vector3.forward * FistToHandle;
+                    wrist = pose.Wrist - direction * new Vector3(GripToHandle.x * arm.Side, GripToHandle.y, GripToHandle.z);
                     break;
                 case HandAim.FlatOn:
                     // Mostly straight ahead. Following the forearm, which comes up from below, stands the fingers on end.
@@ -954,6 +961,16 @@ namespace CargoClash
             arm.Parts.relaxed.SetActive(shape == HandShape.Relaxed);
             arm.Parts.open.SetActive(shape == HandShape.Open);
             arm.Parts.fist.SetActive(shape == HandShape.Fist);
+            arm.Parts.grip.SetActive(shape == HandShape.Grip);
+        }
+
+        /// <summary>Your sleeves are whatever you have on: the porters' shirt or the wreckers' jacket, which swap at half-time.</summary>
+        private void UpdateSleeves(PlayerAvatar local)
+        {
+            Material sleeve = local.Visual != null ? local.Visual.SleeveMaterial : null;
+            if (sleeve == null || sleeve == sleeveShown) return;
+            sleeveShown = sleeve;
+            foreach (Renderer part in sleeves) part.sharedMaterial = sleeve;
         }
 
         private void ApplyTeamColor(PlayerAvatar local)

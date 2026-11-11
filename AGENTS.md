@@ -20,6 +20,7 @@
 | 冲撞判定、倒地、掉货 | 主机 | `PlayerAvatar.ServerCheckRamHit`、`ServerKnockDown` |
 | 打人、喷气、重锤 | 拥有者把准星对着的敌人的 ID 发给主机；主机查距离、数这是第几下，再判定推开或倒地 | `PlayerAvatar.UpdateTools`、`ServerSwing`、`ServerSlam`、`ServerTakeHit` |
 | 血量、击败、重生 | 主机。血量是 `NetworkVariable`，击败时通知所有人出战报，到时间把人传回出生点 | `PlayerAvatar.ServerKnockOut`、`ServerRespawn`、`MatchDirector.ServerOnKnockedOut` |
+| 体型、帽子、眼镜、脸 | 各人在自己电脑上选，加入房间时发给主机，开局前还能改；主机开局时放进角色，体型决定血量、速度和伤害 | `SessionRoster.SetLookRpc`、`PlayerAvatar.LookVar`、`GameConfig.Stats` |
 | 吸货、吸人 | 拥有者只说按着右键。主机用身体朝向算前方：货由主机拉动，人由主机通知他的拥有者（`PullRpc`），因为移动归拥有者管 | `PlayerAvatar.ServerSuck`、`CargoItem.ServerPullToward` |
 | 地上的货物物理 | 主机（NetworkRigidbody） | `CargoItem` |
 | 瞄准 | 拥有者算出准星对着哪件货或哪个人，把 ID 发给主机；主机只查距离和状态 | `PlayerAvatar.UpdateAim`、`InteractRpc`、`SetSwingingRpc` |
@@ -38,6 +39,8 @@
 
 **系统的键盘配置一变（比如切换输入法），Input System 会重新绑定所有动作**，按着的键会被取消，要松开再按才有反应。按住才有效的动作（`Attack`、`Secondary`）要打开 `initialStateCheck`，这样重新绑定后会重新读按键。只看按下那一下的动作（`Interact`、`Ram`）不要开，否则会多触发一次。
 
+**刚加入的客户端在 `OnNetworkSpawn` 里发的 RPC，比主机的 `OnClientConnectedCallback` 先到。** 这时主机还没把这个客户端加进 `SessionRoster.Entries`，按名单找人的 RPC 会落空。客户端一进来就发自己选的外形，`SetLookRpc` 把先到的存进 `earlyLooks`，`AddHuman` 再取出来。以后加别的“一进来就发”的东西，也要这样处理。
+
 ## 写代码的规则
 
 - 角色不要直接读键盘，统一通过 `ICharacterInput`。这样机器人和自动测试才能用。人的 `Move` 是相对视线的，机器人的 `Move` 是世界方向（看 `LooksAround`）。
@@ -52,13 +55,13 @@
 
 ## 模型和动作
 
-角色、货物、货车、直升机和场景都是用脚本在 Blender 里做的，比用 Unity 的方块和球拼出来的好看。脚本写出 `Assets/Game/Models` 里的 FBX，生成脚本再按材质名换成 `Assets/Game/Materials` 里的材质，对照表在 `CargoClashBuilder.ModelMaterials`。在仓库根目录运行：
+货物、交通锥和场景都是用脚本在 Blender 里做的，比用 Unity 的方块和球拼出来的好看。人物、锤子、收集器、货车和直升机是组员 Astra 在 Blender 里做的，见下面的“人物”和“货车和直升机”。脚本写出 `Assets/Game/Models` 里的 FBX，生成脚本再按材质名换成 `Assets/Game/Materials` 里的材质，对照表在 `CargoClashBuilder.ModelMaterials`。在仓库根目录运行：
 
 ```bash
-/Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup --python Tools/blender/make_character.py
+/Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup --python Tools/blender/make_cargo.py
 ```
 
-其他模型把脚本换成 `make_cargo.py`、`make_hands.py`、`make_truck.py`、`make_helicopter.py`、`make_scenery.py`，开始页面的 Logo、按钮、卡片图和比赛界面的图标用 `make_ui.py`。末尾加 `-- --sheet 文件夹` 可以同时渲染检查图（直升机是 `-- --preview 图片.png`）。运行之后，还要运行上面的生成脚本才会进入游戏。
+其他模型把脚本换成 `make_crew.py`、`make_hands.py`、`make_cone.py`、`make_scenery.py`，开始页面的 Logo、按钮、卡片图和比赛界面的图标用 `make_ui.py`。末尾加 `-- --sheet 文件夹` 可以同时渲染检查图。运行之后，还要运行上面的生成脚本才会进入游戏。
 
 场景的每个模型是一个 FBX，`make_scenery.py` 加 `-- --only Rock_A,Barn` 只重做这几个。生成脚本把它们做成 `Assets/Game/Prefabs/Scenery` 里的预制体，再摆进关卡（`CargoClashBuilder` 的 `AddTrees` 到 `AddOutskirts`）。模型本身没有碰撞，挡人的是单独的 `Blocker` 子物体，所以换模型不影响玩法和寻路。放进可玩区域的新东西，要么加 `Blocker`，要么矮到走过去也不奇怪（比如草和花）。
 
@@ -68,15 +71,43 @@
 
 **场景物件不要勾 Static（Batching Static）。** 这台 Mac 上试过：静态合批和 SRP Batcher 一起用时，镜头转到某些位置，地面贴图和货车旁的黄色区域会整片变黑或消失。去掉静态合批就好了，原因没有查清。
 
-货物的尺寸要和 `CargoClashBuilder.BuildCargo` 里的碰撞盒一致。货车的 `CargoBed` 是单独的物体，直升机吊走的就是它。
+货物的尺寸要和 `CargoClashBuilder.BuildCargo` 里的碰撞盒一致。
 
-开始场景用的 `TitleTruck` 是同一辆车没出事的样子（`make_truck.py` 同时输出），由 `CargoClashBuilder.BuildTitleTruck` 组装，`Assets/CargoRover` 里的脚本带动它。轮子是单独的物体，轴距和轮距要和那些脚本一致。
+### 货车和直升机
 
-别人看到的工具也在 `Character.fbx` 里（`Hammer`、`Vacuum`，绑在 `Hand.R` 上）。手里有工具时上半身层播 `ReadyHammer` 或 `ReadyVacuum`。
+是 Astra 的 V07 车队，原件在仓库外的 `game design/独立建模/运输载具_v07/`（她的说明是 `打开说明_交接Opus.md`）。她按旧模型的接口导出了一套减面版，在她的 `交接/旧接口兼容/` 里：`Truck.fbx`（关卡里出事的那辆）、`TitleTruck.fbx`（开始画面，两个车轮样本放在原点）、`Helicopter.fbx`。**这三个文件原样复制进 `Assets/Game/Models`，不用脚本处理**，她更新了就再复制一次（保留 `.meta`），然后运行生成脚本。旧的 `make_truck.py`、`make_helicopter.py` 已经删了，别从历史里找回来运行，会把她的模型盖掉。
 
-角色的每个动作是 `make_character.py` 里的一个函数，只写手脚放在哪里，手肘和膝盖由脚本算出来。新增一个动作要改三处：
+- 材质名是 `Fleet_*`，颜色、粗糙度和金属度照她的 `交接/palette.json` 写在 `CargoClashBuilder.ModelMaterials`（`FleetMat`）。她的坐标表写的是 `(x, z, -y)`，实际进 Unity 后 X 是反的（比如尾桨在 `x = -0.49`），量位置时要注意。
+- 货车的 `CargoBed` 是单独的物体，直升机吊走的就是它。它的原点在车斗地板中心 `(0, 1.88, 1.66)`，地板面在 2.02 米，四个吊耳在车斗空间的 `(±1.82, 1.2, ±2.36)`（`HelicopterExtraction.bedClips`）。车斗里落货的范围是 `LevelLayout.bedHalfSize`，她的车斗内宽 3.16 米。
+- 开始场景的 `TitleTruck` 由 `CargoClashBuilder.BuildTitleTruck` 组装，`Assets/CargoRover` 里的脚本带动它。轮子是单独的物体，轴距和轮距（轮心 `±2.36`、高 1.05，前中后轴 `-2.75`、`0.15`、`2.95`）要和那些脚本一致，她的车就是按这些做的。
+- 吊运是她的方案（`脚本/motion_fleet.py`），在 `HelicopterExtraction` 里：每个姿势只由“到达后过了多少秒”算出来，不要加逐帧累积的模拟，否则各台电脑和各种帧率会不一样。车斗先保持事故倾角垂直离开车架，再调平，四根吊索挂上后长度不变。各段时长在 `GameConfig` 的 `helicopterLowerSeconds` 等四项，改了它们半场结尾的长度跟着变（`HelicopterWorkSeconds`）。
 
-1. `make_character.py`：写动作函数，加进 `CLIPS`。
+### 人物
+
+人物、锤子和收集器的原件是 Astra 的 Blender 文件，在仓库外面的 `game design/独立建模/`，不进 Git。`make_crew.py` 从那里读（不在旁边就加 `-- --source 文件夹`），写出 `Crew_Short.fbx`、`Crew_Medium.fbx`、`Crew_Tall.fbx`。她的原件每人约 45 万个三角面，脚本去掉缝线和拉链齿，按颜色分开减面到每人约 2 万（帽子和眼镜另算，全部加起来约 2.7 万），把她的 35 种颜色并成游戏的二十来种（`COLOURS`），`ClothPrimary` 换成队伍颜色。
+
+- **三种体型，两套衣服。** 同一身高的搬运工（v05，运输公司的人）和破坏者（v06，对手公司的人）骨架一样，所以每种体型一个文件、一套动作，里面有 `Porter` 和 `Wrecker` 两套衣服。正方穿搬运工的，反方穿破坏者的，中场换边时 `CharacterVisual` 换衣服。手套用 v06 的（她在 v06 改正了手的绑定方向），两套衣服共用。
+- **玩家自己搭配。** 开局前在 CREW 页（`TitleFlow` 的 `Page.Crew`）选体型、帽子（6 顶或不戴）、眼镜（3 副或不戴），再拉她的 10 个捏脸滑块。主菜单和大厅各有一个 CREW 按钮，练习模式选完关卡也会先到这一页。选的结果是一个 `CrewLook`（每个滑块 6 位，十个挤在一个 `ulong` 里），存在本机（`GameSettings.Look`），加入房间时发给主机，开局时主机放进 `PlayerAvatar.LookVar`。机器人的体型按 `GameConfig.bodyOrder` 轮流（中、矮、高），帽子、眼镜和脸随机（`CrewLook.Random`）。
+- **体型各有打法。** 矮胖的血厚、打得重、跑得慢，高瘦的跑得快、血少、打得轻，中等的都在中间。数值在 `GameConfig` 的 `shortBody`、`mediumBody`、`tallBody`（`BodyStats`：血量、速度倍数、伤害倍数）。伤害倍数乘在锤子、喷气、重锤和冲撞上，速度倍数乘在 `runSpeed` 上。碰撞和视线高度三种一样。
+- **帽子、眼镜和脸。** 每个 FBX 里两套衣服各带全部帽子和眼镜，`CrewModel.Dress` 只显示选中的那个。捏脸是她做的形状键：导出时不能应用修改器（`use_mesh_modifiers=False`），否则形状键会丢；Unity 导入要开 `importBlendShapes`。滑块从 -1 到 1，负的权重也照样生效。眼镜也有 `EyeSpacing`、`EyeSize` 两个形状键，跟着眼睛一起变，才不会离开眼睛。比赛里的人（`CharacterVisual`）和 CREW 页的预览（`CrewPreview`）都由 `CrewModel` 来穿，所以两边一样。
+- **预览。** CREW 页的人站在开始场景远处 (0, 300, 0) 的转台上，一台单独的相机只画 `Preview` 层（第 14 层），画进 `Assets/Game/UI/CrewPreview.renderTexture`，页面用 RawImage 显示。主相机不画这一层，描边功能要包含它。
+- **大小。** Unity 按 `CargoClashBuilder.CrewScale`（0.84）导入，中等身材和以前的工人差不多高。这个数要和 `make_crew.py` 的 `GAME_SCALE` 一样，脚本按它算抱货时两手隔多远。
+- **工具。** `Hammer`、`Vacuum` 挂在 `RightHand` 骨骼上，握的位置和她的握持姿势一致，左手由动作放到另一个握点上。手里有工具时上半身层播 `ReadyHammer` 或 `ReadyVacuum`。
+- **手指。** 52 根骨骼里有 30 根指骨。每个动作给两只手各指定她的一种手型（`Relaxed`、`Grip`、`Fist`、`Carry`、`Open`），键在动作里。
+
+每个动作是 `make_crew.py` 里的一个函数，只写手脚放在哪里（工具动作写工具放在哪里，两只手跟着握点走），手肘和膝盖由脚本算出来。位置用骨架量出来的尺寸写（`Body`：肩膀、臂长、腿长、肚子往前多少），三种体型共用同一套函数。烘焙时够不着的手会打出 `a hand falls short` 的提示。
+
+脚本会自己避免穿模和折腕，写动作时不用操心，但要知道它会改你的姿势：
+
+- **躯干轮廓。** `Body.measure_torso` 从衣服量出躯干每 3 厘米一层、36 个方向的轮廓。矮胖的肚子比肩膀宽，手臂要绕着走。
+- **手肘绕开身体。** 每一帧算完手臂后，手肘可以绕“肩—腕”连线转，先转到手臂整个在躯干外面（`place_elbow`），空手的手再往外张开（`clear_hand`）。
+- **工具挪出身体。** 工具或握着它的手在身体里时，把工具整体往前或往上挪，前提是两只手还够得着（`clear_tool`）。挥锤这种快动作用 `clear=0.1` 限制挪动，不然会挪得很怪。
+- **手在把手上转。** 锤柄和收集器的竖把手是圆的，手会绕它转到顺着前臂的方向，手肘也转到让手腕弯得最少的位置（`EASY_WRIST`）。锤子跟着右手转，锤面始终在前臂和锤柄的平面里；收集器不能跟着转（会改变朝向），所以只有左手转。
+- 砸下那一帧的手的位置是按体型试出来的（`STRIKE`），矮胖的收集器端法也是（`READY_VACUUM`）。改了体型或这些动作，用 `-- --only Short --no-export --check 文件夹 --clips Smash,Slam` 只烘焙这几个动作存成 .blend，再检查穿模和手腕（交接说明第 3 节第 13 步）。
+
+新增一个动作要改三处：
+
+1. `make_crew.py`：写动作函数，加进 `CLIPS`。
 2. `Assets/Game/Editor/CargoClashCharacterAnimator.cs`：加状态和过渡。循环的动作还要加进 `LoopingClips`。
 3. `Assets/Game/Scripts/Player/CharacterVisual.cs`：从联网状态决定什么时候播。
 
@@ -90,14 +121,14 @@ Animator 有两层：`Base` 管全身，`UpperBody` 只管上半身，这样搬�
 
 **两台相机。** 主相机不画 `ViewModel` 层。它上面叠了一台 Overlay 相机，只画 `ViewModel` 层：手、锤子和自己手里的货。这台相机会先清深度，所以手和货不会插进墙里。自己手里的货由 `CargoItem.SetOnViewLayer` 换层。两台相机的视野一样，货从地上进到手里时才不会跳。
 
-**手是代码摆的，不是 Animator。** `make_hands.py` 输出 `FirstPersonHands.fbx`，上臂、前臂、三种手型（放松、张开、握拳）、锤子和收集器都是不变形的物体，长度要和 `FirstPersonRig` 开头的常量一致。`FirstPersonRig` 每帧算它们的位置，因为手要跟着货物的大小走。要让动作看着协调，守住这几条：
+**手是代码摆的，不是 Animator。** `make_hands.py` 输出 `FirstPersonHands.fbx`，上臂、前臂、四种手型（放松、张开、握拳、握把手）、锤子和收集器都是不变形的物体，长度要和 `FirstPersonRig` 开头的常量一致。手套、锤子和收集器是 Astra 的：她的第一人称手套有指骨，每种手型是摆好她的一种手势后定住的网格。握把手的手里，把手在手腕前 0.13 米、往掌心偏 0.061 米（`GripToHandle`）。袖子是 `FP_Sleeve`，`FirstPersonRig` 按自己穿的衣服换成搬运工的衬衫或破坏者的外套（`CharacterVisual.SleeveMaterial`）。`FirstPersonRig` 每帧算它们的位置，因为手要跟着货物的大小走。要让动作看着协调，守住这几条：
 
 - 手臂是两段的 IK（`PlaceArm`、`FindElbow`）：动作只说手腕放哪里，手肘和手的朝向是算出来的。
 - 根节点是上半身，绕胸口转（`torso` 弹簧）。一个动作要带上身体，不要只动手。
 - 跑步摆臂用 `FollowCamera.Stride`，它和落脚同步。想和步子合拍就用它，不要自己算相位。
 - 工具是双手握的刚体：动的是工具（`HammerKeys`、`BlastKeys`、`SlamKeys`），两只手锁在把手上。挥锤和喷气跟着角色动画的进度（`CharacterVisual.SwingCycle`），所以手、声音和特效是同一时刻。改 `Smash` 的长度要同时改 `GameConfig.smashSwingSeconds` 和 `smashFirstHitSeconds`，`Blast` 对应 `blastCycleSeconds` 和 `blastFirstSeconds`，`Slam` 对应 `slamSeconds` 和 `slamLandSeconds`。
 - 手里的货：手掌贴在两侧、手指朝前、拇指朝上（`HoldPoses`）。手的朝向不要跟着前臂，前臂从下面上来，手指会竖起来。拿货时手从下面迎上去，不要伸到地上，否则一条手臂会横穿画面。
-- 收集器做大了会挡视线。它在 `make_hands.py` 里按 `VACUUM_SCALE` 缩小，`FirstPersonRig` 里的 `VacuumForeGrip`、`VacuumMouth` 是缩小后的值。
+- 收集器做大了会挡视线。Astra 按挡不挡视线定好了大小，`FirstPersonRig` 里的 `VacuumForeGrip`、`VacuumMouth` 是她的握点和吸口。
 - 检视（F）是 `HammerInspect`、`VacuumInspect` 两张关键帧表，只在本地播放。`Flip` 和 `Twist` 可以超过一整圈。锤子在画面平面内转，翻跟头的话锤头会贴到镜头上。左手松开（`leftLetGo`）之后，握回工具的那个键不用写左手位置：手先停在原处，快到时伸回把手（`SampleInspect` 的返回值）。检查检视要看每一张连拍，有的问题只出现一帧。一按左键或右键检视就停，看的是本机的 `PlayerAvatar.WantsToUseTool`，不等主机确认，否则客户端要晚一个来回才停。
 - 合搬时人站在箱子一端，走路时箱子总在身侧。看得到把手时手搭在上面，看不到时两只手朝箱子的方向伸，箱子在身后时手放到视野外（`CoCarryPoses`）。
 
@@ -150,7 +181,7 @@ grep CCTEST /tmp/cargo-match.log
 | 参数 | 作用 |
 |---|---|
 | `-ccMode host` / `client` | 开局域网主机 / 加入，配合 `-ccAddress`、`-ccExpectClients` 测两台机器 |
-| `-ccMode menu` | 用真实的点击走一遍开始页面的每一屏并拍照，同时检查锁着的关卡点不进去、加入失败有提示。配合 `-ccShotDir`，窗口运行 |
+| `-ccMode menu` | 用真实的点击走一遍开始页面的每一屏并拍照，同时检查锁着的关卡点不进去、加入失败有提示，以及 CREW 页的按钮、滑块、预览和改了之后能传到房间。配合 `-ccShotDir`，窗口运行 |
 | `-ccShotDir 目录`、`-ccShotEvery 秒` | 窗口运行时定时截图，用来检查画面 |
 | `-ccSmashScale 倍数` | 临时改砸货时间，用来比较平衡 |
 | `-ccPort 端口` | 同时跑多局时避开端口冲突 |
@@ -159,7 +190,8 @@ grep CCTEST /tmp/cargo-match.log
 | `-ccAgain` | 结算后点“再来一局”或“回大厅”，测重新进入的流程 |
 | `-ccForceCoCarry` | 每个半场强制两名正方合搬大件，第二个半场放在货车附近，测运送得分 |
 | `-ccWaitHostLeave` | 客户端等主机退出，测回到主菜单和提示 |
-| `-ccDriveInput` | 用真实的键盘和鼠标事件玩一局：转视角、走路、拿货送到货车、抡锤砸货、打人、击败和重生、吸货吸人、蓄力重锤、检视，并检查 V、方向键、Esc、灵敏度滑块，以及按住左键不会挥不动。最后要看到 `CHECK ok`，这是测 `HumanInput` 和按键绑定的唯一办法。两台机器都加这个参数，主机打客户端和客户端打主机就都测到了 |
+| `-ccDriveInput` | 用真实的键盘和鼠标事件玩一局：转视角、走路、拿货送到货车、抡锤砸货、打人、击败和重生、吸货吸人、蓄力重锤、检视，并检查 V、方向键、Esc、灵敏度滑块，以及按住左键不会挥不动。最后要看到 `CHECK ok`，这是测 `HumanInput` 和按键绑定的唯一办法。两台机器都加这个参数，主机打客户端和客户端打主机就都测到了。不要同时加 `-ccBotLocal`，否则机器人和测试抢着操作同一个人，会错一大片 |
+| `-ccBody short` / `medium` / `tall` | 这一局用哪种体型，不加就是中等，不保存。开局后检查自己选的就是比赛里的（客户端也查）。高瘦的血少，客户端用它跑 48 秒的半场时，偶尔会因为被打倒太多次没砸碎货而报错，重跑一次再查 |
 | `-ccSwingBurst 秒` | 配合 `-ccDriveInput`、`-ccShotDir` 和 `-ccView first`：每半场按这个间隔连拍跑步、站立、挥击、检视、右键，拿货和合搬时也拍，用来看手的动作 |
 | `-ccView first` / `third` | 这一局用第一人称或肩后视角，不保存。不加就用上次玩时存下的视角，截图时记得加 |
 | `-ccEyeTour "x,z,yaw;x,z,yaw"` | 站在这些位置平视并截图，用来检查场景从地面看是什么样 |

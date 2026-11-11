@@ -33,6 +33,10 @@ public static partial class CargoClashBuilder
     private const string InputPath = Root + "/Input/CargoClashInput.inputactions";
 
     private static readonly Dictionary<string, GameObject> sceneryPrefabs = new Dictionary<string, GameObject>();
+
+    // The teams' colours on clothes and tools. A little softer than pure orange and blue, to sit with Astra's palette.
+    private static readonly Color TeamOrange = new Color(0.96f, 0.5f, 0.16f);
+    private static readonly Color TeamBlue = new Color(0.22f, 0.5f, 0.95f);
     private static Dictionary<string, Material> modelMaterials;
 
     [MenuItem("Tools/Cargo Clash/Build Game Content")]
@@ -44,8 +48,8 @@ public static partial class CargoClashBuilder
         ConfigureProject();
 
         GameConfig config = LoadOrCreate<GameConfig>(ResourcesDir + "/GameConfig.asset");
-        config.orangeMaterial = Mat("Team_Orange", new Color(1f, 0.5f, 0.1f));
-        config.blueMaterial = Mat("Team_Blue", new Color(0.2f, 0.52f, 1f));
+        config.orangeMaterial = Mat("Team_Orange", TeamOrange);
+        config.blueMaterial = Mat("Team_Blue", TeamBlue);
         config.particleMaterial = ParticleMaterial();
         config.puffMaterial = PuffMaterial();
         config.flashMaterial = FlashMaterial();
@@ -103,6 +107,7 @@ public static partial class CargoClashBuilder
         layers.GetArrayElementAtIndex(GameLayers.Outlined).stringValue = "Outlined";
         layers.GetArrayElementAtIndex(GameLayers.ViewModel).stringValue = "ViewModel";
         layers.GetArrayElementAtIndex(GameLayers.Debris).stringValue = "Debris";
+        layers.GetArrayElementAtIndex(GameLayers.Preview).stringValue = "Preview";
         tags.ApplyModifiedPropertiesWithoutUndo();
     }
 
@@ -130,7 +135,7 @@ public static partial class CargoClashBuilder
         return asset;
     }
 
-    private static Material Mat(string name, Color color, float smoothness = 0.2f)
+    private static Material Mat(string name, Color color, float smoothness = 0.2f, float metallic = 0f)
     {
         string path = MaterialDir + "/" + name + ".mat";
         Material material = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -141,8 +146,19 @@ public static partial class CargoClashBuilder
         }
         material.SetColor("_BaseColor", color);
         material.SetFloat("_Smoothness", smoothness);
+        material.SetFloat("_Metallic", metallic);
         EditorUtility.SetDirty(material);
         return material;
+    }
+
+    /// <summary>
+    /// One of Astra's vehicle colours, as her palette.json gives it: an sRGB hex colour, roughness and
+    /// metallic. URP's smoothness is one minus her roughness.
+    /// </summary>
+    private static Material FleetMat(string name, string hex, float roughness, float metallic)
+    {
+        ColorUtility.TryParseHtmlString("#" + hex, out Color color);
+        return Mat(name, color, 1f - roughness, metallic);
     }
 
     /// <summary>A painted texture from Tools/blender/make_ground.py, with its import settings.</summary>
@@ -313,12 +329,24 @@ public static partial class CargoClashBuilder
         Object.DestroyImmediate(root);
     }
 
-    /// <summary>The model, skeleton and clips come from Tools/blender/make_character.py.</summary>
+    /// <summary>
+    /// Astra's people come in at this size, so the medium one stands about as tall as the old worker.
+    /// It has to match GAME_SCALE in Tools/blender/make_crew.py, which sizes cargo held in the arms by it.
+    /// </summary>
+    private const float CrewScale = 0.84f;
+
+    /// <summary>Each body type and how fast its legs go round: shorter legs take quicker steps.</summary>
+    private static readonly (BodyType body, float runRate)[] CrewBodies =
+    {
+        (BodyType.Short, 3.6f), (BodyType.Medium, 2.8f), (BodyType.Tall, 2.45f),
+    };
+
+    /// <summary>
+    /// Astra's three body types from Tools/blender/make_crew.py, each with both sets of clothes, its own
+    /// skeleton and clips. CharacterVisual switches on the one the host gave this player.
+    /// </summary>
     private static GameObject BuildAvatar()
     {
-        const string modelPath = Root + "/Models/Character.fbx";
-        CargoClashCharacterAnimator.ConfigureImport(modelPath);
-
         GameObject root = new GameObject("Avatar");
         root.layer = GameLayers.Player;
         CharacterController controller = root.AddComponent<CharacterController>();
@@ -344,35 +372,77 @@ public static partial class CargoClashBuilder
         CharacterVisual visual = root.AddComponent<CharacterVisual>();
 
         Transform pivot = Group("Pivot", root.transform);
-        GameObject model = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(modelPath), pivot);
-        model.name = "Model";
-        ApplyMaterials(model);
-
-        Animator animator = model.GetComponent<Animator>();
-        animator.runtimeAnimatorController = CargoClashCharacterAnimator.BuildController(modelPath, model.transform);
-        animator.applyRootMotion = false;
-        animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-
         visual.pivot = pivot;
-        visual.animator = animator;
-        visual.allRenderers = model.GetComponentsInChildren<Renderer>(true);
-        visual.collectorHat = FindInModel(model, "HatCollector").gameObject;
-        visual.interrupterHat = FindInModel(model, "HatInterrupter").gameObject;
-        visual.hammer = FindInModel(model, "Hammer").gameObject;
-        visual.vacuum = FindInModel(model, "Vacuum").gameObject;
-        visual.handLeft = FindInModel(model, "Hand.L");
-        visual.handRight = FindInModel(model, "Hand.R");
-        visual.dizzyStars = FindInModel(model, "DizzyStars").gameObject;
-        visual.starsBone = FindInModel(model, "Stars");
-        visual.eyeLeft = FindInModel(model, "Eye.L");
-        visual.eyeRight = FindInModel(model, "Eye.R");
-        visual.interrupterHat.SetActive(false);
-        visual.hammer.SetActive(false);
-        visual.vacuum.SetActive(false);
-        visual.dizzyStars.SetActive(false);
+        List<CrewModel> crews = new List<CrewModel>();
+        foreach ((BodyType body, float runRate) in CrewBodies)
+        {
+            CrewModel crew = NewCrewModel(body, runRate, pivot, true);
+            crew.gameObject.SetActive(body == BodyType.Medium);
+            crews.Add(crew);
+        }
+        visual.crews = crews.ToArray();
 
         SetLayerRecursively(root, GameLayers.Player);
         return SavePrefab(root, "Avatar");
+    }
+
+    /// <summary>
+    /// One body type, dressed in the default look. The first time (for the avatar) it sets up the import and
+    /// builds the Animator; the crew page's preview then reuses that Animator.
+    /// </summary>
+    private static CrewModel NewCrewModel(BodyType body, float runRate, Transform parent, bool firstTime)
+    {
+        string modelPath = $"{Root}/Models/Crew_{body}.fbx";
+        if (firstTime) CargoClashCharacterAnimator.ConfigureImport(modelPath, CrewScale, true);
+        GameObject model = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(modelPath), parent);
+        model.name = "Crew_" + body;
+        ApplyMaterials(model);
+
+        Animator animator = model.GetComponent<Animator>();
+        animator.runtimeAnimatorController = firstTime
+            ? CargoClashCharacterAnimator.BuildController(modelPath, model.transform, "Crew_" + body)
+            : AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>($"{Root}/Animation/Crew_{body}.controller");
+        animator.applyRootMotion = false;
+        animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+
+        Dictionary<string, Material> materials = ModelMaterials();
+        CrewModel crew = model.AddComponent<CrewModel>();
+        crew.body = body;
+        crew.animator = animator;
+        crew.runRate = runRate;
+        crew.porter = FindInModel(model, "Porter").GetComponent<SkinnedMeshRenderer>();
+        crew.wrecker = FindInModel(model, "Wrecker").GetComponent<SkinnedMeshRenderer>();
+        crew.porterHats = new GameObject[CrewLook.Hats.Length];
+        crew.wreckerHats = new GameObject[CrewLook.Hats.Length];
+        for (int i = 0; i < CrewLook.Hats.Length; i++)
+        {
+            crew.porterHats[i] = FindInModel(model, "Porter_Hat_" + CrewLook.Hats[i]).gameObject;
+            crew.wreckerHats[i] = FindInModel(model, "Wrecker_Hat_" + CrewLook.Hats[i]).gameObject;
+        }
+        crew.porterGlasses = new SkinnedMeshRenderer[CrewLook.GlassesStyles.Length];
+        crew.wreckerGlasses = new SkinnedMeshRenderer[CrewLook.GlassesStyles.Length];
+        for (int i = 0; i < CrewLook.GlassesStyles.Length; i++)
+        {
+            crew.porterGlasses[i] = FindInModel(model, "Porter_Glasses_" + CrewLook.GlassesStyles[i]).GetComponent<SkinnedMeshRenderer>();
+            crew.wreckerGlasses[i] = FindInModel(model, "Wrecker_Glasses_" + CrewLook.GlassesStyles[i]).GetComponent<SkinnedMeshRenderer>();
+        }
+        crew.porterSleeve = materials["Porter_Shirt"];
+        // The medium wrecker wears a vest over a shirt with rolled sleeves; the others wear jackets.
+        crew.wreckerSleeve = body == BodyType.Medium ? materials["Wrecker_Shirt"] : materials["Wrecker_Jacket"];
+        crew.hammer = FindInModel(model, "Hammer").gameObject;
+        crew.vacuum = FindInModel(model, "Vacuum").gameObject;
+        crew.dizzyStars = FindInModel(model, "DizzyStars").gameObject;
+        crew.handLeft = FindInModel(model, "LeftHand");
+        crew.handRight = FindInModel(model, "RightHand");
+        crew.starsBone = FindInModel(model, "Stars");
+        crew.renderers = model.GetComponentsInChildren<Renderer>(true);
+
+        crew.Dress(CrewLook.Default);
+        crew.Wear(true);
+        crew.hammer.SetActive(false);
+        crew.vacuum.SetActive(false);
+        crew.dizzyStars.SetActive(false);
+        return crew;
     }
 
     private static Transform FindInModel(GameObject model, string partName)
@@ -388,7 +458,7 @@ public static partial class CargoClashBuilder
     /// <summary>The project's materials for every Blender model, by the name the model's script gives them.</summary>
     private static Dictionary<string, Material> ModelMaterials() => modelMaterials ??= new Dictionary<string, Material>
     {
-        { "Char_Team", Mat("Team_Orange", new Color(1f, 0.5f, 0.1f)) },
+        { "Char_Team", Mat("Team_Orange", TeamOrange) },
         { "Char_Band", Mat("Char_Band", new Color(0.97f, 0.97f, 0.9f), 0.5f) },
         { "Char_Pants", Mat("Char_Pants", new Color(0.2f, 0.24f, 0.34f)) },
         { "Char_Belt", Mat("Char_Belt", new Color(0.2f, 0.13f, 0.08f)) },
@@ -407,6 +477,49 @@ public static partial class CargoClashBuilder
         { "Hat_Horn", Mat("Hat_Horn", new Color(0.95f, 0.9f, 0.76f)) },
         { "Hammer_Handle", Mat("Hammer_Handle", new Color(0.55f, 0.35f, 0.18f)) },
         { "Hammer_Head", Mat("Hammer_Head", new Color(0.5f, 0.52f, 0.57f), 0.6f) },
+
+        // Astra's crew, tools and first-person sleeves (Tools/blender/make_crew.py, make_hands.py).
+        { "Porter_Shirt", Mat("Porter_Shirt", new Color(0.18f, 0.26f, 0.36f), 0.15f) },
+        { "Wrecker_Jacket", Mat("Wrecker_Jacket", new Color(0.29f, 0.29f, 0.3f), 0.2f) },
+        { "Wrecker_Shirt", Mat("Wrecker_Shirt", new Color(0.82f, 0.8f, 0.74f), 0.15f) },
+        { "Crew_Skin", Mat("Crew_Skin", new Color(0.93f, 0.74f, 0.57f), 0.3f) },
+        { "Crew_SkinShade", Mat("Crew_SkinShade", new Color(0.82f, 0.6f, 0.45f), 0.3f) },
+        { "Crew_Hair", Mat("Crew_Hair", new Color(0.3f, 0.21f, 0.16f), 0.25f) },
+        { "Crew_EyeWhite", Mat("Crew_EyeWhite", new Color(0.97f, 0.95f, 0.9f), 0.5f) },
+        { "Crew_Dark", Mat("Crew_Dark", new Color(0.13f, 0.12f, 0.12f), 0.4f) },
+        { "Crew_Mouth", Mat("Crew_Mouth", new Color(0.48f, 0.26f, 0.21f), 0.3f) },
+        { "Crew_Glove", Mat("Crew_Glove", new Color(0.78f, 0.62f, 0.42f), 0.25f) },
+        { "Crew_Boot", Mat("Crew_Boot", new Color(0.36f, 0.32f, 0.27f), 0.25f) },
+        { "Crew_Brass", Mat("Crew_Brass", new Color(0.75f, 0.64f, 0.42f), 0.55f) },
+        { "Crew_Light", Mat("Crew_Light", new Color(0.86f, 0.82f, 0.71f), 0.2f) },
+        { "Crew_HatPrimary", Mat("Crew_HatPrimary", new Color(0.95f, 0.72f, 0.25f), 0.45f) },
+        { "Crew_HatTrim", Mat("Crew_HatTrim", new Color(0.66f, 0.49f, 0.2f), 0.4f) },
+        { "Crew_Lamp", Mat("Crew_Lamp", new Color(1f, 0.96f, 0.78f), 0.8f) },
+        { "Crew_Beacon", Mat("Crew_Beacon", new Color(1f, 0.6f, 0.18f), 0.7f) },
+        { "Crew_LensBlue", Mat("Crew_LensBlue", new Color(0.24f, 0.56f, 0.64f), 0.85f) },
+        { "Crew_LensAmber", Mat("Crew_LensAmber", new Color(0.74f, 0.47f, 0.18f), 0.85f) },
+        { "Hammer_Grip", Mat("Hammer_Grip", new Color(0.7f, 0.54f, 0.34f), 0.2f) },
+        { "Vacuum_Housing", Mat("Vacuum_Housing", new Color(0.97f, 0.72f, 0.2f), 0.45f) },
+        { "Vacuum_Red", Mat("Vacuum_Red", new Color(0.82f, 0.32f, 0.24f), 0.4f) },
+        { "Vacuum_Steel", Mat("Vacuum_Steel", new Color(0.55f, 0.62f, 0.62f), 0.6f) },
+        { "Vacuum_Glass", Mat("Vacuum_Glass", new Color(0.3f, 0.66f, 0.74f), 0.85f) },
+        { "Vacuum_Ivory", Mat("Vacuum_Ivory", new Color(0.97f, 0.89f, 0.76f), 0.3f) },
+        { "FP_Sleeve", Mat("Porter_Shirt", new Color(0.18f, 0.26f, 0.36f), 0.15f) },
+
+        // Astra's truck, its cargo bed and the helicopter (运输载具_v07, 交接/palette.json).
+        { "Fleet_Navy", FleetMat("Fleet_Navy", "303950", 0.46f, 0.12f) },
+        { "Fleet_Orange", FleetMat("Fleet_Orange", "CB682B", 0.46f, 0.08f) },
+        { "Fleet_Cream", FleetMat("Fleet_Cream", "DFD8B7", 0.46f, 0.05f) },
+        { "Fleet_Gold", FleetMat("Fleet_Gold", "D9A928", 0.42f, 0.12f) },
+        { "Fleet_Dark", FleetMat("Fleet_Dark", "353934", 0.58f, 0.12f) },
+        { "Fleet_Rubber", FleetMat("Fleet_Rubber", "24292C", 0.76f, 0f) },
+        { "Fleet_Steel", FleetMat("Fleet_Steel", "849393", 0.33f, 0.6f) },
+        { "Fleet_Brass", FleetMat("Fleet_Brass", "AC8E52", 0.36f, 0.55f) },
+        { "Fleet_Glass", FleetMat("Fleet_Glass", "284B58", 0.18f, 0.3f) },
+        { "Fleet_GlassGlint", FleetMat("Fleet_GlassGlint", "8DB1B8", 0.25f, 0.24f) },
+        { "Fleet_Lamp", FleetMat("Fleet_Lamp", "FFF1BE", 0.26f, 0.12f) },
+        { "Fleet_Red", FleetMat("Fleet_Red", "B9503E", 0.4f, 0.12f) },
+        { "Fleet_Grille", FleetMat("Fleet_Grille", "182932", 0.65f, 0.05f) },
 
         { "Heli_Yellow", Mat("Heli_Yellow", new Color(1f, 0.76f, 0.1f), 0.45f) },
         { "Heli_White", Mat("Heli_White", new Color(0.95f, 0.94f, 0.9f), 0.35f) },
@@ -613,7 +726,7 @@ public static partial class CargoClashBuilder
             feature.settings.Event = RenderPassEvent.AfterRenderingOpaques;
             feature.settings.filterSettings.RenderQueueType = RenderQueueType.Opaque;
             feature.settings.filterSettings.LayerMask = (1 << GameLayers.Player) | (1 << GameLayers.Cargo) | (1 << GameLayers.Outlined) |
-                (1 << GameLayers.ViewModel) | (1 << GameLayers.Debris);
+                (1 << GameLayers.ViewModel) | (1 << GameLayers.Debris) | (1 << GameLayers.Preview);
             feature.settings.overrideMaterial = material;
             feature.settings.overrideMaterialPassIndex = 0;
             AssetDatabase.AddObjectToAsset(feature, data);
@@ -766,7 +879,10 @@ public static partial class CargoClashBuilder
 
     // ---- Helicopter ----
 
-    /// <summary>The model comes from Tools/blender/make_helicopter.py. Materials are matched by name.</summary>
+    /// <summary>
+    /// Astra's helicopter (独立建模/运输载具_v07, copied from 交接/旧接口兼容/Helicopter.fbx). Materials are
+    /// matched by name. Its winch, hook and the hook's eye are where her lifting motion expects them.
+    /// </summary>
     private static GameObject BuildHelicopter()
     {
         GameObject root = NewStaticModel("Helicopter", null);
@@ -775,15 +891,18 @@ public static partial class CargoClashBuilder
 
         // A faint disc makes the spinning blades read as a blur, even in a still frame.
         Transform mainRotor = root.transform.Find("MainRotor");
-        Part(PrimitiveType.Cylinder, "RotorBlur", mainRotor, new Vector3(0f, 0.01f, 0f), new Vector3(9.7f, 0.004f, 9.7f),
+        Part(PrimitiveType.Cylinder, "RotorBlur", mainRotor, new Vector3(0f, 0.08f, 0f), new Vector3(9.6f, 0.004f, 9.6f),
             TransparentMat("Heli_RotorBlur", new Color(0.1f, 0.11f, 0.13f, 0.14f))).GetComponent<Renderer>().shadowCastingMode =
             UnityEngine.Rendering.ShadowCastingMode.Off;
 
-        // HelicopterExtraction stretches these thin cylinders every frame.
+        // HelicopterExtraction stretches these thin cylinders every frame, and puts a clip on each sling's end.
         Material cable = Mat("Heli_Cable", new Color(0.09f, 0.09f, 0.1f), 0.2f);
         Part(PrimitiveType.Cylinder, "Cable", root.transform, Vector3.zero, Vector3.one * 0.1f, cable).SetActive(false);
         for (int i = 1; i <= 4; i++)
             Part(PrimitiveType.Cylinder, "Sling" + i, root.transform, Vector3.zero, Vector3.one * 0.1f, cable).SetActive(false);
+        Material clipColour = ModelMaterials()["Fleet_Orange"];
+        for (int i = 1; i <= 4; i++)
+            Part(PrimitiveType.Cube, "SlingClip" + i, root.transform, Vector3.zero, new Vector3(0.11f, 0.17f, 0.12f), clipColour).SetActive(false);
 
         Debug.Log($"[Builder] Helicopter root scale={root.transform.localScale} mainRotor rotation={mainRotor.localRotation.eulerAngles} scale={mainRotor.localScale} winch={root.transform.Find("Winch").localPosition}");
         return SavePrefab(root, "Helicopter");
@@ -808,13 +927,22 @@ public static partial class CargoClashBuilder
             helicopter.transform.Find("Sling1"), helicopter.transform.Find("Sling2"),
             helicopter.transform.Find("Sling3"), helicopter.transform.Find("Sling4"),
         };
+        extraction.slingClips = new[]
+        {
+            helicopter.transform.Find("SlingClip1"), helicopter.transform.Find("SlingClip2"),
+            helicopter.transform.Find("SlingClip3"), helicopter.transform.Find("SlingClip4"),
+        };
         extraction.bed = bed;
         helicopter.SetActive(false);
     }
 
     // ---- Level ----
 
-    /// <summary>The model comes from Tools/blender/make_truck.py.</summary>
+    /// <summary>
+    /// Astra's crashed truck (独立建模/运输载具_v07, copied from 交接/旧接口兼容/Truck.fbx): a front wheel
+    /// off and lying on the ground, the windscreen cracked. Its CargoBed is a separate object, with the
+    /// helicopter's four lifting eyes on it.
+    /// </summary>
     private static GameObject BuildCrashedTruck()
     {
         GameObject root = new GameObject("TruckCrashed");
@@ -828,14 +956,16 @@ public static partial class CargoClashBuilder
         // The wheel that came off lies on the ground, so it doesn't lean with the truck.
         model.transform.Find("LooseWheel").SetParent(root.transform, false);
 
+        // Her bed's floor is at 2.02, so cargo lands just above it.
         Transform bed = Group("BedOrigin", model.transform, new Vector3(0f, 2.05f, 1.66f));
         bed.name = "BedOrigin";
-        AddPuffs(model.transform, "EngineSmoke", new Vector3(0.9f, 3.0f, -3.5f), 6f, 40, new Color(0.42f, 0.42f, 0.44f), new Color(0.68f, 0.68f, 0.7f), 0.4f, 0.8f, 1.1f, 1.8f);
+        // The engine sits under the cab, so the smoke comes up out of the grille.
+        AddPuffs(model.transform, "EngineSmoke", new Vector3(-0.4f, 1.9f, -4.5f), 6f, 40, new Color(0.42f, 0.42f, 0.44f), new Color(0.68f, 0.68f, 0.7f), 0.4f, 0.8f, 1.1f, 1.8f);
 
         Transform colliders = Group("Colliders", root.transform);
-        AddBoxCollider(colliders, "Cab", new Vector3(0f, 2.3f, -2.5f), new Vector3(3.4f, 2.8f, 3.6f));
-        AddBoxCollider(colliders, "Bed", new Vector3(0f, 2.2f, 1.66f), new Vector3(3.9f, 2.2f, 5f));
-        AddBoxCollider(colliders, "Chassis", new Vector3(0f, 1f, 0f), new Vector3(5.4f, 2f, 8.6f));
+        AddBoxCollider(colliders, "Cab", new Vector3(0f, 2.4f, -2.55f), new Vector3(3.4f, 3.1f, 3.7f));
+        AddBoxCollider(colliders, "Bed", new Vector3(0f, 2.1f, 1.69f), new Vector3(4f, 2f, 5.1f));
+        AddBoxCollider(colliders, "Chassis", new Vector3(0f, 1f, 0f), new Vector3(5.8f, 2f, 8.7f));
 
         Group("Zone", root.transform);
         return SavePrefab(root, "TruckCrashed");
@@ -948,7 +1078,8 @@ public static partial class CargoClashBuilder
         layout.truckZone = zoneTransform;
         layout.truckZoneHalfSize = zoneHalf;
         layout.bedOrigin = truck.transform.Find("Model/BedOrigin");
-        layout.bedHalfSize = new Vector2(1.35f, 2f);
+        // Her bed is 3.16 m across inside, so the outer rows of cargo stay off its walls.
+        layout.bedHalfSize = new Vector2(1.25f, 1.95f);
         layout.mapArea = new Rect(-23f, -49f, 46f, 98f);
         layout.mapPicture = PaintedTexture("Level01_Ground", TextureWrapMode.Clamp);
 
@@ -1026,6 +1157,11 @@ public static partial class CargoClashBuilder
         rig.leftArm = BuildFirstPersonArm(model, "L");
         rig.hammer = FindInModel(model, "Hammer");
         rig.vacuum = FindInModel(model, "Vacuum");
+        rig.sleeves = new Renderer[]
+        {
+            rig.rightArm.upperArm.GetComponent<Renderer>(), rig.rightArm.forearm.GetComponent<Renderer>(),
+            rig.leftArm.upperArm.GetComponent<Renderer>(), rig.leftArm.forearm.GetComponent<Renderer>(),
+        };
 
         SetLayerRecursively(model, GameLayers.ViewModel);
         foreach (Renderer part in model.GetComponentsInChildren<Renderer>(true))
@@ -1046,6 +1182,7 @@ public static partial class CargoClashBuilder
             relaxed = HandPart(model, $"Hand_{side}_Relaxed", hand),
             open = HandPart(model, $"Hand_{side}_Open", hand),
             fist = HandPart(model, $"Hand_{side}_Fist", hand),
+            grip = HandPart(model, $"Hand_{side}_Grip", hand),
         };
     }
 
