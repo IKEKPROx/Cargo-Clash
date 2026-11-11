@@ -4,8 +4,9 @@ using UnityEditor.Animations;
 using UnityEngine;
 
 /// <summary>
-/// Sets up the character model's import and builds its animator: a base layer for the whole body,
-/// and an upper-body layer so carrying and smashing can play while the legs keep running.
+/// Sets up a character model's import and builds its animator: a base layer for the whole body,
+/// and an upper-body layer so carrying and smashing can play while the legs keep running. Each of
+/// Astra's body types has its own skeleton and clips, so each gets its own controller.
 /// </summary>
 public static class CargoClashCharacterAnimator
 {
@@ -16,16 +17,17 @@ public static class CargoClashCharacterAnimator
         "Idle", "Run", "Carry", "CarryBig", "CoCarryIdle", "CoCarryWalk", "Smash", "ReadyHammer", "ReadyVacuum", "Blast", "Charge", "Cheer", "Grumble",
     };
 
-    public static void ConfigureImport(string modelPath)
+    public static void ConfigureImport(string modelPath, float scale = 1f, bool blendShapes = false)
     {
         ModelImporter importer = (ModelImporter)AssetImporter.GetAtPath(modelPath);
+        importer.globalScale = scale;
         importer.animationType = ModelImporterAnimationType.Generic;
         importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
         importer.optimizeGameObjects = false;
         importer.importAnimation = true;
         importer.importCameras = false;
         importer.importLights = false;
-        importer.importBlendShapes = false;
+        importer.importBlendShapes = blendShapes;
         importer.resampleCurves = true;
         importer.animationCompression = ModelImporterAnimationCompression.KeyframeReduction;
         importer.SaveAndReimport();
@@ -46,7 +48,7 @@ public static class CargoClashCharacterAnimator
         importer.SaveAndReimport();
     }
 
-    public static AnimatorController BuildController(string modelPath, Transform modelRoot)
+    public static AnimatorController BuildController(string modelPath, Transform modelRoot, string name = "Character")
     {
         if (!AssetDatabase.IsValidFolder(Folder)) AssetDatabase.CreateFolder("Assets/Game", "Animation");
 
@@ -57,10 +59,10 @@ public static class CargoClashCharacterAnimator
         }
         foreach (string needed in new[] { "Idle", "Run", "Carry", "CarryBig", "CoCarryIdle", "CoCarryWalk", "Ram", "Knocked", "KnockedOut", "Smash", "Toss", "ReadyHammer", "ReadyVacuum", "Blast", "Charge", "Slam", "Flinch", "Cheer", "Grumble" })
         {
-            if (!clips.ContainsKey(needed)) Debug.LogError($"[Builder] The character model has no {needed} clip.");
+            if (!clips.ContainsKey(needed)) Debug.LogError($"[Builder] {name} has no {needed} clip.");
         }
 
-        string path = Folder + "/Character.controller";
+        string path = $"{Folder}/{name}.controller";
         AssetDatabase.DeleteAsset(path);
         AnimatorController controller = AnimatorController.CreateAnimatorControllerAtPath(path);
         controller.AddParameter("Speed", AnimatorControllerParameterType.Float);
@@ -74,7 +76,7 @@ public static class CargoClashCharacterAnimator
         controller.AddParameter("UpperPose", AnimatorControllerParameterType.Int);
 
         BuildBaseLayer(controller, clips);
-        BuildUpperLayer(controller, clips, modelRoot);
+        BuildUpperLayer(controller, clips, modelRoot, name);
         EditorUtility.SetDirty(controller);
         AssetDatabase.SaveAssets();
         return controller;
@@ -119,13 +121,13 @@ public static class CargoClashCharacterAnimator
         }
     }
 
-    private static void BuildUpperLayer(AnimatorController controller, Dictionary<string, AnimationClip> clips, Transform modelRoot)
+    private static void BuildUpperLayer(AnimatorController controller, Dictionary<string, AnimationClip> clips, Transform modelRoot, string name)
     {
         controller.AddLayer("UpperBody");
         AnimatorControllerLayer[] layers = controller.layers;
         layers[1].defaultWeight = 0f;
         layers[1].blendingMode = AnimatorLayerBlendingMode.Override;
-        layers[1].avatarMask = BuildUpperBodyMask(modelRoot);
+        layers[1].avatarMask = BuildUpperBodyMask(modelRoot, name);
         controller.layers = layers;
 
         AnimatorStateMachine machine = controller.layers[1].stateMachine;
@@ -153,10 +155,10 @@ public static class CargoClashCharacterAnimator
         AnyTransition(machine, slam, 0.03f).AddCondition(AnimatorConditionMode.Equals, 11, "UpperPose");
     }
 
-    /// <summary>The spine, head and arms. The face stays with the base layer, so its expressions keep playing.</summary>
-    private static AvatarMask BuildUpperBodyMask(Transform modelRoot)
+    /// <summary>The spine, neck, head, arms and fingers. The hips and legs stay with the base layer.</summary>
+    private static AvatarMask BuildUpperBodyMask(Transform modelRoot, string name)
     {
-        string path = Folder + "/UpperBody.mask";
+        string path = $"{Folder}/{name}_UpperBody.mask";
         AssetDatabase.DeleteAsset(path);
         AvatarMask mask = new AvatarMask { name = "UpperBody" };
 
@@ -165,9 +167,10 @@ public static class CargoClashCharacterAnimator
         foreach (Transform item in modelRoot.GetComponentsInChildren<Transform>(true))
         {
             if (item == modelRoot) continue;
-            string name = item.name;
-            bool upper = name == "Spine" || name == "Chest" || name == "Head" ||
-                name.StartsWith("UpperArm.") || name.StartsWith("LowerArm.") || name.StartsWith("Hand.");
+            string bone = item.name;
+            bool upper = bone == "Spine" || bone == "Chest" || bone == "Neck" || bone == "Head" || bone == "Stars" ||
+                bone.EndsWith("Shoulder") || bone.EndsWith("UpperArm") || bone.EndsWith("LowerArm") || bone.EndsWith("Hand") ||
+                bone.Contains("Thumb") || bone.Contains("Index") || bone.Contains("Middle") || bone.Contains("Ring") || bone.Contains("Little");
             paths.Add(AnimationUtility.CalculateTransformPath(item, modelRoot));
             active.Add(upper);
         }

@@ -1,8 +1,27 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace CargoClash
 {
+    /// <summary>What a body type is good at. Each player picks one before the match.</summary>
+    [Serializable]
+    public struct BodyStats
+    {
+        public int maxHealth;
+        [Tooltip("Times the normal running speed. Carrying and tools slow everyone down by the same share.")]
+        public float speed;
+        [Tooltip("Times the normal damage of every hit this body gives: hammer, blast, slam and ram.")]
+        public float damage;
+
+        public BodyStats(int maxHealth, float speed, float damage)
+        {
+            this.maxHealth = maxHealth;
+            this.speed = speed;
+            this.damage = damage;
+        }
+    }
+
     /// <summary>All gameplay tuning in one asset, so numbers can change without touching code.</summary>
     [CreateAssetMenu(menuName = "Cargo Clash/Game Config")]
     public sealed class GameConfig : ScriptableObject
@@ -41,10 +60,13 @@ namespace CargoClash
         public float helicopterArrivalDelay = 1.2f;
         [Tooltip("If the cargo runs out early, it arrives this long after the half ends.")]
         public float helicopterHurrySeconds = 3f;
-        public float helicopterLowerSeconds = 1f;
-        public float helicopterClipSeconds = 0.4f;
-        public float helicopterLiftSeconds = 1.7f;
-        public float helicopterLeaveSeconds = 2.3f;
+        // Astra's lift (运输载具_v07): the hook comes down, the four slings go tight, the box clears the
+        // truck before it levels off, then it is carried away. Her suggested times.
+        public float helicopterLowerSeconds = 1.5f;
+        public float helicopterClipSeconds = 0.7f;
+        [Tooltip("The first 30% of it lifts the box straight up off the truck, the rest levels it and winds in the cable.")]
+        public float helicopterLiftSeconds = 2f;
+        public float helicopterLeaveSeconds = 4f;
 
         [Header("Movement")]
         public float runSpeed = 6.5f;
@@ -52,6 +74,16 @@ namespace CargoClash
         [Tooltip("People closer than this ease apart, so no one's view ends up inside someone else.")]
         public float personalSpace = 0.95f;
         public float personalSpacePush = 3.5f;
+
+        [Header("Body types")]
+        [Tooltip("Short and stocky: slow, but tough and hits hard.")]
+        public BodyStats shortBody = new BodyStats(140, 0.86f, 1.3f);
+        [Tooltip("In between on everything.")]
+        public BodyStats mediumBody = new BodyStats(100, 1f, 1f);
+        [Tooltip("Tall and lanky: quick, but fragile and hits softer.")]
+        public BodyStats tallBody = new BodyStats(75, 1.14f, 0.82f);
+        [Tooltip("The bodies bots take on each team, in the order they're added.")]
+        public BodyType[] bodyOrder = { BodyType.Medium, BodyType.Short, BodyType.Tall };
 
         [Header("Looking around")]
         public float eyeHeight = 1.28f;
@@ -85,7 +117,7 @@ namespace CargoClash
         public float hitComboSeconds = 2.5f;
 
         [Header("Health")]
-        public int maxHealth = 100;
+        [Tooltip("Each body type's health is in its BodyStats. These damages are for a medium body, scaled by the attacker's.")]
         public int hammerDamage = 34;
         public int blastDamage = 25;
         public int slamDamage = 60;
@@ -104,7 +136,7 @@ namespace CargoClash
         [Tooltip("A blast has to be aimed better than the hammer, because it reaches farther.")]
         public float blastAimDegrees = 24f;
         public float blastPushSpeed = 9f;
-        [Tooltip("One blast. Should match the Blast clip's length in make_character.py.")]
+        [Tooltip("One blast. Should match the Blast clip's length in make_crew.py.")]
         public float blastCycleSeconds = 0.55f;
         [Tooltip("From clicking until the air comes out. Should match the Blast clip.")]
         public float blastFirstSeconds = 0.1f;
@@ -147,7 +179,7 @@ namespace CargoClash
         public float maxLagCompensation = 2.5f;
         [Tooltip("Scales every cargo type's smash time. Playtesting tunes this before individual values.")]
         public float smashTimeMultiplier = 1f;
-        [Tooltip("One swing of the hammer. Should match the Smash clip's length in make_character.py.")]
+        [Tooltip("One swing of the hammer. Should match the Smash clip's length in make_crew.py.")]
         public float smashSwingSeconds = 0.5f;
         [Tooltip("From starting to swing until the first hit. Should match where the hit lands in the Smash clip.")]
         public float smashFirstHitSeconds = 0.275f;
@@ -173,6 +205,16 @@ namespace CargoClash
 
         [Header("Input")]
         public InputActionAsset inputActions;
+
+        public BodyStats Stats(BodyType body)
+        {
+            switch (body)
+            {
+                case BodyType.Short: return shortBody;
+                case BodyType.Tall: return tallBody;
+                default: return mediumBody;
+            }
+        }
 
         public int DamageOf(Weapon weapon)
         {

@@ -8,7 +8,8 @@ Add `-- --only logo`, `-- --only icons`, `-- --only sprites` or `-- --only cards
 
 Sprites and level cards are painted with numpy. The logo is too, from the shapes of the letters in
 the font Lilita One (see ASSETS.md), with each letter tilted a little. The parcels on the logo and
-the icons are the game's own models, rendered in Blender.
+the icons are the game's own models, rendered in Blender. The truck on the icon is Astra's TitleTruck.fbx,
+read back from Assets/Game/Models and coloured with her palette (FLEET_PALETTE).
 """
 import math
 import sys
@@ -21,7 +22,6 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).parent))
 import make_cargo
 import make_ground
-import make_truck
 import modeling
 from make_ground import smoothstep, write_png
 from mathutils import Matrix, Vector
@@ -471,15 +471,48 @@ def render_cargo(builder, pose, size, view_width, folder):
     return render_to_array(folder)
 
 
+# Astra's vehicle colours (独立建模/运输载具_v07/交接/palette.json): sRGB hex, roughness, metallic.
+FLEET_PALETTE = {
+    "Fleet_Navy": ("303950", 0.46, 0.12), "Fleet_Orange": ("CB682B", 0.46, 0.08), "Fleet_Cream": ("DFD8B7", 0.46, 0.05),
+    "Fleet_Gold": ("D9A928", 0.42, 0.12), "Fleet_Dark": ("353934", 0.58, 0.12), "Fleet_Rubber": ("24292C", 0.76, 0.0),
+    "Fleet_Steel": ("849393", 0.33, 0.6), "Fleet_Brass": ("AC8E52", 0.36, 0.55), "Fleet_Glass": ("284B58", 0.18, 0.3),
+    "Fleet_GlassGlint": ("8DB1B8", 0.25, 0.24), "Fleet_Lamp": ("FFF1BE", 0.26, 0.12), "Fleet_Red": ("B9503E", 0.4, 0.12),
+    "Fleet_Grille": ("182932", 0.65, 0.05),
+}
+# Where the title truck's two sample wheels go: her axles, in Blender's axes (front along +Y).
+TRUCK_AXLES = (2.75, -0.15, -2.95)
+TRUCK_WHEEL = (2.36, 1.05)
+
+
+def linear(channel):
+    return channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4
+
+
 def render_truck(pose, size, view_width, folder):
+    """Astra's truck, as the game shows it on the start screen, with a wheel on each end of every axle."""
     modeling.reset_scene()
     setup_render(size, view_width)
-    materials = modeling.make_materials(make_truck.PALETTE)
-    make_truck.build_body(materials, intact=True)
-    make_truck.build_bed(materials)
-    make_truck.build_title_wheel(materials, "Wheel_L", 1)
-    make_truck.build_title_wheel(materials, "Wheel_R", -1)
-    make_truck.show_title_wheels(materials)
+    bpy.ops.import_scene.fbx(filepath=str(ROOT / "Assets/Game/Models/TitleTruck.fbx"))
+    for material in bpy.data.materials:
+        colour = FLEET_PALETTE.get(material.name.split(".")[0])
+        if colour is None or not material.use_nodes:
+            continue
+        shader = material.node_tree.nodes.get("Principled BSDF")
+        hex_colour, roughness, metallic = colour
+        rgb = [linear(int(hex_colour[i:i + 2], 16) / 255.0) for i in (0, 2, 4)]
+        shader.inputs["Base Color"].default_value = (*rgb, 1.0)
+        shader.inputs["Roughness"].default_value = roughness
+        shader.inputs["Metallic"].default_value = metallic
+    for name, side in (("Wheel_L", 1.0), ("Wheel_R", -1.0)):
+        sample = bpy.data.objects[name]
+        for y in TRUCK_AXLES:
+            copy = sample.copy()
+            bpy.context.scene.collection.objects.link(copy)
+            copy.location = (side * TRUCK_WHEEL[0], y, TRUCK_WHEEL[1])
+        bpy.data.objects.remove(sample)
+    for item in list(bpy.context.scene.objects):
+        if item.type == "EMPTY":
+            bpy.data.objects.remove(item)
     turn_to_camera(pose, centre=(0.0, 0.0, 2.1))
     return render_to_array(folder)
 

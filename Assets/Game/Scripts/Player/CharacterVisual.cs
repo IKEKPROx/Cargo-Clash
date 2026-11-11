@@ -4,8 +4,10 @@ namespace CargoClash
 {
     /// <summary>
     /// Plays the character's animations. It runs on every computer from replicated state, so nothing
-    /// here affects the rules. The clips come from Tools/blender/make_character.py and the state
-    /// machine is Assets/Game/Animation/Character.controller.
+    /// here affects the rules. The models are Astra's (CrewModel, from Tools/blender/make_crew.py): one
+    /// per body type, each with the porters' and the wreckers' clothes on the same skeleton and its own
+    /// copy of the clips, dressed in the player's CrewLook. The state machines are
+    /// Assets/Game/Animation/Crew_*.controller.
     /// </summary>
     [RequireComponent(typeof(PlayerAvatar))]
     public sealed class CharacterVisual : MonoBehaviour
@@ -47,27 +49,15 @@ namespace CargoClash
 
         [Header("Model")]
         public Transform pivot;
-        public Animator animator;
-        public Renderer[] allRenderers;
-        [Tooltip("How many times faster than the clip the Run animation plays at full speed.")]
-        public float runRate = 2.6f;
-
-        [Header("Gear")]
-        public GameObject collectorHat;
-        public GameObject interrupterHat;
-        public GameObject hammer;
-        public GameObject vacuum;
-        public Transform handLeft;
-        public Transform handRight;
-
-        [Header("Face")]
-        public Transform eyeLeft;
-        public Transform eyeRight;
-        public GameObject dizzyStars;
-        public Transform starsBone;
+        [Tooltip("One per body type. Only the one this player picked is switched on.")]
+        public CrewModel[] crews;
 
         private PlayerAvatar avatar;
         private GameConfig config;
+        private CrewModel look;
+        private Animator animator;
+        private CrewModel dressedModel;
+        private CrewLook dressedLook;
         private Vector3 lastPosition;
         private float lastYaw;
         private float smoothedSpeed;
@@ -78,8 +68,6 @@ namespace CargoClash
         private float starsAngle;
         private float knockedAt;
         private float tossUntil;
-        private float nextBlink;
-        private float blinkUntil;
         private float lastSwingCycle;
         private bool colorsApplied;
         private bool wasKnockedDown;
@@ -91,6 +79,12 @@ namespace CargoClash
         /// <summary>How far through a swing the character is, from 0 to 1. The first-person hands follow this.</summary>
         public float SwingCycle { get; private set; }
 
+        /// <summary>Collectors wear the porters' clothes. Outside a match everyone does.</summary>
+        private bool WearsPorter => MatchDirector.Instance == null || avatar.Side == Side.Collector;
+
+        /// <summary>What this player's sleeves look like now, for the first-person arms.</summary>
+        public Material SleeveMaterial => look == null ? null : WearsPorter ? look.porterSleeve : look.wreckerSleeve;
+
         /// <summary>Where the vacuum's air goes in and out, for the effects. On your own computer, that's the one in your hands.</summary>
         private Vector3 VacuumMouth
         {
@@ -98,7 +92,7 @@ namespace CargoClash
             {
                 FirstPersonRig rig = FirstPersonRig.Instance;
                 if (avatar == PlayerAvatar.Local && rig != null && rig.ShowsTool) return rig.VacuumMouthWorld;
-                return handRight.position + transform.forward * 0.75f + Vector3.up * 0.12f;
+                return look.handRight.position + transform.forward * 0.5f + Vector3.up * 0.1f;
             }
         }
 
@@ -107,7 +101,7 @@ namespace CargoClash
         /// <summary>Where held cargo goes for anyone watching: between the hands, against the belly.</summary>
         public Vector3 CarryPoint(float cargoHalfDepth)
         {
-            Vector3 hands = (handLeft.position + handRight.position) * 0.5f;
+            Vector3 hands = (look.handLeft.position + look.handRight.position) * 0.5f;
             return hands + transform.forward * (cargoHalfDepth - 0.05f);
         }
 
@@ -117,13 +111,38 @@ namespace CargoClash
             config = GameConfig.Get();
             lastPosition = transform.position;
             lastYaw = transform.eulerAngles.y;
-            nextBlink = Time.time + Random.Range(1f, 4f);
+            UseLook(BodyType.Medium);
+        }
+
+        /// <summary>Switches on this player's body type. The host sets it before spawning, so it's known from the start.</summary>
+        private void UseLook(BodyType body)
+        {
+            CrewModel next = crews[0];
+            foreach (CrewModel candidate in crews)
+            {
+                if (candidate.body == body) next = candidate;
+            }
+            foreach (CrewModel other in crews)
+            {
+                if (other.gameObject.activeSelf != (other == next)) other.gameObject.SetActive(other == next);
+            }
+            look = next;
+            animator = next.animator;
             animator.SetFloat(KnockedRateParam, KnockedClipSeconds / config.knockdownSeconds);
+            bodyHidden = false;
+            ApplyShadows(false);
         }
 
         private void Update()
         {
             if (!avatar.IsSpawned) return;
+            if (look.body != avatar.Body) UseLook(avatar.Body);
+            if (dressedModel != look || !dressedLook.Equals(avatar.Look))
+            {
+                dressedModel = look;
+                dressedLook = avatar.Look;
+                look.Dress(dressedLook);
+            }
             float deltaTime = Mathf.Max(Time.deltaTime, 0.0001f);
 
             Vector3 moved = transform.position - lastPosition;
@@ -138,11 +157,11 @@ namespace CargoClash
             if (wasKnockedDown && !knockedDown) squash = 1f;
             wasKnockedDown = knockedDown;
 
-            float topSpeed = config.runSpeed * (carried != null ? carried.Definition.carrySpeedMultiplier : 1f);
+            float topSpeed = avatar.RunSpeed * (carried != null ? carried.Definition.carrySpeedMultiplier : 1f);
             float speed = Mathf.Clamp01(smoothedSpeed / topSpeed);
-            float pace = Mathf.Max(0.55f, smoothedSpeed / config.runSpeed);
+            float pace = Mathf.Max(0.55f, smoothedSpeed / avatar.RunSpeed);
             animator.SetFloat(SpeedParam, speed, 0.05f, deltaTime);
-            animator.SetFloat(RateParam, Mathf.Lerp(1f, runRate * pace, speed));
+            animator.SetFloat(RateParam, Mathf.Lerp(1f, look.runRate * pace, speed));
             animator.SetInteger(CarryParam, coCarrying ? 2 : carried != null ? 1 : 0);
             animator.SetBool(DashParam, avatar.IsDashing);
             animator.SetBool(KnockedParam, knockedDown);
@@ -288,7 +307,6 @@ namespace CargoClash
             UpdatePivot();
             UpdateGear();
             UpdateFace();
-            UpdateBlink();
         }
 
         /// <summary>In first person your own body would be in the way, but it still casts its shadow.</summary>
@@ -297,10 +315,15 @@ namespace CargoClash
             bool hide = avatar == PlayerAvatar.Local && FollowCamera.HidesLocalBody;
             if (hide == bodyHidden) return;
             bodyHidden = hide;
-            UnityEngine.Rendering.ShadowCastingMode mode = hide
+            ApplyShadows(hide);
+        }
+
+        private void ApplyShadows(bool shadowOnly)
+        {
+            UnityEngine.Rendering.ShadowCastingMode mode = shadowOnly
                 ? UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly
                 : UnityEngine.Rendering.ShadowCastingMode.On;
-            foreach (Renderer part in allRenderers) part.shadowCastingMode = mode;
+            foreach (Renderer part in look.renderers) part.shadowCastingMode = mode;
         }
 
         /// <summary>A little extra life on top of the clips: lean into turns, stretch in a ram, squash on impacts.</summary>
@@ -310,7 +333,7 @@ namespace CargoClash
             float yaw = transform.eulerAngles.y;
             float turnRate = Mathf.DeltaAngle(lastYaw, yaw) / deltaTime;
             lastYaw = yaw;
-            float run = Mathf.Clamp01(smoothedSpeed / config.runSpeed);
+            float run = Mathf.Clamp01(smoothedSpeed / avatar.RunSpeed);
             bank = Mathf.MoveTowards(bank, Mathf.Clamp(-turnRate * 0.035f, -16f, 16f) * run, 90f * deltaTime);
             pivot.localRotation = Quaternion.Euler(0f, 0f, avatar.IsKnockedDown ? 0f : bank);
 
@@ -325,35 +348,33 @@ namespace CargoClash
             if (colorsApplied) return;
             colorsApplied = true;
             if (avatar.Team == Team.Orange) return;
-            foreach (Renderer part in allRenderers)
+            foreach (CrewModel each in crews)
             {
-                Material[] slots = part.sharedMaterials;
-                for (int i = 0; i < slots.Length; i++)
+                foreach (Renderer part in each.renderers)
                 {
-                    if (slots[i] == config.orangeMaterial) slots[i] = config.blueMaterial;
+                    Material[] slots = part.sharedMaterials;
+                    for (int i = 0; i < slots.Length; i++)
+                    {
+                        if (slots[i] == config.orangeMaterial) slots[i] = config.blueMaterial;
+                    }
+                    part.sharedMaterials = slots;
                 }
-                part.sharedMaterials = slots;
             }
         }
 
         private void UpdateGear()
         {
-            MatchDirector director = MatchDirector.Instance;
-            if (director != null)
-            {
-                bool collector = avatar.Side == Side.Collector;
-                if (collectorHat.activeSelf != collector) collectorHat.SetActive(collector);
-                if (interrupterHat.activeSelf == collector) interrupterHat.SetActive(!collector);
-            }
+            // The sides swap at half-time, and everyone changes into the other company's clothes.
+            look.Wear(WearsPorter);
 
             bool toolOut = ToolOut(avatar.CarriedCargo, avatar.IsKnockedDown);
             bool interrupter = avatar.Side == Side.Interrupter;
-            if (hammer.activeSelf != (toolOut && interrupter)) hammer.SetActive(toolOut && interrupter);
-            if (vacuum.activeSelf != (toolOut && !interrupter)) vacuum.SetActive(toolOut && !interrupter);
+            if (look.hammer.activeSelf != (toolOut && interrupter)) look.hammer.SetActive(toolOut && interrupter);
+            if (look.vacuum.activeSelf != (toolOut && !interrupter)) look.vacuum.SetActive(toolOut && !interrupter);
 
             // Flicker during the short immunity after getting up, so attackers can see it.
             bool visible = avatar.IsKnockedDown || !avatar.IsImmune || Mathf.Repeat(Time.time * 9f, 1f) > 0.35f;
-            foreach (Renderer part in allRenderers)
+            foreach (Renderer part in look.renderers)
             {
                 if (part.enabled != visible) part.enabled = visible;
             }
@@ -362,25 +383,10 @@ namespace CargoClash
         private void UpdateFace()
         {
             bool dizzy = avatar.IsKnockedDown && Time.time - knockedAt > 0.3f;
-            if (dizzyStars.activeSelf != dizzy) dizzyStars.SetActive(dizzy);
+            if (look.dizzyStars.activeSelf != dizzy) look.dizzyStars.SetActive(dizzy);
             if (!dizzy) return;
             starsAngle += 300f * Time.deltaTime;
-            starsBone.localRotation *= Quaternion.AngleAxis(starsAngle, Vector3.up);
-        }
-
-        private void UpdateBlink()
-        {
-            if (Time.time >= nextBlink)
-            {
-                blinkUntil = Time.time + 0.11f;
-                nextBlink = Time.time + Random.Range(1.8f, 5f);
-            }
-            if (Time.time >= blinkUntil || avatar.IsKnockedDown) return;
-
-            // The animator has already set the eyes this frame, so this only applies for now.
-            Vector3 lids = new Vector3(1f, 1f, 0.1f);
-            eyeLeft.localScale = Vector3.Scale(eyeLeft.localScale, lids);
-            eyeRight.localScale = Vector3.Scale(eyeRight.localScale, lids);
+            look.starsBone.localRotation *= Quaternion.AngleAxis(starsAngle, Vector3.up);
         }
     }
 }

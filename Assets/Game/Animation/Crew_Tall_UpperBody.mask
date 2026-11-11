@@ -1,0 +1,167 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!319 &31900000
+AvatarMask:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Crew_Tall_UpperBody
+  m_Mask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000u
+  m_Elements:
+  - m_Path: Armature
+    m_Weight: 0
+  - m_Path: Armature/Root
+    m_Weight: 0
+  - m_Path: Armature/Root/Hips
+    m_Weight: 0
+  - m_Path: Armature/Root/Hips/LeftUpperLeg
+    m_Weight: 0
+  - m_Path: Armature/Root/Hips/LeftUpperLeg/LeftLowerLeg
+    m_Weight: 0
+  - m_Path: Armature/Root/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot
+    m_Weight: 0
+  - m_Path: Armature/Root/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot/LeftToes
+    m_Weight: 0
+  - m_Path: Armature/Root/Hips/RightUpperLeg
+    m_Weight: 0
+  - m_Path: Armature/Root/Hips/RightUpperLeg/RightLowerLeg
+    m_Weight: 0
+  - m_Path: Armature/Root/Hips/RightUpperLeg/RightLowerLeg/RightFoot
+    m_Weight: 0
+  - m_Path: Armature/Root/Hips/RightUpperLeg/RightLowerLeg/RightFoot/RightToes
+    m_Weight: 0
+  - m_Path: Armature/Root/Hips/Spine
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/LeftIndexProximal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/LeftIndexProximal/LeftIndexIntermediate
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/LeftIndexProximal/LeftIndexIntermediate/LeftIndexDistal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/LeftLittleProximal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/LeftLittleProximal/LeftLittleIntermediate
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/LeftLittleProximal/LeftLittleIntermediate/LeftLittleDistal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/LeftMiddleProximal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/LeftMiddleProximal/LeftMiddleIntermediate
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/LeftMiddleProximal/LeftMiddleIntermediate/LeftMiddleDistal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/LeftRingProximal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/LeftRingProximal/LeftRingIntermediate
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/LeftRingProximal/LeftRingIntermediate/LeftRingDistal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/LeftThumbProximal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/LeftThumbProximal/LeftThumbIntermediate
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/LeftThumbProximal/LeftThumbIntermediate/LeftThumbDistal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/Neck
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/Neck/Head
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/Neck/Head/Stars
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/Hammer
+    m_Weight: 0
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/RightIndexProximal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/RightIndexProximal/RightIndexIntermediate
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/RightIndexProximal/RightIndexIntermediate/RightIndexDistal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/RightLittleProximal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/RightLittleProximal/RightLittleIntermediate
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/RightLittleProximal/RightLittleIntermediate/RightLittleDistal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/RightMiddleProximal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/RightMiddleProximal/RightMiddleIntermediate
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/RightMiddleProximal/RightMiddleIntermediate/RightMiddleDistal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/RightRingProximal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/RightRingProximal/RightRingIntermediate
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/RightRingProximal/RightRingIntermediate/RightRingDistal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/RightThumbProximal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/RightThumbProximal/RightThumbIntermediate
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/RightThumbProximal/RightThumbIntermediate/RightThumbDistal
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/Vacuum
+    m_Weight: 0
+  - m_Path: DizzyStars
+    m_Weight: 0
+  - m_Path: Gloves
+    m_Weight: 0
+  - m_Path: Porter
+    m_Weight: 0
+  - m_Path: Porter_Glasses_round
+    m_Weight: 0
+  - m_Path: Porter_Glasses_square
+    m_Weight: 0
+  - m_Path: Porter_Glasses_visor
+    m_Weight: 0
+  - m_Path: Porter_Hat_beacon
+    m_Weight: 0
+  - m_Path: Porter_Hat_classic
+    m_Weight: 0
+  - m_Path: Porter_Hat_earmuffs
+    m_Weight: 0
+  - m_Path: Porter_Hat_lamp
+    m_Weight: 0
+  - m_Path: Porter_Hat_patched
+    m_Weight: 0
+  - m_Path: Porter_Hat_wide
+    m_Weight: 0
+  - m_Path: Wrecker
+    m_Weight: 0
+  - m_Path: Wrecker_Glasses_round
+    m_Weight: 0
+  - m_Path: Wrecker_Glasses_square
+    m_Weight: 0
+  - m_Path: Wrecker_Glasses_visor
+    m_Weight: 0
+  - m_Path: Wrecker_Hat_beacon
+    m_Weight: 0
+  - m_Path: Wrecker_Hat_classic
+    m_Weight: 0
+  - m_Path: Wrecker_Hat_earmuffs
+    m_Weight: 0
+  - m_Path: Wrecker_Hat_lamp
+    m_Weight: 0
+  - m_Path: Wrecker_Hat_patched
+    m_Weight: 0
+  - m_Path: Wrecker_Hat_wide
+    m_Weight: 0

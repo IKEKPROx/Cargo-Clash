@@ -14,6 +14,8 @@ namespace CargoClash
         public Team Team;
         public bool Ready;
         public bool IsBot;
+        /// <summary>Their body type, hat, glasses and face, picked on the crew page.</summary>
+        public CrewLook Look;
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
         {
@@ -22,11 +24,12 @@ namespace CargoClash
             serializer.SerializeValue(ref Team);
             serializer.SerializeValue(ref Ready);
             serializer.SerializeValue(ref IsBot);
+            serializer.SerializeValue(ref Look);
         }
 
         public bool Equals(RosterEntry other) =>
             ClientId == other.ClientId && Name.Equals(other.Name) && Team == other.Team &&
-            Ready == other.Ready && IsBot == other.IsBot;
+            Ready == other.Ready && IsBot == other.IsBot && Look.Equals(other.Look);
     }
 
     /// <summary>
@@ -43,6 +46,7 @@ namespace CargoClash
         public readonly NetworkVariable<int> Level = new NetworkVariable<int>(0);
 
         private GameConfig config;
+        private readonly Dictionary<ulong, CrewLook> earlyLooks = new Dictionary<ulong, CrewLook>();
 
         private string LevelScene => config.Level(Level.Value).scene;
 
@@ -55,7 +59,12 @@ namespace CargoClash
         public override void OnNetworkSpawn()
         {
             Instance = this;
-            if (!IsServer) return;
+            if (!IsServer)
+            {
+                // The host can't know what this player picked, so it's sent as soon as they're in.
+                SetLookRpc(GameSettings.Look);
+                return;
+            }
 
             Level.Value = RoomService.Instance.SelectedLevel;
             NetworkManager.OnClientConnectedCallback += AddHuman;
@@ -119,6 +128,19 @@ namespace CargoClash
             ulong sender = rpcParams.Receive.SenderClientId;
             if (InGame.Value || CountTeam(team) >= config.teamSize) return;
             UpdateEntry(sender, entry => { entry.Team = team; entry.Ready = false; return entry; });
+        }
+
+        /// <summary>What someone picked on the crew page. It can change until the match starts.</summary>
+        [Rpc(SendTo.Server)]
+        public void SetLookRpc(CrewLook look, RpcParams rpcParams = default)
+        {
+            if (InGame.Value) return;
+            ulong sender = rpcParams.Receive.SenderClientId;
+            CrewLook sanitized = look.Sanitized();
+            // The one a player sends on joining gets here while they're still loading in, before AddHuman
+            // has put them on the list, so it waits for them.
+            if (TryGetEntry(sender, out _)) UpdateEntry(sender, entry => { entry.Look = sanitized; return entry; });
+            else earlyLooks[sender] = sanitized;
         }
 
         [Rpc(SendTo.Server)]
@@ -191,11 +213,20 @@ namespace CargoClash
                 Name = new FixedString32Bytes("Player " + (clientId + 1)),
                 Team = team,
                 Ready = RoomService.Instance.IsPractice,
+                Look = JoiningLook(clientId),
             });
+        }
+
+        /// <summary>The host's own pick is right here. Anyone else's has usually just arrived (SetLookRpc).</summary>
+        private CrewLook JoiningLook(ulong clientId)
+        {
+            if (clientId == NetworkManager.LocalClientId) return GameSettings.Look;
+            return earlyLooks.Remove(clientId, out CrewLook look) ? look : CrewLook.Default;
         }
 
         private void RemoveHuman(ulong clientId)
         {
+            earlyLooks.Remove(clientId);
             for (int i = Entries.Count - 1; i >= 0; i--)
             {
                 if (!Entries[i].IsBot && Entries[i].ClientId == clientId) Entries.RemoveAt(i);
@@ -207,8 +238,10 @@ namespace CargoClash
             int number = 1;
             foreach (Team team in new[] { Team.Orange, Team.Blue })
             {
+                int index = 0;
                 while (CountTeam(team) < config.teamSize)
                 {
+                    BodyType body = config.bodyOrder[index++ % config.bodyOrder.Length];
                     Entries.Add(new RosterEntry
                     {
                         ClientId = NetworkManager.ServerClientId,
@@ -216,6 +249,7 @@ namespace CargoClash
                         Team = team,
                         Ready = true,
                         IsBot = true,
+                        Look = CrewLook.Random(body),
                     });
                 }
             }

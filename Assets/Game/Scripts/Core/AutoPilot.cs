@@ -53,6 +53,7 @@ namespace CargoClash
         private bool suckUntested;
         private int slamsLanded;
         private string startView;
+        private BodyType body = BodyType.Medium;
         private int errorCount;
         private int shotNumber;
 
@@ -109,6 +110,7 @@ namespace CargoClash
                     case "-ccSwingBurst": burstEvery = float.Parse(next); break;
                     case "-ccView": startView = next; break;
                     case "-ccHideUi": hideUi = true; break;
+                    case "-ccBody": body = (BodyType)Enum.Parse(typeof(BodyType), next, true); break;
                 }
             }
         }
@@ -134,7 +136,12 @@ namespace CargoClash
         {
             yield return null;
             yield return null;
-            Log($"START mode={mode} halfSeconds={HalfSecondsOverride} localBot={LocalIsBot}");
+            Log($"START mode={mode} halfSeconds={HalfSecondsOverride} localBot={LocalIsBot} body={body}");
+            // A test plays as the body it's told to (medium unless -ccBody), whatever was last picked on this
+            // computer. While a test runs, nothing it changes is saved.
+            CrewLook look = GameSettings.Look;
+            look.Body = body;
+            GameSettings.Look = look;
 
             RoomService rooms = RoomService.Instance;
             NetworkManager net = NetworkManager.Singleton;
@@ -184,6 +191,7 @@ namespace CargoClash
 
             float startedAt = Time.realtimeSinceStartup;
             MatchPhase lastPhase = MatchPhase.Loading;
+            bool checkedLook = false;
             while (Time.realtimeSinceStartup - startedAt < timeoutSeconds)
             {
                 MatchDirector director = MatchDirector.Instance;
@@ -193,6 +201,13 @@ namespace CargoClash
                     {
                         lastPhase = director.Phase.Value;
                         Log($"PHASE {lastPhase} half={director.Half.Value} collectors={director.CollectorTeam.Value} orange={director.OrangeScore.Value} blue={director.BlueScore.Value} avatars={PlayerAvatar.All.Count} cargo={CargoItem.All.Count}");
+                    }
+                    // What was picked on this computer has to be what everyone sees, clients included.
+                    if (!checkedLook && lastPhase == MatchPhase.Playing && PlayerAvatar.Local != null)
+                    {
+                        checkedLook = true;
+                        PlayerAvatar me = PlayerAvatar.Local;
+                        Expect(me.Look.Equals(GameSettings.Look), $"the crew picked here is the one in the match (picked {GameSettings.Look.Body}, playing {me.Body})");
                     }
                     if (lastPhase == MatchPhase.Results && director.Results != null)
                     {
@@ -743,7 +758,7 @@ namespace CargoClash
                 if (MatchDirector.Instance.Phase.Value != MatchPhase.Playing) yield break;
                 yield return null;
             }
-            Expect(!enemy.KnockedOut.Value && enemy.Health.Value == config.maxHealth, "someone knocked out comes back with full health");
+            Expect(!enemy.KnockedOut.Value && enemy.Health.Value == enemy.MaxHealth, "someone knocked out comes back with full health");
             Expect(enemy.IsImmune, "someone who's just come back can't be hit straight away");
             Expect(Vector3.Distance(enemy.transform.position, fellAt) > 2f, "someone knocked out comes back at their own start");
         }
@@ -815,8 +830,8 @@ namespace CargoClash
                     cargoSucked++;
                     yield break;
                 }
-                // Someone else picking it up or breaking it first isn't the vacuum's fault either.
-                if (interrupted || cargo.State.Value != CargoState.Ground) continue;
+                // Someone else picking it up, breaking it or delivering it first isn't the vacuum's fault either.
+                if (interrupted || cargo == null || cargo.State.Value != CargoState.Ground) continue;
                 Log($"SUCK nothing came in: {cargo.name} distance={cargo.EdgeDistance(local.transform.position):0.00}");
                 yield break;
             }
@@ -828,6 +843,9 @@ namespace CargoClash
         private IEnumerator TestPullingSomeone(Keyboard keyboard, Mouse mouse, PlayerAvatar local)
         {
             if (!NetworkManager.Singleton.IsServer) yield break;
+            // A bot may have just knocked you over, and nobody can use the vacuum from the ground.
+            while (local.IsKnockedDown || local.IsStaggered) yield return null;
+            if (MatchDirector.Instance.Phase.Value != MatchPhase.Playing || local.Side != Side.Collector) yield break;
 
             PlayerAvatar enemy = null;
             foreach (PlayerAvatar other in PlayerAvatar.All)
@@ -949,7 +967,9 @@ namespace CargoClash
             yield return null;
             Expect(GameSettings.FirstPerson == wasFirstPerson, "V switches the view back");
 
-            // One quick click, with the button straight back up, still throws a whole swing. Hands have to be free for that.
+            // One quick click, with the button straight back up, still throws a whole swing. Hands have to be free
+            // for that and for F, and the tall body is fast enough to be carrying something already.
+            yield return LetGoOfCargo(keyboard, local);
             if (local.CarriedCargo == null && !local.IsKnockedDown && !local.IsStaggered)
             {
                 SendMouse(mouse, Vector2.zero, true, false);
@@ -1211,6 +1231,7 @@ namespace CargoClash
         private IEnumerator TourTheMenus(NetworkManager net)
         {
             TitleFlow flow = FindAnyObjectByType<TitleFlow>();
+            GameConfig config = GameConfig.Get();
             yield return new WaitForSeconds(3f);
             Expect(flow.titlePanel.activeSelf, "the game opens on the title");
             yield return ShotThenWait();
@@ -1241,13 +1262,40 @@ namespace CargoClash
             flow.codeInput.text = "";
             yield return new WaitForSeconds(0.2f);
 
+            Click(flow.crewButton);
+            yield return new WaitForSeconds(1.2f);
+            Expect(flow.crewPanel.activeSelf && flow.preview.gameObject.activeSelf, "Crew opens the crew page with the preview");
+            yield return ShotThenWait();
+            // The look starts as whatever was last picked on this computer, so the next hat and glasses are counted from it.
+            CrewLook before = GameSettings.Look;
+            Click(flow.bodyButtons[(int)BodyType.Tall]);
+            Click(flow.hatNext);
+            Click(flow.glassesNext);
+            yield return new WaitForSeconds(0.6f);
+            Expect(GameSettings.Look.Body == BodyType.Tall && GameSettings.Look.Hat == (before.Hat + 1) % (CrewLook.Hats.Length + 1) &&
+                GameSettings.Look.Glasses == (before.Glasses + 1) % (CrewLook.GlassesStyles.Length + 1),
+                "the body, hat and glasses buttons change the look");
+            Expect(flow.statValues[0].text == config.tallBody.maxHealth.ToString(), "the stats follow the body");
+            yield return ShotThenWait();
+            Click(flow.bodyButtons[(int)BodyType.Short]);
+            Click(flow.crewRandomButton);
+            Click(flow.crewOutfitButton);
+            yield return new WaitForSeconds(0.6f);
+            Expect(GameSettings.Look.Body == BodyType.Short, "Random keeps the body");
+            yield return ShotThenWait();
+            flow.faceSliders[5].value = 1f;
+            yield return null;
+            Expect(GameSettings.Look.FaceValue(5) > 0.9f, "a face slider changes the face");
+            Click(flow.crewBackButton);
+            yield return new WaitForSeconds(1f);
+            Expect(flow.menuPanel.activeSelf && !flow.crewPanel.activeSelf && !flow.preview.gameObject.activeSelf, "Back leaves the crew page");
+
             Click(flow.practiceButton);
             yield return new WaitForSeconds(1.5f);
             Expect(flow.levelPanel.activeSelf, "Practice opens the level select");
             Expect(flow.statusText.text.Length == 0, "the old message is gone");
             yield return ShotThenWait();
 
-            GameConfig config = GameConfig.Get();
             int locked = 0;
             for (int i = 0; i < flow.levelCards.Length; i++)
             {
@@ -1260,6 +1308,13 @@ namespace CargoClash
             Log($"LEVELS total={config.levels.Length} locked={locked} cards={flow.levelCards.Length}");
             yield return new WaitForSeconds(0.1f);
             yield return ShotThenWait();
+
+            Click(flow.levelCards[0].button);
+            yield return new WaitForSeconds(1f);
+            Expect(flow.crewPanel.activeSelf && !net.IsListening, "practice goes through the crew page before it starts");
+            Click(flow.crewBackButton);
+            yield return new WaitForSeconds(1f);
+            Expect(flow.levelPanel.activeSelf, "Back from there returns to the level select");
 
             Click(flow.levelBackButton);
             yield return new WaitForSeconds(1f);
@@ -1276,6 +1331,17 @@ namespace CargoClash
             Click(flow.readyButton);
             yield return new WaitForSeconds(0.5f);
             yield return ShotThenWait();
+
+            Click(flow.lobbyCrewButton);
+            yield return new WaitForSeconds(1f);
+            Expect(flow.crewPanel.activeSelf, "the lobby's Crew button opens the crew page");
+            Click(flow.bodyButtons[(int)BodyType.Medium]);
+            yield return new WaitForSeconds(0.5f);
+            Expect(SessionRoster.Instance.TryGetEntry(net.LocalClientId, out RosterEntry mine) && mine.Look.Body == BodyType.Medium,
+                "a change on the crew page reaches the room");
+            Click(flow.crewStartButton);
+            yield return new WaitForSeconds(1f);
+            Expect(flow.lobbyPanel.activeSelf, "Done returns to the lobby");
 
             Click(flow.leaveButton);
             yield return new WaitForSeconds(1.5f);
@@ -1304,6 +1370,8 @@ namespace CargoClash
                 Click(flow.practiceButton);
                 yield return new WaitForSeconds(1f);
                 Click(flow.levelCards[0].button);
+                yield return new WaitForSeconds(1f);
+                Click(flow.crewStartButton);
                 yield break;
             }
 

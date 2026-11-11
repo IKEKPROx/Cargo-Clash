@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace CargoClash
 {
     /// <summary>Player-facing strings in one place, so changing or translating them is easy.</summary>
@@ -43,7 +45,40 @@ namespace CargoClash
         public static string RoomCode(string code) => "ROOM CODE: " + code;
         public static string LanRoom(string address) => "LAN ROOM: " + address;
         public static string LevelLine(int number, string title) => "LEVEL " + number + ": " + title;
-        public static string RosterLine(string name, bool isYou, bool ready) => name + (isYou ? " (you)" : "") + (ready ? "  READY" : "");
+        public static string RosterLine(string name, bool isYou, bool ready, BodyType body) =>
+            name + (isYou ? " (you)" : "") + "  " + BodyName(body) + (ready ? "  READY" : "");
+
+        // The crew page.
+        public const string Crew = "CREW";
+        public const string YourCrew = "YOUR CREW";
+        public const string StartPractice = "START";
+        public const string Done = "DONE";
+        public const string RandomLook = "RANDOM";
+        public const string SeeWrecker = "SEE WRECKER CLOTHES";
+        public const string SeePorter = "SEE PORTER CLOTHES";
+        public const string HatHeading = "HAT";
+        public const string GlassesHeading = "GLASSES";
+        public const string FaceHeading = "FACE";
+        public const string StatHealth = "HEALTH";
+        public const string StatSpeed = "SPEED";
+        public const string StatDamage = "DAMAGE";
+        public static readonly string[] FaceSliderNames =
+        {
+            "JAW", "CHIN", "NOSE LENGTH", "NOSE WIDTH", "EYE SPACING",
+            "EYE SIZE", "BROWS", "MOUTH", "SMILE", "SQUINT",
+        };
+        private static readonly string[] HatNames = { "NO HAT", "CLASSIC", "PATCHED", "WIDE BRIM", "HEAD LAMP", "EARMUFFS", "BEACON" };
+        private static readonly string[] GlassesNames = { "NO GLASSES", "SQUARE", "ROUND", "VISOR" };
+
+        public static string BodyName(BodyType body) => body == BodyType.Short ? "SHORT" : body == BodyType.Tall ? "TALL" : "MEDIUM";
+
+        public static string BodyBlurb(BodyType body) => body == BodyType.Short
+            ? "Slow, but tough, and hits the hardest."
+            : body == BodyType.Tall ? "Quick, but fragile, and hits softer." : "A bit of everything.";
+
+        public static string HatName(int hat) => HatNames[Mathf.Clamp(hat, 0, HatNames.Length - 1)];
+        public static string GlassesName(int glasses) => GlassesNames[Mathf.Clamp(glasses, 0, GlassesNames.Length - 1)];
+        public static string Percent(float times) => Mathf.RoundToInt(times * 100f) + "%";
 
         public const string CollectorRole = "YOU ARE COLLECTORS";
         public const string InterrupterRole = "YOU ARE INTERRUPTERS";

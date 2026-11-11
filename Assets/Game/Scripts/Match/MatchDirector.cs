@@ -162,6 +162,8 @@ namespace CargoClash
                 GameObject instance = Instantiate(config.avatarPrefab, spot.position, spot.rotation);
                 PlayerAvatar avatar = instance.GetComponent<PlayerAvatar>();
                 avatar.ServerInit(entry);
+                CrewLook look = avatar.Look;
+                AutoPilot.Log($"CREW {entry.Name} body={look.Body} hat={look.Hat} glasses={look.Glasses} health={avatar.MaxHealth} speed={avatar.RunSpeed:0.00} damage={avatar.Stats.damage:0.00}");
                 stats[avatar] = new PlayerStats { Name = entry.Name.ToString(), Team = entry.Team };
 
                 NetworkObject networkObject = instance.GetComponent<NetworkObject>();

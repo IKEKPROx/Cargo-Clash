@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CargoClash;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -55,6 +56,7 @@ public static partial class CargoClashBuilder
         camera.fieldOfView = 40f;
         camera.clearFlags = CameraClearFlags.Skybox;
         camera.farClipPlane = 620f;
+        camera.cullingMask = ~(1 << GameLayers.Preview);
         cameraObject.AddComponent<UniversalAdditionalCameraData>();
 
         GameObject truck = (GameObject)PrefabUtility.InstantiatePrefab(BuildTitleTruck());
@@ -69,7 +71,8 @@ public static partial class CargoClashBuilder
         stage.Configure(truck.GetComponent<RoverTerrainAnimator>(), truck.transform, camera);
 
         AddTitleScenery(truck.transform);
-        BuildTitleMenus(stage);
+        CrewPreview preview = BuildCrewPreview(out RenderTexture previewPicture);
+        BuildTitleMenus(stage, preview, previewPicture);
         new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
         EditorSceneManager.SaveScene(scene, TitleScenePath);
     }
@@ -127,7 +130,8 @@ public static partial class CargoClashBuilder
     /// <summary>
     /// The truck on the start screen: the same truck before the crash, with a full load. RoverTerrainAnimator
     /// moves the body and each wheel over the bumps, so the wheels are separate and the axles and shocks
-    /// are stretched between them while it drives. The model comes from Tools/blender/make_truck.py.
+    /// are stretched between them while it drives. The model is Astra's (独立建模/运输载具_v07, copied from
+    /// 交接/旧接口兼容/TitleTruck.fbx): her two wheels are samples at the origin, copied onto each axle here.
     /// </summary>
     private static GameObject BuildTitleTruck()
     {
@@ -143,8 +147,8 @@ public static partial class CargoClashBuilder
         Transform leftWheel = FindInModel(model, "Wheel_L");
         Transform rightWheel = FindInModel(model, "Wheel_R");
 
-        Material dark = ModelMaterials()["Truck_Dark"];
-        Material steel = ModelMaterials()["Truck_Steel"];
+        Material dark = ModelMaterials()["Fleet_Dark"];
+        Material steel = ModelMaterials()["Fleet_Steel"];
         float[] axleZ = { -2.75f, 0.15f, 2.95f };
         Transform[] pivots = new Transform[6];
         Transform[] mounts = new Transform[6];
@@ -178,7 +182,7 @@ public static partial class CargoClashBuilder
 
         // Faces point along the truck's width, so they look out at both sides of it. The camera is on
         // the +X side of the truck, so the chest goes on the far side, with only low parcels in front
-        // of it. Heights are the bed floor at 2.0 plus half an item, on top of whatever it stands on.
+        // of it. Heights are the bed floor at 2.02 plus half an item, on top of whatever it stands on.
         Transform load = Group("Load", body);
         Place("Cargo_Large", load, new Vector3(-0.78f, 2.53f, 2.55f), 90f);
         Place("Cargo_Medium", load, new Vector3(-0.85f, 2.46f, 0.55f), 96f);
@@ -197,7 +201,8 @@ public static partial class CargoClashBuilder
         Color dustDark = new Color(0.72f, 0.63f, 0.47f);
         Color dustLight = new Color(0.86f, 0.79f, 0.63f);
         Material puff = PuffMaterial();
-        AddPuffs(body, "Exhaust", new Vector3(-1.2f, 4.42f, -0.3f), 7f, 24, smokeDark, smokeLight, 0.16f, 0.3f, 1f, 1.7f, puff);
+        // Her exhaust stack runs up the back corner of the cab.
+        AddPuffs(body, "Exhaust", new Vector3(-1.25f, 4.05f, -1.15f), 7f, 24, smokeDark, smokeLight, 0.16f, 0.3f, 1f, 1.7f, puff);
         AddPuffs(body, "DustLeft", new Vector3(-2.36f, 0.25f, 3.7f), 9f, 24, dustDark, dustLight, 0.14f, 0.34f, 0.6f, 1.1f, puff);
         AddPuffs(body, "DustRight", new Vector3(2.36f, 0.25f, 3.7f), 9f, 24, dustDark, dustLight, 0.14f, 0.34f, 0.6f, 1.1f, puff);
 
@@ -537,7 +542,58 @@ public static partial class CargoClashBuilder
 
     // ---- The screens ----
 
-    private static void BuildTitleMenus(CargoClashStartMenu stage)
+    /// <summary>
+    /// Every body type on a stand high above the countryside, where the stage camera never looks and on a
+    /// layer it doesn't draw anyway. A camera of its own draws whichever is picked into a picture for the
+    /// crew page. The sun lights it like everything else.
+    /// </summary>
+    private static CrewPreview BuildCrewPreview(out RenderTexture picture)
+    {
+        string picturePath = UiDir + "/CrewPreview.renderTexture";
+        AssetDatabase.DeleteAsset(picturePath);
+        picture = new RenderTexture(720, 900, 24, RenderTextureFormat.ARGB32) { name = "CrewPreview", antiAliasing = 4 };
+        AssetDatabase.CreateAsset(picture, picturePath);
+
+        GameObject root = new GameObject("CrewPreview");
+        root.transform.position = new Vector3(0f, 300f, 0f);
+        CrewPreview preview = root.AddComponent<CrewPreview>();
+        Transform turntable = Group("Turntable", root.transform);
+        preview.turntable = turntable;
+        turntable.localRotation = Quaternion.Euler(0f, 200f, 0f);
+
+        Material stand = Mat("Preview_Stand", new Color(0.82f, 0.86f, 0.78f), 0.1f);
+        Part(PrimitiveType.Cylinder, "Stand", turntable, new Vector3(0f, -0.04f, 0f), new Vector3(1.5f, 0.04f, 1.5f), stand);
+
+        List<CrewModel> crews = new List<CrewModel>();
+        foreach ((BodyType body, float runRate) in CrewBodies)
+        {
+            CrewModel crew = NewCrewModel(body, runRate, turntable, false);
+            crew.gameObject.SetActive(body == BodyType.Medium);
+            crews.Add(crew);
+        }
+        preview.crews = crews.ToArray();
+
+        GameObject cameraObject = new GameObject("PreviewCamera");
+        cameraObject.transform.SetParent(root.transform, false);
+        cameraObject.transform.localPosition = new Vector3(0f, 1.05f, -4.6f);
+        cameraObject.transform.localRotation = Quaternion.Euler(4f, 0f, 0f);
+        Camera camera = cameraObject.AddComponent<Camera>();
+        camera.fieldOfView = 28f;
+        camera.nearClipPlane = 0.5f;
+        camera.farClipPlane = 12f;
+        camera.cullingMask = 1 << GameLayers.Preview;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = new Color(0.8f, 0.87f, 0.92f);
+        camera.targetTexture = picture;
+        UniversalAdditionalCameraData data = cameraObject.AddComponent<UniversalAdditionalCameraData>();
+        data.antialiasing = AntialiasingMode.FastApproximateAntialiasing;
+
+        SetLayerRecursively(root, GameLayers.Preview);
+        root.SetActive(false);
+        return preview;
+    }
+
+    private static void BuildTitleMenus(CargoClashStartMenu stage, CrewPreview preview, RenderTexture previewPicture)
     {
         LoadUiAssets();
         Canvas canvas = NewCanvas("GameMenuCanvas", 200);
@@ -551,6 +607,7 @@ public static partial class CargoClashBuilder
         BuildMenuPanel(canvas.transform, flow, logo);
         BuildLevelPanel(canvas.transform, flow);
         BuildLobbyPanel(canvas.transform, flow);
+        BuildCrewPanel(canvas.transform, flow, preview, previewPicture);
         EditorUtility.SetDirty(flow);
     }
 
@@ -589,7 +646,8 @@ public static partial class CargoClashBuilder
         flow.createButton = UiButton(panel, "Create", GameText.CreateRoomButton, left, new Vector2(columnX, 8f), buttonSize, UiBlue, 40, 0.1f, out _, truck);
         flow.codeInput = UiCodeInput(panel, left, new Vector2(columnX - 106f, -112f), new Vector2(328f, 100f), 0.15f);
         flow.joinButton = UiButton(panel, "Join", GameText.Join, left, new Vector2(columnX + 170f, -112f), new Vector2(200f, 100f), UiGreen, 40, 0.15f, out _);
-        flow.quitButton = UiButton(panel, "Quit", GameText.Quit, left, new Vector2(columnX, -226f), new Vector2(260f, 84f), UiGray, 34, 0.2f, out _);
+        flow.crewButton = UiButton(panel, "Crew", GameText.Crew, left, new Vector2(columnX - 138f, -226f), new Vector2(264f, 84f), UiGreen, 34, 0.2f, out _);
+        flow.quitButton = UiButton(panel, "Quit", GameText.Quit, left, new Vector2(columnX + 138f, -226f), new Vector2(264f, 84f), UiGray, 34, 0.2f, out _);
 
         flow.statusText = UiText(panel, "Status", "", 30, UiYellow, 2f);
         Rect(flow.statusText.gameObject, panel, left, new Vector2(columnX, -320f), new Vector2(560f, 80f));
@@ -734,6 +792,121 @@ public static partial class CargoClashBuilder
 
         flow.lobbyHint = UiText(inside, "Hint", "", 28, new Color(0.34f, 0.37f, 0.48f));
         Rect(flow.lobbyHint.gameObject, inside, AnchorBottom, new Vector2(0f, 40f), new Vector2(1240f, 36f));
+        flow.lobbyCrewButton = UiButton(inside, "Crew", GameText.Crew, AnchorTop, new Vector2(-520f, -64f), new Vector2(210f, 76f), UiGreen, 34, 0.05f, out _);
+    }
+
+    /// <summary>
+    /// The crew page: the character on the left, turning on its stand; on the right the body types with what
+    /// each is good at, the hat and glasses, and Astra's face sliders.
+    /// </summary>
+    private static void BuildCrewPanel(Transform canvas, TitleFlow flow, CrewPreview preview, RenderTexture previewPicture)
+    {
+        RectTransform panel = UiPanelRoot(canvas, "CrewPanel");
+        flow.crewPanel = panel.gameObject;
+        flow.preview = preview;
+        panel.gameObject.SetActive(false);
+
+        Image dim = UiImage(panel, "Dim", null, new Color(UiNavy.r, UiNavy.g, UiNavy.b, 0.66f));
+        Fill(dim.rectTransform);
+        dim.raycastTarget = true;
+        AddTape(panel, "TapeTop", true);
+        AddTape(panel, "TapeBottom", false);
+
+        RectTransform headingSlot = PopSlot(panel, "Heading", AnchorTop, new Vector2(0f, -116f), new Vector2(1100f, 110f), 0f);
+        Text heading = UiText(headingSlot, "Text", GameText.YourCrew, 88, UiYellow, 4f);
+        Fill(heading.rectTransform);
+        flow.crewBackButton = UiButton(panel, "Back", GameText.Back, new Vector2(0f, 1f), new Vector2(170f, -116f), new Vector2(250f, 96f), UiBlue, 38, 0f, out _, UiSprite("UI_Back"));
+
+        // The character.
+        RectTransform frame = UiPanel(panel, "Preview", AnchorCentre, new Vector2(-500f, 4f), new Vector2(600f, 730f), UiCream, 0.05f);
+        RawImage picture = new GameObject("Picture", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage)).GetComponent<RawImage>();
+        picture.transform.SetParent(frame, false);
+        Fill(picture.rectTransform, 6f, 6f, 6f, 6f);
+        picture.texture = previewPicture;
+        picture.raycastTarget = false;
+        flow.crewOutfitButton = UiButton(panel, "Outfit", GameText.SeeWrecker, AnchorCentre, new Vector2(-500f, -428f), new Vector2(560f, 84f), UiBlue, 32, 0.1f, out flow.crewOutfitLabel);
+
+        // Body types.
+        const float columnX = 330f;
+        BodyType[] bodies = { BodyType.Short, BodyType.Medium, BodyType.Tall };
+        flow.bodyButtons = new Button[bodies.Length];
+        flow.bodyPicked = new GameObject[bodies.Length];
+        for (int i = 0; i < bodies.Length; i++)
+        {
+            Vector2 position = new Vector2(columnX + (i - 1) * 290f, 318f);
+            Button button = UiButton(panel, "Body" + bodies[i], GameText.BodyName(bodies[i]), AnchorCentre, position, new Vector2(266f, 96f), UiOrange, 38, 0.05f + i * 0.03f, out _);
+            // A yellow rim behind the picked one.
+            Image picked = UiImage(button.transform.parent, "Picked", uiRound, UiYellow, 1.4f);
+            Fill(picked.rectTransform, -11f, -11f, -11f, -11f);
+            picked.transform.SetSiblingIndex(1);
+            picked.gameObject.SetActive(false);
+            flow.bodyButtons[i] = button;
+            flow.bodyPicked[i] = picked.gameObject;
+        }
+
+        RectTransform stats = UiPanel(panel, "Stats", AnchorCentre, new Vector2(columnX, 172f), new Vector2(860f, 168f), UiCream, 0.1f, 1.6f);
+        string[] names = { GameText.StatHealth, GameText.StatSpeed, GameText.StatDamage };
+        Color[] colors = { UiGreen, UiBlue, UiOrange };
+        flow.statFills = new Image[names.Length];
+        flow.statValues = new Text[names.Length];
+        for (int i = 0; i < names.Length; i++)
+        {
+            float y = 46f - i * 46f;
+            Text label = UiText(stats, names[i], names[i], 30, UiNavy);
+            label.alignment = TextAnchor.MiddleLeft;
+            Rect(label.gameObject, stats, AnchorCentre, new Vector2(-322f, y), new Vector2(170f, 40f));
+            Image track = UiImage(stats, names[i] + "Track", uiRound, UiNavy, 4f);
+            Rect(track.gameObject, stats, AnchorCentre, new Vector2(52f, y), new Vector2(520f, 30f));
+            RectTransform area = UiGroup(track.transform, "Area", AnchorCentre, Vector2.zero, Vector2.zero);
+            Fill(area, 5f, 5f, 5f, 5f);
+            Image fill = UiImage(area, "Fill", uiRound, colors[i], 6f);
+            Fill(fill.rectTransform);
+            fill.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+            flow.statFills[i] = fill;
+            Text value = UiText(stats, names[i] + "Value", "", 30, UiNavy);
+            value.alignment = TextAnchor.MiddleRight;
+            Rect(value.gameObject, stats, AnchorCentre, new Vector2(366f, y), new Vector2(110f, 40f));
+            flow.statValues[i] = value;
+        }
+
+        flow.bodyBlurb = UiText(panel, "Blurb", "", 30, UiCream, 2f);
+        Rect(flow.bodyBlurb.gameObject, panel, AnchorCentre, new Vector2(columnX, 62f), new Vector2(860f, 44f));
+
+        // Hat and glasses.
+        CrewSelector(panel, "Hat", GameText.HatHeading, new Vector2(columnX, -12f), 0.15f, out flow.hatBack, out flow.hatNext, out flow.hatLabel);
+        CrewSelector(panel, "Glasses", GameText.GlassesHeading, new Vector2(columnX, -104f), 0.18f, out flow.glassesBack, out flow.glassesNext, out flow.glassesLabel);
+
+        // Face: Astra's ten sliders, in two columns.
+        RectTransform face = UiPanel(panel, "Face", AnchorCentre, new Vector2(columnX, -270f), new Vector2(860f, 220f), UiCream, 0.2f, 1.6f);
+        flow.faceSliders = new Slider[CrewLook.FaceSliders.Length];
+        for (int i = 0; i < CrewLook.FaceSliders.Length; i++)
+        {
+            float x = i < 5 ? -212f : 212f;
+            float y = 80f - (i % 5) * 40f;
+            Text label = UiText(face, "Label" + i, GameText.FaceSliderNames[i], 22, UiNavy);
+            label.alignment = TextAnchor.MiddleLeft;
+            Rect(label.gameObject, face, AnchorCentre, new Vector2(x - 128f, y), new Vector2(150f, 34f));
+            Slider slider = UiSlider(face, "Slider" + i, AnchorCentre, new Vector2(x + 72f, y), new Vector2(240f, 32f));
+            slider.minValue = -1f;
+            slider.maxValue = 1f;
+            slider.value = 0f;
+            flow.faceSliders[i] = slider;
+        }
+
+        flow.crewRandomButton = UiButton(panel, "Random", GameText.RandomLook, AnchorCentre, new Vector2(columnX - 236f, -428f), new Vector2(380f, 88f), UiGray, 36, 0.25f, out _);
+        flow.crewStartButton = UiButton(panel, "Start", GameText.StartPractice, AnchorCentre, new Vector2(columnX + 214f, -428f), new Vector2(420f, 88f), UiOrange, 40, 0.25f, out flow.crewStartLabel);
+    }
+
+    private static void CrewSelector(Transform parent, string name, string heading, Vector2 position, float delay, out Button back, out Button next, out Text value)
+    {
+        RectTransform row = UiPanel(parent, name, AnchorCentre, position, new Vector2(860f, 80f), UiCream, delay, 1.6f);
+        Text title = UiText(row, "Heading", heading, 32, UiNavy);
+        title.alignment = TextAnchor.MiddleLeft;
+        Rect(title.gameObject, row, AnchorCentre, new Vector2(-322f, 0f), new Vector2(170f, 50f));
+        back = UiButton(row, "Back", "<", AnchorCentre, new Vector2(-150f, 0f), new Vector2(88f, 62f), UiBlue, 40, delay, out _);
+        value = UiText(row, "Value", "", 34, UiNavy);
+        Rect(value.gameObject, row, AnchorCentre, new Vector2(102f, 0f), new Vector2(330f, 50f));
+        next = UiButton(row, "Next", ">", AnchorCentre, new Vector2(354f, 0f), new Vector2(88f, 62f), UiBlue, 40, delay, out _);
     }
 
     private static Text AddTeamColumn(RectTransform parent, string name, string heading, Color color, Color tint, float x)

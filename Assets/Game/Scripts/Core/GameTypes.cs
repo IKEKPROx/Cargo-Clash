@@ -9,6 +9,12 @@ namespace CargoClash
 
     public enum MatchPhase : byte { Loading = 0, HalfIntro = 1, Playing = 2, HalfOutro = 3, Results = 4 }
 
+    /// <summary>
+    /// Which of Astra's three people someone is. It only changes how they look: Collectors wear the
+    /// porters' clothes and Interrupters the wreckers', on the same body.
+    /// </summary>
+    public enum BodyType : byte { Short = 0, Medium = 1, Tall = 2 }
+
     public enum CargoSize : byte { Small = 0, Medium = 1, Large = 2 }
 
     public enum CargoState : byte { Ground = 0, Carried = 1, Rescued = 2, Destroyed = 3 }
@@ -27,6 +33,8 @@ namespace CargoClash
         public const int ViewModel = 12;
         /// <summary>Bits of broken cargo. They only collide with the level.</summary>
         public const int Debris = 13;
+        /// <summary>The character on the crew page. Only its own camera draws this layer.</summary>
+        public const int Preview = 14;
         public static int LevelMask => 1 << Level;
     }
 

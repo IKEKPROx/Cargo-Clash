@@ -247,8 +247,9 @@ namespace CargoClash
             Vector3 moved = local.transform.position - lastPosition;
             moved.y = 0f;
             lastPosition = local.transform.position;
-            float speed = deltaTime > 0f ? Mathf.Min(moved.magnitude / deltaTime, config.runSpeed * 1.2f) : 0f;
-            walkAmount = Mathf.MoveTowards(walkAmount, Mathf.Clamp01(speed / config.runSpeed), deltaTime * 6f);
+            float runSpeed = local.RunSpeed;
+            float speed = deltaTime > 0f ? Mathf.Min(moved.magnitude / deltaTime, runSpeed * 1.2f) : 0f;
+            walkAmount = Mathf.MoveTowards(walkAmount, Mathf.Clamp01(speed / runSpeed), deltaTime * 6f);
 
             // Two footsteps to each full swing of the sine, so a step lands at each half turn.
             float before = walkPhase;

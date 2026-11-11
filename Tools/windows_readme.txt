@@ -6,8 +6,10 @@ RUNNING THE GAME
 1. Unzip the whole folder first. The game won't run from inside the zip.
 2. Double-click CargoClash.exe.
    If Windows says it protected your PC, click More info, then Run anyway. The program isn't code-signed.
-3. To play alone, click PLAY, then PRACTICE WITH BOTS, then the TUTORIAL card. No network or account
-   is needed. The other levels are locked for now.
+3. To play alone, click PLAY, then PRACTICE WITH BOTS, then the TUTORIAL card. The YOUR CREW page
+   opens: pick a body type (SHORT is slow but tough and hits hardest, TALL is fast but fragile), a hat,
+   glasses and a face, then click START. No network or account is needed. The other levels are locked
+   for now. The CREW button on the main menu opens the same page any time.
 
 CONTROLS
 WASD                 Move
