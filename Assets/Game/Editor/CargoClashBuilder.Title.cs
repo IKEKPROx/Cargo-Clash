@@ -30,7 +30,8 @@ public static partial class CargoClashBuilder
             new LevelInfo { title = "FOREST ROAD", picture = CardPicture(2) },
             new LevelInfo { title = "MOUNTAIN PASS", picture = CardPicture(3) },
             new LevelInfo { title = "RIVER FLATS", picture = CardPicture(4) },
-            new LevelInfo { title = "???", picture = CardPicture(5) },
+            new LevelInfo { title = GameText.RuinTitle, scene = RuinCourtyard.SceneName,
+                picture = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Game/Resources/RuinCourtyard/RuinCard.png") },
             new LevelInfo { title = "???", picture = CardPicture(6) },
         };
     }

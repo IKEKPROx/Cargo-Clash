@@ -74,6 +74,8 @@ namespace CargoClash
                 thinkAt = Time.time + 0.18f + Random.value * 0.14f;
                 Think();
             }
+            if (hasGoal && RuinCourtyard.Instance != null && RuinCourtyard.Instance.TryBotOpenDoor(self, goal))
+                repathAt = 0f;
             move = Steer();
         }
 
@@ -178,6 +180,7 @@ namespace CargoClash
             float bestScore = float.MinValue;
             foreach (CargoItem cargo in CargoItem.All)
             {
+                if (!RuinCourtyard.BotCanReachCargo(self, cargo)) continue;
                 bool large = cargo.Definition.requiredCarriers > 1;
                 bool waitingForHelp = cargo.State.Value == CargoState.Carried && cargo.HasFreeSlot && CarriedByTeammate(cargo);
                 if (cargo.State.Value != CargoState.Ground && !waitingForHelp) continue;
@@ -288,7 +291,7 @@ namespace CargoClash
             float bestScore = float.MinValue;
             foreach (CargoItem cargo in CargoItem.All)
             {
-                if (cargo.State.Value != CargoState.Ground) continue;
+                if (cargo.State.Value != CargoState.Ground || !RuinCourtyard.BotCanReachCargo(self, cargo)) continue;
                 float distance = cargo.EdgeDistance(self.transform.position);
                 float score = (cargo.Definition.value + 10f) / (distance + 6f);
                 if (cargo.Durability.Value < 1f) score *= 1.4f;

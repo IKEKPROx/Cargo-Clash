@@ -26,9 +26,9 @@ MonoBehaviour:
   - title: RIVER FLATS
     scene: 
     picture: {fileID: 21300000, guid: caab7b6327add41e9949b2d59ffeb6f6, type: 3}
-  - title: ???
-    scene: 
-    picture: {fileID: 21300000, guid: 9335afe636bcf45d3a76ec341ba11f82, type: 3}
+  - title: RUIN COURTYARD
+    scene: LevelRuinCourtyard
+    picture: {fileID: 21300000, guid: 7b265054b996fafc7d12e8f4b376b79f, type: 3}
   - title: ???
     scene: 
     picture: {fileID: 21300000, guid: 79bdd48a6a6424424a487d698bc6f439, type: 3}
@@ -37,6 +37,21 @@ MonoBehaviour:
   halfSeconds: 60
   finalStretchSeconds: 15
   halfIntroSeconds: 4
+  ruinUseRange: 2.4
+  ruinDoorCooldown: 0.45
+  ruinRestoreSeconds: 1.2
+  ruinWallSwitchCooldown: 3
+  ruinThrowRange: 5
+  ruinPatchRadius: 1.4
+  ruinPatchSeconds: 6
+  ruinPatchSpeed: 0.7
+  ruinLadderSeconds: 16
+  ruinClimbSeconds: 1.6
+  ruinPickupSeconds: 12
+  ruinBoostSeconds: 2.5
+  ruinBoostReadySeconds: 5
+  ruinLandingWaitSeconds: 2
+  ruinPitReturnHeight: -2.4
   helicopterApproachSeconds: 12
   helicopterWarningSeconds: 10
   helicopterArrivalDelay: 1.2

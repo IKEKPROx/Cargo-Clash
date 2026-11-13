@@ -11,4 +11,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Game/Scenes/Level01.unity
     guid: fd3d0f66fd29942df913c40cf81063f0
+  - enabled: 1
+    path: Assets/Game/Scenes/LevelRuinCourtyard.unity
+    guid: a32d8af586ea6e5c5d284d21acfb057f
   m_configObjects: {}

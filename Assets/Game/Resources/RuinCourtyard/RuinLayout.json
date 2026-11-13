@@ -1,0 +1,2718 @@
+{
+  "collectorSpawns": [
+    {
+      "name": "CollectorSpawn1",
+      "position": {
+        "x": 49.0,
+        "y": 0,
+        "z": 6.5
+      },
+      "yaw": -39.3
+    },
+    {
+      "name": "CollectorSpawn2",
+      "position": {
+        "x": 77.0,
+        "y": 0,
+        "z": 6.5
+      },
+      "yaw": 53.1
+    },
+    {
+      "name": "CollectorSpawn3",
+      "position": {
+        "x": 44.0,
+        "y": 0,
+        "z": 4.5
+      },
+      "yaw": -27.0
+    }
+  ],
+  "interrupterSpawns": [
+    {
+      "name": "InterrupterSpawn1",
+      "position": {
+        "x": 59.5,
+        "y": 0,
+        "z": 62.2
+      },
+      "yaw": -180
+    },
+    {
+      "name": "InterrupterSpawn2",
+      "position": {
+        "x": 67.5,
+        "y": 0,
+        "z": 62.4
+      },
+      "yaw": -180
+    },
+    {
+      "name": "InterrupterSpawn3",
+      "position": {
+        "x": 63.35,
+        "y": 0,
+        "z": 60.85
+      },
+      "yaw": -180.0
+    }
+  ],
+  "smallSpots": [
+    {
+      "name": "SmallSpot1",
+      "position": {
+        "x": 51.0,
+        "y": 0.3,
+        "z": 9.0
+      },
+      "yaw": 10.165
+    },
+    {
+      "name": "SmallSpot2",
+      "position": {
+        "x": 46.5,
+        "y": 0.3,
+        "z": 12.8
+      },
+      "yaw": -4.943
+    },
+    {
+      "name": "SmallSpot3",
+      "position": {
+        "x": 43.0,
+        "y": 0.3,
+        "z": 16.5
+      },
+      "yaw": 12.006
+    },
+    {
+      "name": "SmallSpot4",
+      "position": {
+        "x": 36.0,
+        "y": 0.3,
+        "z": 22.3
+      },
+      "yaw": -11.868
+    },
+    {
+      "name": "SmallSpot5",
+      "position": {
+        "x": 74.0,
+        "y": 0.3,
+        "z": 9.0
+      },
+      "yaw": -15.838
+    },
+    {
+      "name": "SmallSpot6",
+      "position": {
+        "x": 79.0,
+        "y": 0.3,
+        "z": 12.3
+      },
+      "yaw": -13.185
+    },
+    {
+      "name": "SmallSpot7",
+      "position": {
+        "x": 85.0,
+        "y": 0.3,
+        "z": 16.7
+      },
+      "yaw": 9.914
+    },
+    {
+      "name": "SmallSpot8",
+      "position": {
+        "x": 96.0,
+        "y": 0.3,
+        "z": 21.2
+      },
+      "yaw": -4.959
+    }
+  ],
+  "mediumSpots": [
+    {
+      "name": "MediumSpot1",
+      "position": {
+        "x": 19.0,
+        "y": 0.46,
+        "z": 41.0
+      },
+      "yaw": -19.556
+    },
+    {
+      "name": "MediumSpot2",
+      "position": {
+        "x": 72.0,
+        "y": 0.46,
+        "z": 30.0
+      },
+      "yaw": 13.991
+    },
+    {
+      "name": "MediumSpot3",
+      "position": {
+        "x": 102.5,
+        "y": 0.46,
+        "z": 37.0
+      },
+      "yaw": 18.069
+    },
+    {
+      "name": "MediumSpot4",
+      "position": {
+        "x": 62,
+        "y": 2.96,
+        "z": 40.2
+      },
+      "yaw": -0.192
+    },
+    {
+      "name": "MediumSpot5",
+      "position": {
+        "x": 65.2,
+        "y": 2.96,
+        "z": 42
+      },
+      "yaw": -6.702
+    }
+  ],
+  "largeSpots": [
+    {
+      "name": "LargeSpot1",
+      "position": {
+        "x": 44.5,
+        "y": 0.544,
+        "z": 36.5
+      },
+      "yaw": -90.0
+    },
+    {
+      "name": "LargeSpot2",
+      "position": {
+        "x": 82.0,
+        "y": 0.544,
+        "z": 37.5
+      },
+      "yaw": -90.0
+    }
+  ],
+  "size": {
+    "x": 124,
+    "y": 69
+  },
+  "truckZone": {
+    "x": 63,
+    "y": 0,
+    "z": 3.1
+  },
+  "truckZoneHalfSize": {
+    "x": 4.9,
+    "y": 2.9
+  },
+  "bedHalfSize": {
+    "x": 1.25,
+    "y": 1.95
+  },
+  "pits": [
+    {
+      "x": 24,
+      "y": 34,
+      "z": 33,
+      "w": 45
+    },
+    {
+      "x": 89.75,
+      "y": 28,
+      "z": 97,
+      "w": 40
+    }
+  ],
+  "pitReturns": [
+    {
+      "x": 18,
+      "y": 0,
+      "z": 32.6
+    },
+    {
+      "x": 104,
+      "y": 0,
+      "z": 29.2
+    }
+  ],
+  "vinePickups": [
+    {
+      "x": 28,
+      "y": 0,
+      "z": 19.7
+    },
+    {
+      "x": 105.25,
+      "y": 0,
+      "z": 26
+    },
+    {
+      "x": 85.5,
+      "y": 0,
+      "z": 57.1
+    }
+  ],
+  "boostStart": {
+    "x": 60,
+    "y": 0,
+    "z": 34
+  },
+  "boostExit": {
+    "x": 60,
+    "y": 2.51,
+    "z": 38
+  },
+  "ladderStart": {
+    "x": 73.65,
+    "y": 0,
+    "z": 42
+  },
+  "ladderExit": {
+    "x": 71.12,
+    "y": 2.51,
+    "z": 42
+  },
+  "ladderAnchor": {
+    "x": 71.91,
+    "y": 2.33,
+    "z": 42
+  },
+  "blockers": [
+    {
+      "name": "OuterWall_1",
+      "minY": 0,
+      "maxY": 1.64,
+      "round": false,
+      "rect": {
+        "x": 54,
+        "y": 11,
+        "z": 59.8,
+        "w": 12.15
+      }
+    },
+    {
+      "name": "OuterWall_2",
+      "minY": 0,
+      "maxY": 1.64,
+      "round": false,
+      "rect": {
+        "x": 66.15,
+        "y": 11,
+        "z": 72,
+        "w": 12.15
+      }
+    },
+    {
+      "name": "RuinButtress_1",
+      "minY": 0,
+      "maxY": 1.346,
+      "round": false,
+      "rect": {
+        "x": 33.2,
+        "y": 33.4,
+        "z": 34.9,
+        "w": 34.65
+      }
+    },
+    {
+      "name": "RuinButtress_2",
+      "minY": 0,
+      "maxY": 1.372,
+      "round": false,
+      "rect": {
+        "x": 38.1,
+        "y": 33.4,
+        "z": 40.0,
+        "w": 34.65
+      }
+    },
+    {
+      "name": "RuinButtress_3",
+      "minY": 0,
+      "maxY": 1.3980000000000001,
+      "round": false,
+      "rect": {
+        "x": 39.05,
+        "y": 34.15,
+        "z": 40.15,
+        "w": 37.25
+      }
+    },
+    {
+      "name": "RuinButtress_4",
+      "minY": 0,
+      "maxY": 1.4240000000000002,
+      "round": false,
+      "rect": {
+        "x": 93.4,
+        "y": 40.45,
+        "z": 94.65,
+        "w": 43.4
+      }
+    },
+    {
+      "name": "RuinButtress_5",
+      "minY": 0,
+      "maxY": 1.4500000000000002,
+      "round": false,
+      "rect": {
+        "x": 93.4,
+        "y": 46.6,
+        "z": 94.65,
+        "w": 47.5
+      }
+    },
+    {
+      "name": "U1_01",
+      "minY": 0,
+      "maxY": 1.7,
+      "round": false,
+      "rect": {
+        "x": 20.2,
+        "y": 9.6,
+        "z": 21.45,
+        "w": 13.8
+      }
+    },
+    {
+      "name": "U1_02",
+      "minY": 0,
+      "maxY": 2.65,
+      "round": false,
+      "rect": {
+        "x": 21,
+        "y": 12.9,
+        "z": 28.9,
+        "w": 13.8
+      }
+    },
+    {
+      "name": "U1_03",
+      "minY": 0,
+      "maxY": 2.0,
+      "round": false,
+      "rect": {
+        "x": 23,
+        "y": 9.7,
+        "z": 24.3,
+        "w": 10.95
+      }
+    },
+    {
+      "name": "U1_04",
+      "minY": 0,
+      "maxY": 1.6,
+      "round": false,
+      "rect": {
+        "x": 26,
+        "y": 9.7,
+        "z": 27.3,
+        "w": 10.95
+      }
+    },
+    {
+      "name": "U1_05",
+      "minY": 0,
+      "maxY": 1.17,
+      "round": false,
+      "rect": {
+        "x": 28.3,
+        "y": 9.7,
+        "z": 29.4,
+        "w": 10.8
+      }
+    },
+    {
+      "name": "U2_01",
+      "minY": 0,
+      "maxY": 1.53,
+      "round": false,
+      "rect": {
+        "x": 25.5,
+        "y": 15.2,
+        "z": 26.4,
+        "w": 17.5
+      }
+    },
+    {
+      "name": "U2_02",
+      "minY": 0,
+      "maxY": 1.58,
+      "round": false,
+      "rect": {
+        "x": 25.5,
+        "y": 16.9,
+        "z": 26.4,
+        "w": 17.7
+      }
+    },
+    {
+      "name": "U2_03",
+      "minY": 0,
+      "maxY": 1.42,
+      "round": false,
+      "rect": {
+        "x": 29.3,
+        "y": 16.9,
+        "z": 30.2,
+        "w": 17.7
+      }
+    },
+    {
+      "name": "U2_04",
+      "minY": 0,
+      "maxY": 1.28,
+      "round": false,
+      "rect": {
+        "x": 29.3,
+        "y": 15.55,
+        "z": 30.2,
+        "w": 17.1
+      }
+    },
+    {
+      "name": "U3_01",
+      "minY": 0,
+      "maxY": 1.48,
+      "round": false,
+      "rect": {
+        "x": 60.3,
+        "y": 19.45,
+        "z": 61.2,
+        "w": 22.35
+      }
+    },
+    {
+      "name": "U3_02",
+      "minY": 0,
+      "maxY": 1.24,
+      "round": false,
+      "rect": {
+        "x": 65.8,
+        "y": 19.45,
+        "z": 66.7,
+        "w": 21.65
+      }
+    },
+    {
+      "name": "U3_03",
+      "minY": 0,
+      "maxY": 0.83,
+      "round": false,
+      "rect": {
+        "x": 62.1,
+        "y": 19.05,
+        "z": 63.4,
+        "w": 19.85
+      }
+    },
+    {
+      "name": "U4_01",
+      "minY": 0,
+      "maxY": 1.72,
+      "round": false,
+      "rect": {
+        "x": 95.1,
+        "y": 8.55,
+        "z": 96.05,
+        "w": 12.9
+      }
+    },
+    {
+      "name": "U4_02",
+      "minY": 0,
+      "maxY": 1.7,
+      "round": false,
+      "rect": {
+        "x": 95.1,
+        "y": 12.1,
+        "z": 96.05,
+        "w": 13.05
+      }
+    },
+    {
+      "name": "U4_03",
+      "minY": 0,
+      "maxY": 1.78,
+      "round": false,
+      "rect": {
+        "x": 99,
+        "y": 12.1,
+        "z": 99.9,
+        "w": 13.05
+      }
+    },
+    {
+      "name": "U4_04",
+      "minY": 0,
+      "maxY": 1.92,
+      "round": false,
+      "rect": {
+        "x": 99,
+        "y": 9.6,
+        "z": 99.9,
+        "w": 12.25
+      }
+    },
+    {
+      "name": "U4_05",
+      "minY": 0,
+      "maxY": 0.64,
+      "round": false,
+      "rect": {
+        "x": 98,
+        "y": 8.55,
+        "z": 99.15,
+        "w": 9.35
+      }
+    },
+    {
+      "name": "U4 canopy timber post",
+      "minY": 0,
+      "maxY": 2.24,
+      "round": false,
+      "rect": {
+        "x": 95.295,
+        "y": 11.575,
+        "z": 95.505,
+        "w": 11.785
+      }
+    },
+    {
+      "name": "U4 canopy timber post",
+      "minY": 0,
+      "maxY": 2.24,
+      "round": false,
+      "rect": {
+        "x": 99.295,
+        "y": 11.575,
+        "z": 99.505,
+        "w": 11.785
+      }
+    },
+    {
+      "name": "U5_01",
+      "minY": 0,
+      "maxY": 2.88,
+      "round": false,
+      "rect": {
+        "x": 56.0,
+        "y": 63.1,
+        "z": 57.5,
+        "w": 65.9
+      }
+    },
+    {
+      "name": "U5_02",
+      "minY": 2.3,
+      "maxY": 2.7699999999999996,
+      "round": false,
+      "rect": {
+        "x": 57.16,
+        "y": 64.65,
+        "z": 64.64,
+        "w": 65.9
+      }
+    },
+    {
+      "name": "U5_03",
+      "minY": 0,
+      "maxY": 2.79,
+      "round": false,
+      "rect": {
+        "x": 64.4,
+        "y": 63,
+        "z": 65.65,
+        "w": 65.9
+      }
+    },
+    {
+      "name": "U5_04",
+      "minY": 2.3,
+      "maxY": 2.7699999999999996,
+      "round": false,
+      "rect": {
+        "x": 65.5,
+        "y": 64.65,
+        "z": 71.9,
+        "w": 65.9
+      }
+    },
+    {
+      "name": "U5_05",
+      "minY": 0,
+      "maxY": 2.79,
+      "round": false,
+      "rect": {
+        "x": 70.8,
+        "y": 63.05,
+        "z": 72.05,
+        "w": 65.9
+      }
+    },
+    {
+      "name": "U6_01",
+      "minY": 0,
+      "maxY": 1.3,
+      "round": false,
+      "rect": {
+        "x": 106.2,
+        "y": 30.2,
+        "z": 107.1,
+        "w": 35.8
+      }
+    },
+    {
+      "name": "U6_02",
+      "minY": 0,
+      "maxY": 1.42,
+      "round": false,
+      "rect": {
+        "x": 107,
+        "y": 34.9,
+        "z": 109.3,
+        "w": 35.85
+      }
+    },
+    {
+      "name": "U6_03",
+      "minY": 0,
+      "maxY": 1.08,
+      "round": false,
+      "rect": {
+        "x": 108.55,
+        "y": 31.5,
+        "z": 109.4,
+        "w": 34.9
+      }
+    },
+    {
+      "name": "U6_04",
+      "minY": 0,
+      "maxY": 0.59,
+      "round": false,
+      "rect": {
+        "x": 107.7,
+        "y": 31.15,
+        "z": 109.4,
+        "w": 32.0
+      }
+    },
+    {
+      "name": "R7 fixed stone step 1",
+      "minY": 0,
+      "maxY": 0.25,
+      "round": false,
+      "rect": {
+        "x": 105.65,
+        "y": 35.95,
+        "z": 106.05,
+        "w": 37.05
+      }
+    },
+    {
+      "name": "R7 fixed stone step 2",
+      "minY": 0,
+      "maxY": 0.5,
+      "round": false,
+      "rect": {
+        "x": 106.05,
+        "y": 35.95,
+        "z": 106.45,
+        "w": 37.05
+      }
+    },
+    {
+      "name": "R7 fixed stone step 3",
+      "minY": 0,
+      "maxY": 0.741,
+      "round": false,
+      "rect": {
+        "x": 106.45,
+        "y": 35.95,
+        "z": 108.4,
+        "w": 37.05
+      }
+    },
+    {
+      "name": "R7 fixed stone step 4",
+      "minY": 0,
+      "maxY": 0.741,
+      "round": false,
+      "rect": {
+        "x": 106.45,
+        "y": 38.85,
+        "z": 108.4,
+        "w": 40.15
+      }
+    },
+    {
+      "name": "B1 back masonry",
+      "minY": 0,
+      "maxY": 2.95,
+      "round": false,
+      "rect": {
+        "x": 40.8,
+        "y": 39.5,
+        "z": 48.2,
+        "w": 40.1
+      }
+    },
+    {
+      "name": "B1 south west cheek",
+      "minY": 0,
+      "maxY": 2.95,
+      "round": false,
+      "rect": {
+        "x": 40.8,
+        "y": 32.9,
+        "z": 42.33,
+        "w": 33.5
+      }
+    },
+    {
+      "name": "B1 south east cheek",
+      "minY": 0,
+      "maxY": 2.95,
+      "round": false,
+      "rect": {
+        "x": 46.67,
+        "y": 32.9,
+        "z": 48.2,
+        "w": 33.5
+      }
+    },
+    {
+      "name": "B1 full side W",
+      "minY": 0,
+      "maxY": 2.95,
+      "round": false,
+      "rect": {
+        "x": 40.8,
+        "y": 33.5,
+        "z": 41.4,
+        "w": 39.5
+      }
+    },
+    {
+      "name": "B1 side gate south pier",
+      "minY": 0,
+      "maxY": 2.95,
+      "round": false,
+      "rect": {
+        "x": 47.6,
+        "y": 33.5,
+        "z": 48.2,
+        "w": 34.7
+      }
+    },
+    {
+      "name": "B1 side gate north pier",
+      "minY": 0,
+      "maxY": 2.95,
+      "round": false,
+      "rect": {
+        "x": 47.6,
+        "y": 38.3,
+        "z": 48.2,
+        "w": 39.5
+      }
+    },
+    {
+      "name": "B1 side gate fixed lintel",
+      "minY": 2.55,
+      "maxY": 2.9499999999999997,
+      "round": false,
+      "rect": {
+        "x": 47.6,
+        "y": 34.7,
+        "z": 48.2,
+        "w": 38.3
+      }
+    },
+    {
+      "name": "B1 front portal jamb",
+      "minY": 0,
+      "maxY": 2.72,
+      "round": false,
+      "rect": {
+        "x": 42.35,
+        "y": 32.82,
+        "z": 42.63,
+        "w": 33.58
+      }
+    },
+    {
+      "name": "B1 front portal jamb",
+      "minY": 0,
+      "maxY": 2.72,
+      "round": false,
+      "rect": {
+        "x": 46.37,
+        "y": 32.82,
+        "z": 46.65,
+        "w": 33.58
+      }
+    },
+    {
+      "name": "B1 front portal lintel",
+      "minY": 2.72,
+      "maxY": 3.04,
+      "round": false,
+      "rect": {
+        "x": 42.34,
+        "y": 32.79,
+        "z": 46.66,
+        "w": 33.61
+      }
+    },
+    {
+      "name": "B2 back masonry",
+      "minY": 0,
+      "maxY": 2.95,
+      "round": false,
+      "rect": {
+        "x": 78.1,
+        "y": 40.5,
+        "z": 85.9,
+        "w": 41.1
+      }
+    },
+    {
+      "name": "B2 south west cheek",
+      "minY": 0,
+      "maxY": 2.95,
+      "round": false,
+      "rect": {
+        "x": 78.1,
+        "y": 33.9,
+        "z": 79.83,
+        "w": 34.5
+      }
+    },
+    {
+      "name": "B2 south east cheek",
+      "minY": 0,
+      "maxY": 2.95,
+      "round": false,
+      "rect": {
+        "x": 84.17,
+        "y": 33.9,
+        "z": 85.9,
+        "w": 34.5
+      }
+    },
+    {
+      "name": "B2 side gate south pier",
+      "minY": 0,
+      "maxY": 2.95,
+      "round": false,
+      "rect": {
+        "x": 78.1,
+        "y": 34.5,
+        "z": 78.7,
+        "w": 35.7
+      }
+    },
+    {
+      "name": "B2 side gate north pier",
+      "minY": 0,
+      "maxY": 2.95,
+      "round": false,
+      "rect": {
+        "x": 78.1,
+        "y": 39.3,
+        "z": 78.7,
+        "w": 40.5
+      }
+    },
+    {
+      "name": "B2 side gate fixed lintel",
+      "minY": 2.55,
+      "maxY": 2.9499999999999997,
+      "round": false,
+      "rect": {
+        "x": 78.1,
+        "y": 35.7,
+        "z": 78.7,
+        "w": 39.3
+      }
+    },
+    {
+      "name": "B2 full side E",
+      "minY": 0,
+      "maxY": 2.95,
+      "round": false,
+      "rect": {
+        "x": 85.3,
+        "y": 34.5,
+        "z": 85.9,
+        "w": 40.5
+      }
+    },
+    {
+      "name": "B2 front portal jamb",
+      "minY": 0,
+      "maxY": 2.72,
+      "round": false,
+      "rect": {
+        "x": 79.85,
+        "y": 33.82,
+        "z": 80.13,
+        "w": 34.58
+      }
+    },
+    {
+      "name": "B2 front portal jamb",
+      "minY": 0,
+      "maxY": 2.72,
+      "round": false,
+      "rect": {
+        "x": 83.87,
+        "y": 33.82,
+        "z": 84.15,
+        "w": 34.58
+      }
+    },
+    {
+      "name": "B2 front portal lintel",
+      "minY": 2.72,
+      "maxY": 3.04,
+      "round": false,
+      "rect": {
+        "x": 79.84,
+        "y": 33.79,
+        "z": 84.16,
+        "w": 34.61
+      }
+    },
+    {
+      "name": "U7 stepped shrine",
+      "minY": 0,
+      "maxY": 2.75,
+      "round": false,
+      "rect": {
+        "x": 9.5,
+        "y": 19.1,
+        "z": 15.1,
+        "w": 23.5
+      }
+    },
+    {
+      "name": "U8 west return",
+      "minY": 0,
+      "maxY": 2.5,
+      "round": false,
+      "rect": {
+        "x": 15.5,
+        "y": 3.9,
+        "z": 16.1,
+        "w": 7.64
+      }
+    },
+    {
+      "name": "U8 east return",
+      "minY": 0,
+      "maxY": 2.35,
+      "round": false,
+      "rect": {
+        "x": 23.2,
+        "y": 3.9,
+        "z": 23.8,
+        "w": 7.64
+      }
+    },
+    {
+      "name": "U8 rear west",
+      "minY": 0,
+      "maxY": 2.45,
+      "round": false,
+      "rect": {
+        "x": 16.1,
+        "y": 7.04,
+        "z": 19.15,
+        "w": 7.64
+      }
+    },
+    {
+      "name": "U8 rear east",
+      "minY": 0,
+      "maxY": 2.2,
+      "round": false,
+      "rect": {
+        "x": 22.35,
+        "y": 7.04,
+        "z": 23.2,
+        "w": 7.64
+      }
+    },
+    {
+      "name": "U8 front west",
+      "minY": 0,
+      "maxY": 2.5,
+      "round": false,
+      "rect": {
+        "x": 16.1,
+        "y": 3.9,
+        "z": 17.82,
+        "w": 4.5
+      }
+    },
+    {
+      "name": "U8 front east",
+      "minY": 0,
+      "maxY": 2.5,
+      "round": false,
+      "rect": {
+        "x": 21.48,
+        "y": 3.9,
+        "z": 23.2,
+        "w": 4.5
+      }
+    },
+    {
+      "name": "U8 archivist portal jamb",
+      "minY": 0,
+      "maxY": 2.5,
+      "round": false,
+      "rect": {
+        "x": 17.84,
+        "y": 3.82,
+        "z": 18.12,
+        "w": 4.58
+      }
+    },
+    {
+      "name": "U8 archivist portal jamb",
+      "minY": 0,
+      "maxY": 2.5,
+      "round": false,
+      "rect": {
+        "x": 21.18,
+        "y": 3.82,
+        "z": 21.46,
+        "w": 4.58
+      }
+    },
+    {
+      "name": "U8 archivist portal lintel",
+      "minY": 2.5,
+      "maxY": 2.82,
+      "round": false,
+      "rect": {
+        "x": 17.83,
+        "y": 3.79,
+        "z": 21.47,
+        "w": 4.61
+      }
+    },
+    {
+      "name": "U9 rounded square pillar",
+      "minY": 0,
+      "maxY": 2.4,
+      "round": false,
+      "rect": {
+        "x": 110.479999,
+        "y": 4.73,
+        "z": 111.219999,
+        "w": 5.47
+      }
+    },
+    {
+      "name": "U9 rounded square pillar",
+      "minY": 0,
+      "maxY": 2.4,
+      "round": false,
+      "rect": {
+        "x": 110.479999,
+        "y": 7.43,
+        "z": 111.219999,
+        "w": 8.17
+      }
+    },
+    {
+      "name": "U9 rounded square pillar",
+      "minY": 0,
+      "maxY": 2.4,
+      "round": false,
+      "rect": {
+        "x": 116.379999,
+        "y": 4.73,
+        "z": 117.119999,
+        "w": 5.47
+      }
+    },
+    {
+      "name": "U9 rounded square pillar",
+      "minY": 0,
+      "maxY": 2.4,
+      "round": false,
+      "rect": {
+        "x": 116.379999,
+        "y": 7.43,
+        "z": 117.119999,
+        "w": 8.17
+      }
+    },
+    {
+      "name": "U10 paired portal pier",
+      "minY": 0,
+      "maxY": 2.6,
+      "round": false,
+      "rect": {
+        "x": 33.1,
+        "y": 57.5,
+        "z": 33.9,
+        "w": 58.5
+      }
+    },
+    {
+      "name": "U10 paired portal pier",
+      "minY": 0,
+      "maxY": 2.6,
+      "round": false,
+      "rect": {
+        "x": 37.1,
+        "y": 57.5,
+        "z": 37.9,
+        "w": 58.5
+      }
+    },
+    {
+      "name": "U10 rear screen",
+      "minY": 0,
+      "maxY": 1.43,
+      "round": false,
+      "rect": {
+        "x": 33.1,
+        "y": 60.3,
+        "z": 37.9,
+        "w": 61.0
+      }
+    },
+    {
+      "name": "U10 cross lintel",
+      "minY": 2.6,
+      "maxY": 2.98,
+      "round": false,
+      "rect": {
+        "x": 33.1,
+        "y": 57.5,
+        "z": 37.9,
+        "w": 58.5
+      }
+    },
+    {
+      "name": "U11 west wall",
+      "minY": 0,
+      "maxY": 1.95,
+      "round": false,
+      "rect": {
+        "x": 111.0,
+        "y": 21.95,
+        "z": 111.5,
+        "w": 25.4
+      }
+    },
+    {
+      "name": "U11 east wall",
+      "minY": 0,
+      "maxY": 2.25,
+      "round": false,
+      "rect": {
+        "x": 113.9,
+        "y": 21.35,
+        "z": 114.4,
+        "w": 25.4
+      }
+    },
+    {
+      "name": "U11 back wall",
+      "minY": 0,
+      "maxY": 2.1,
+      "round": false,
+      "rect": {
+        "x": 111.5,
+        "y": 24.8,
+        "z": 113.9,
+        "w": 25.4
+      }
+    },
+    {
+      "name": "U12 base storey",
+      "minY": 0,
+      "maxY": 1.55,
+      "round": false,
+      "rect": {
+        "x": 87.8,
+        "y": 57.15,
+        "z": 92.0,
+        "w": 61.35
+      }
+    },
+    {
+      "name": "U12 upper corner",
+      "minY": 1.55,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 87.92,
+        "y": 57.27,
+        "z": 88.72,
+        "w": 61.23
+      }
+    },
+    {
+      "name": "U12 upper corner",
+      "minY": 1.55,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 91.08,
+        "y": 57.27,
+        "z": 91.88,
+        "w": 61.23
+      }
+    },
+    {
+      "name": "U12 upper rear",
+      "minY": 1.55,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 88.72,
+        "y": 60.43,
+        "z": 91.08,
+        "w": 61.23
+      }
+    },
+    {
+      "name": "U12 upper lintel",
+      "minY": 2.41,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 88.72,
+        "y": 57.27,
+        "z": 91.08,
+        "w": 58.0
+      }
+    },
+    {
+      "name": "Soft rounded tree",
+      "minY": 0,
+      "maxY": 1.645,
+      "round": true,
+      "circle": {
+        "x": 104.490935,
+        "y": 8.202258,
+        "z": 0.20299999999999999
+      }
+    },
+    {
+      "name": "Soft rounded tree.001",
+      "minY": 0,
+      "maxY": 1.645,
+      "round": true,
+      "circle": {
+        "x": 5.101666,
+        "y": 17.160203,
+        "z": 0.20299999999999999
+      }
+    },
+    {
+      "name": "Soft rounded tree.002",
+      "minY": 0,
+      "maxY": 1.5510000000000002,
+      "round": true,
+      "circle": {
+        "x": 75.453909,
+        "y": 22.452931,
+        "z": 0.1914
+      }
+    },
+    {
+      "name": "Soft rounded tree.003",
+      "minY": 0,
+      "maxY": 1.2925000000000002,
+      "round": true,
+      "circle": {
+        "x": 72.098353,
+        "y": 13.90466,
+        "z": 0.1595
+      }
+    },
+    {
+      "name": "Soft rounded tree.004",
+      "minY": 0,
+      "maxY": 1.504,
+      "round": true,
+      "circle": {
+        "x": 23.526614,
+        "y": 58.011498,
+        "z": 0.1856
+      }
+    },
+    {
+      "name": "Soft rounded tree.005",
+      "minY": 0,
+      "maxY": 1.2925000000000002,
+      "round": true,
+      "circle": {
+        "x": 77.247825,
+        "y": 17.266248,
+        "z": 0.1595
+      }
+    },
+    {
+      "name": "Soft rounded tree.006",
+      "minY": 0,
+      "maxY": 1.598,
+      "round": true,
+      "circle": {
+        "x": 49.685252,
+        "y": 19.21104,
+        "z": 0.19720000000000001
+      }
+    },
+    {
+      "name": "Soft rounded tree.007",
+      "minY": 0,
+      "maxY": 2.35,
+      "round": true,
+      "circle": {
+        "x": 40.914673,
+        "y": 42.745382,
+        "z": 0.29
+      }
+    },
+    {
+      "name": "Soft rounded tree.008",
+      "minY": 0,
+      "maxY": 1.739,
+      "round": true,
+      "circle": {
+        "x": 94.178439,
+        "y": 60.176228,
+        "z": 0.21459999999999999
+      }
+    },
+    {
+      "name": "Soft rounded tree.009",
+      "minY": 0,
+      "maxY": 2.1385,
+      "round": true,
+      "circle": {
+        "x": 80.495244,
+        "y": 49.84291,
+        "z": 0.26389999999999997
+      }
+    },
+    {
+      "name": "Soft rounded tree.010",
+      "minY": 0,
+      "maxY": 1.974,
+      "round": true,
+      "circle": {
+        "x": 108.499627,
+        "y": 62.598957,
+        "z": 0.24359999999999998
+      }
+    },
+    {
+      "name": "Soft rounded tree.011",
+      "minY": 0,
+      "maxY": 1.8800000000000001,
+      "round": true,
+      "circle": {
+        "x": 34,
+        "y": -5.0,
+        "z": 0.23199999999999998
+      }
+    },
+    {
+      "name": "Soft rounded tree.012",
+      "minY": 0,
+      "maxY": 2.115,
+      "round": true,
+      "circle": {
+        "x": 89.8,
+        "y": -4.5,
+        "z": 0.261
+      }
+    },
+    {
+      "name": "Soft rounded tree.013",
+      "minY": 0,
+      "maxY": 1.9035000000000002,
+      "round": true,
+      "circle": {
+        "x": 35.4,
+        "y": -16.2,
+        "z": 0.2349
+      }
+    },
+    {
+      "name": "Soft rounded tree.014",
+      "minY": 0,
+      "maxY": 1.692,
+      "round": true,
+      "circle": {
+        "x": 88.4,
+        "y": -16.45,
+        "z": 0.20879999999999999
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 01",
+      "minY": 0,
+      "maxY": 1.8800000000000001,
+      "round": true,
+      "circle": {
+        "x": 18.779248,
+        "y": 54.181515,
+        "z": 0.23199999999999998
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 02",
+      "minY": 0,
+      "maxY": 1.8800000000000001,
+      "round": true,
+      "circle": {
+        "x": 45.853646,
+        "y": 64.899959,
+        "z": 0.23199999999999998
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 03",
+      "minY": 0,
+      "maxY": 1.504,
+      "round": true,
+      "circle": {
+        "x": 91.288226,
+        "y": 65.23288,
+        "z": 0.1856
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 04",
+      "minY": 0,
+      "maxY": 1.2925000000000002,
+      "round": true,
+      "circle": {
+        "x": 14.829146,
+        "y": 48.609446,
+        "z": 0.1595
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 05",
+      "minY": 0,
+      "maxY": 1.645,
+      "round": true,
+      "circle": {
+        "x": 118.459846,
+        "y": 65.515596,
+        "z": 0.20299999999999999
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 06",
+      "minY": 0,
+      "maxY": 1.9035000000000002,
+      "round": true,
+      "circle": {
+        "x": 6.401328,
+        "y": 55.196596,
+        "z": 0.2349
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 07",
+      "minY": 0,
+      "maxY": 1.739,
+      "round": true,
+      "circle": {
+        "x": 118.610573,
+        "y": 21.791249,
+        "z": 0.21459999999999999
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 08",
+      "minY": 0,
+      "maxY": 1.692,
+      "round": true,
+      "circle": {
+        "x": 53.106699,
+        "y": 15.800551,
+        "z": 0.20879999999999999
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 09",
+      "minY": 0,
+      "maxY": 1.2925000000000002,
+      "round": true,
+      "circle": {
+        "x": 109.020937,
+        "y": 17.498579,
+        "z": 0.1595
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 10",
+      "minY": 0,
+      "maxY": 2.115,
+      "round": true,
+      "circle": {
+        "x": 67.685999,
+        "y": 8.620469,
+        "z": 0.261
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 11",
+      "minY": 0,
+      "maxY": 1.739,
+      "round": true,
+      "circle": {
+        "x": 15.933652,
+        "y": 65.009353,
+        "z": 0.21459999999999999
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 12",
+      "minY": 0,
+      "maxY": 1.598,
+      "round": true,
+      "circle": {
+        "x": 117.520849,
+        "y": 36.265118,
+        "z": 0.19720000000000001
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 13",
+      "minY": 0,
+      "maxY": 1.598,
+      "round": true,
+      "circle": {
+        "x": 11.425621,
+        "y": 25.052961,
+        "z": 0.19720000000000001
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 14",
+      "minY": 0,
+      "maxY": 1.692,
+      "round": true,
+      "circle": {
+        "x": 41.456154,
+        "y": 61.198546,
+        "z": 0.20879999999999999
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 15",
+      "minY": 0,
+      "maxY": 1.2925000000000002,
+      "round": true,
+      "circle": {
+        "x": 120.723814,
+        "y": 44.898329,
+        "z": 0.1595
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 16",
+      "minY": 0,
+      "maxY": 1.2925000000000002,
+      "round": true,
+      "circle": {
+        "x": 5.956414,
+        "y": 45.558442,
+        "z": 0.1595
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 17",
+      "minY": 0,
+      "maxY": 1.974,
+      "round": true,
+      "circle": {
+        "x": 89.714656,
+        "y": 49.077569,
+        "z": 0.24359999999999998
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 18",
+      "minY": 0,
+      "maxY": 1.974,
+      "round": true,
+      "circle": {
+        "x": 99.931508,
+        "y": 61.553271,
+        "z": 0.24359999999999998
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 19",
+      "minY": 0,
+      "maxY": 1.5510000000000002,
+      "round": true,
+      "circle": {
+        "x": 65.697513,
+        "y": 16.04338,
+        "z": 0.1914
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 20",
+      "minY": 0,
+      "maxY": 1.692,
+      "round": true,
+      "circle": {
+        "x": 39.996115,
+        "y": 64.689096,
+        "z": 0.20879999999999999
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 21",
+      "minY": 0,
+      "maxY": 1.645,
+      "round": true,
+      "circle": {
+        "x": 34.266347,
+        "y": 42.129623,
+        "z": 0.20299999999999999
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 22",
+      "minY": 0,
+      "maxY": 1.645,
+      "round": true,
+      "circle": {
+        "x": 7.843145,
+        "y": 50.500319,
+        "z": 0.20299999999999999
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 23",
+      "minY": 0,
+      "maxY": 1.2925000000000002,
+      "round": true,
+      "circle": {
+        "x": 13.780405,
+        "y": 37.019607,
+        "z": 0.1595
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 24",
+      "minY": 0,
+      "maxY": 1.2925000000000002,
+      "round": true,
+      "circle": {
+        "x": 31.143794,
+        "y": 58.149404,
+        "z": 0.1595
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 25",
+      "minY": 0,
+      "maxY": 1.2925000000000002,
+      "round": true,
+      "circle": {
+        "x": 87.038491,
+        "y": 13.033661,
+        "z": 0.1595
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 26",
+      "minY": 0,
+      "maxY": 1.739,
+      "round": true,
+      "circle": {
+        "x": 82.509693,
+        "y": 63.081523,
+        "z": 0.21459999999999999
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 27",
+      "minY": 0,
+      "maxY": 1.598,
+      "round": true,
+      "circle": {
+        "x": 116.19457,
+        "y": 11.599499,
+        "z": 0.19720000000000001
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 28",
+      "minY": 0,
+      "maxY": 1.598,
+      "round": true,
+      "circle": {
+        "x": 49.746231,
+        "y": 15.214647,
+        "z": 0.19720000000000001
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 29",
+      "minY": 0,
+      "maxY": 2.115,
+      "round": true,
+      "circle": {
+        "x": 105.811484,
+        "y": 59.655175,
+        "z": 0.261
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 30",
+      "minY": 0,
+      "maxY": 2.35,
+      "round": true,
+      "circle": {
+        "x": 55.140423,
+        "y": 13.569206,
+        "z": 0.29
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 31",
+      "minY": 0,
+      "maxY": 1.9035000000000002,
+      "round": true,
+      "circle": {
+        "x": 112.568132,
+        "y": 34.121248,
+        "z": 0.2349
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 32",
+      "minY": 0,
+      "maxY": 2.35,
+      "round": true,
+      "circle": {
+        "x": 96.020348,
+        "y": 58.239049,
+        "z": 0.29
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 33",
+      "minY": 0,
+      "maxY": 1.645,
+      "round": true,
+      "circle": {
+        "x": 33.60922,
+        "y": 63.702908,
+        "z": 0.20299999999999999
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 34",
+      "minY": 0,
+      "maxY": 2.35,
+      "round": true,
+      "circle": {
+        "x": 75.024776,
+        "y": 46.232231,
+        "z": 0.29
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 35",
+      "minY": 0,
+      "maxY": 1.692,
+      "round": true,
+      "circle": {
+        "x": 34.806202,
+        "y": 29.13417,
+        "z": 0.20879999999999999
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 36",
+      "minY": 0,
+      "maxY": 2.1385,
+      "round": true,
+      "circle": {
+        "x": 58.676894,
+        "y": 58.382374,
+        "z": 0.26389999999999997
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 37",
+      "minY": 0,
+      "maxY": 1.8800000000000001,
+      "round": true,
+      "circle": {
+        "x": 95.363272,
+        "y": 2.340321,
+        "z": 0.23199999999999998
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 38",
+      "minY": 0,
+      "maxY": 2.35,
+      "round": true,
+      "circle": {
+        "x": 12.923619,
+        "y": 30.995555,
+        "z": 0.29
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 39",
+      "minY": 0,
+      "maxY": 1.692,
+      "round": true,
+      "circle": {
+        "x": 105.924789,
+        "y": 19.346559,
+        "z": 0.20879999999999999
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 40",
+      "minY": 0,
+      "maxY": 1.645,
+      "round": true,
+      "circle": {
+        "x": 28.13393,
+        "y": 59.715218,
+        "z": 0.20299999999999999
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 41",
+      "minY": 0,
+      "maxY": 1.2925000000000002,
+      "round": true,
+      "circle": {
+        "x": 11.159363,
+        "y": 53.969096,
+        "z": 0.1595
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 42",
+      "minY": 0,
+      "maxY": 2.35,
+      "round": true,
+      "circle": {
+        "x": 46.237635,
+        "y": 8.843172,
+        "z": 0.29
+      }
+    },
+    {
+      "name": "Existing tree / expanded landscape 43",
+      "minY": 0,
+      "maxY": 1.8800000000000001,
+      "round": true,
+      "circle": {
+        "x": 30.299647,
+        "y": 46.489895,
+        "z": 0.23199999999999998
+      }
+    },
+    {
+      "name": "U13 / U10 paired portal pier",
+      "minY": 0,
+      "maxY": 2.6,
+      "round": false,
+      "rect": {
+        "x": 14.75,
+        "y": 54.6,
+        "z": 15.75,
+        "w": 55.4
+      }
+    },
+    {
+      "name": "U13 / U10 paired portal pier",
+      "minY": 0,
+      "maxY": 2.6,
+      "round": false,
+      "rect": {
+        "x": 14.75,
+        "y": 58.6,
+        "z": 15.75,
+        "w": 59.4
+      }
+    },
+    {
+      "name": "U13 / U10 rear screen",
+      "minY": 0,
+      "maxY": 1.43,
+      "round": false,
+      "rect": {
+        "x": 12.25,
+        "y": 54.6,
+        "z": 12.95,
+        "w": 59.4
+      }
+    },
+    {
+      "name": "U13 / U10 cross lintel",
+      "minY": 2.6,
+      "maxY": 2.98,
+      "round": false,
+      "rect": {
+        "x": 14.75,
+        "y": 54.6,
+        "z": 15.75,
+        "w": 59.4
+      }
+    },
+    {
+      "name": "U14 / U12 base storey",
+      "minY": 0,
+      "maxY": 1.55,
+      "round": false,
+      "rect": {
+        "x": 108.9,
+        "y": 55.9,
+        "z": 113.1,
+        "w": 60.09999
+      }
+    },
+    {
+      "name": "U14 / U12 upper corner",
+      "minY": 1.55,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 109.02,
+        "y": 59.18,
+        "z": 112.98,
+        "w": 59.98
+      }
+    },
+    {
+      "name": "U14 / U12 upper corner",
+      "minY": 1.55,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 109.02,
+        "y": 56.02,
+        "z": 112.98,
+        "w": 56.82
+      }
+    },
+    {
+      "name": "U14 / U12 upper rear",
+      "minY": 1.55,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 112.18,
+        "y": 56.82,
+        "z": 112.98,
+        "w": 59.18
+      }
+    },
+    {
+      "name": "U14 / U12 upper lintel",
+      "minY": 2.41,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 109.02,
+        "y": 56.82,
+        "z": 109.75,
+        "w": 59.18
+      }
+    },
+    {
+      "name": "U15 / U9 rounded square pillar",
+      "minY": 0,
+      "maxY": 2.4,
+      "round": false,
+      "rect": {
+        "x": 8.98,
+        "y": 31.67999,
+        "z": 9.72,
+        "w": 32.42
+      }
+    },
+    {
+      "name": "U15 / U9 rounded square pillar",
+      "minY": 0,
+      "maxY": 2.4,
+      "round": false,
+      "rect": {
+        "x": 6.28,
+        "y": 31.67999,
+        "z": 7.02,
+        "w": 32.42
+      }
+    },
+    {
+      "name": "U15 / U9 rounded square pillar",
+      "minY": 0,
+      "maxY": 2.4,
+      "round": false,
+      "rect": {
+        "x": 8.98,
+        "y": 37.57999,
+        "z": 9.72,
+        "w": 38.32
+      }
+    },
+    {
+      "name": "U15 / U9 rounded square pillar",
+      "minY": 0,
+      "maxY": 2.4,
+      "round": false,
+      "rect": {
+        "x": 6.28,
+        "y": 37.57999,
+        "z": 7.02,
+        "w": 38.32
+      }
+    },
+    {
+      "name": "U16 / U10 paired portal pier",
+      "minY": 0,
+      "maxY": 2.6,
+      "round": false,
+      "rect": {
+        "x": 35.6,
+        "y": 7.75,
+        "z": 36.40001,
+        "w": 8.75
+      }
+    },
+    {
+      "name": "U16 / U10 paired portal pier",
+      "minY": 0,
+      "maxY": 2.6,
+      "round": false,
+      "rect": {
+        "x": 31.6,
+        "y": 7.75,
+        "z": 32.40001,
+        "w": 8.75
+      }
+    },
+    {
+      "name": "U16 / U10 rear screen",
+      "minY": 0,
+      "maxY": 1.43,
+      "round": false,
+      "rect": {
+        "x": 31.6,
+        "y": 5.25,
+        "z": 36.40001,
+        "w": 5.95
+      }
+    },
+    {
+      "name": "U16 / U10 cross lintel",
+      "minY": 2.6,
+      "maxY": 2.98,
+      "round": false,
+      "rect": {
+        "x": 31.6,
+        "y": 7.75,
+        "z": 36.40001,
+        "w": 8.75
+      }
+    },
+    {
+      "name": "U17 / U12 base storey",
+      "minY": 0,
+      "maxY": 1.55,
+      "round": false,
+      "rect": {
+        "x": 24.9,
+        "y": 26.4,
+        "z": 29.1,
+        "w": 30.6
+      }
+    },
+    {
+      "name": "U17 / U12 upper corner",
+      "minY": 1.55,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 25.02,
+        "y": 26.52,
+        "z": 25.82,
+        "w": 30.48
+      }
+    },
+    {
+      "name": "U17 / U12 upper corner",
+      "minY": 1.55,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 28.18,
+        "y": 26.52,
+        "z": 28.98,
+        "w": 30.48
+      }
+    },
+    {
+      "name": "U17 / U12 upper rear",
+      "minY": 1.55,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 25.82,
+        "y": 29.68,
+        "z": 28.18,
+        "w": 30.48
+      }
+    },
+    {
+      "name": "U17 / U12 upper lintel",
+      "minY": 2.41,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 25.82,
+        "y": 26.52,
+        "z": 28.18,
+        "w": 27.25
+      }
+    },
+    {
+      "name": "U18 / U12 base storey",
+      "minY": 0,
+      "maxY": 1.55,
+      "round": false,
+      "rect": {
+        "x": 46.9,
+        "y": 58.9,
+        "z": 51.1,
+        "w": 63.1
+      }
+    },
+    {
+      "name": "U18 / U12 upper corner",
+      "minY": 1.55,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 47.02,
+        "y": 59.02,
+        "z": 50.98,
+        "w": 59.82
+      }
+    },
+    {
+      "name": "U18 / U12 upper corner",
+      "minY": 1.55,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 47.02,
+        "y": 62.18,
+        "z": 50.98,
+        "w": 62.98
+      }
+    },
+    {
+      "name": "U18 / U12 upper rear",
+      "minY": 1.55,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 47.02,
+        "y": 59.82,
+        "z": 47.82,
+        "w": 62.18
+      }
+    },
+    {
+      "name": "U18 / U12 upper lintel",
+      "minY": 2.41,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 50.25,
+        "y": 59.82,
+        "z": 50.98,
+        "w": 62.18
+      }
+    },
+    {
+      "name": "U19 / U7 stepped shrine",
+      "minY": 0,
+      "maxY": 2.75,
+      "round": false,
+      "rect": {
+        "x": 73.7,
+        "y": 58.3,
+        "z": 79.3,
+        "w": 62.7
+      }
+    },
+    {
+      "name": "U20 / U1_01",
+      "minY": 0,
+      "maxY": 1.7,
+      "round": false,
+      "rect": {
+        "x": 87.35,
+        "y": 4.9,
+        "z": 88.6,
+        "w": 9.1
+      }
+    },
+    {
+      "name": "U20 / U1_02",
+      "minY": 0,
+      "maxY": 2.65,
+      "round": false,
+      "rect": {
+        "x": 79.9,
+        "y": 4.9,
+        "z": 87.8,
+        "w": 5.8
+      }
+    },
+    {
+      "name": "U20 / U1_03",
+      "minY": 0,
+      "maxY": 2.0,
+      "round": false,
+      "rect": {
+        "x": 84.5,
+        "y": 7.75,
+        "z": 85.8,
+        "w": 9.0
+      }
+    },
+    {
+      "name": "U20 / U1_04",
+      "minY": 0,
+      "maxY": 1.6,
+      "round": false,
+      "rect": {
+        "x": 81.5,
+        "y": 7.75,
+        "z": 82.8,
+        "w": 9.0
+      }
+    },
+    {
+      "name": "U20 / U1_05",
+      "minY": 0,
+      "maxY": 1.17,
+      "round": false,
+      "rect": {
+        "x": 79.4,
+        "y": 7.9,
+        "z": 80.5,
+        "w": 9.0
+      }
+    },
+    {
+      "name": "U21 / U10 paired portal pier",
+      "minY": 0,
+      "maxY": 2.6,
+      "round": false,
+      "rect": {
+        "x": 114.25,
+        "y": 42.59999,
+        "z": 115.25,
+        "w": 43.4
+      }
+    },
+    {
+      "name": "U21 / U10 paired portal pier",
+      "minY": 0,
+      "maxY": 2.6,
+      "round": false,
+      "rect": {
+        "x": 114.25,
+        "y": 38.59999,
+        "z": 115.25,
+        "w": 39.4
+      }
+    },
+    {
+      "name": "U21 / U10 rear screen",
+      "minY": 0,
+      "maxY": 1.43,
+      "round": false,
+      "rect": {
+        "x": 117.05,
+        "y": 38.59999,
+        "z": 117.75,
+        "w": 43.4
+      }
+    },
+    {
+      "name": "U21 / U10 cross lintel",
+      "minY": 2.6,
+      "maxY": 2.98,
+      "round": false,
+      "rect": {
+        "x": 114.25,
+        "y": 38.59999,
+        "z": 115.25,
+        "w": 43.4
+      }
+    },
+    {
+      "name": "U22 / U12 base storey",
+      "minY": 0,
+      "maxY": 1.55,
+      "round": false,
+      "rect": {
+        "x": 57.90001,
+        "y": 24.9,
+        "z": 62.1,
+        "w": 29.1
+      }
+    },
+    {
+      "name": "U22 / U12 upper corner",
+      "minY": 1.55,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 61.18,
+        "y": 25.02,
+        "z": 61.98001,
+        "w": 28.98
+      }
+    },
+    {
+      "name": "U22 / U12 upper corner",
+      "minY": 1.55,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 58.02001,
+        "y": 25.02,
+        "z": 58.82,
+        "w": 28.98
+      }
+    },
+    {
+      "name": "U22 / U12 upper rear",
+      "minY": 1.55,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 58.82,
+        "y": 25.02,
+        "z": 61.18,
+        "w": 25.82
+      }
+    },
+    {
+      "name": "U22 / U12 upper lintel",
+      "minY": 2.41,
+      "maxY": 2.81,
+      "round": false,
+      "rect": {
+        "x": 58.82,
+        "y": 28.25,
+        "z": 61.18,
+        "w": 28.98
+      }
+    },
+    {
+      "name": "U23 / U7 stepped shrine",
+      "minY": 0,
+      "maxY": 2.75,
+      "round": false,
+      "rect": {
+        "x": 4.8,
+        "y": 7.2,
+        "z": 9.2,
+        "w": 12.8
+      }
+    },
+    {
+      "name": "Terrace foundation",
+      "minY": 0,
+      "maxY": 0.74,
+      "round": false,
+      "rect": {
+        "x": 55.01,
+        "y": 36.01,
+        "z": 72.99,
+        "w": 45.99
+      }
+    },
+    {
+      "name": "Terrace middle courses",
+      "minY": 0.7,
+      "maxY": 2.47,
+      "round": false,
+      "rect": {
+        "x": 55.5,
+        "y": 36.49,
+        "z": 72.5,
+        "w": 45.51
+      }
+    },
+    {
+      "name": "Terrace boost bay",
+      "minY": 0,
+      "maxY": 1.35,
+      "round": false,
+      "rect": {
+        "x": 58.73,
+        "y": 36.01,
+        "z": 61.27,
+        "w": 36.81
+      }
+    }
+  ],
+  "walls": [
+    {
+      "id": "R1",
+      "position": {
+        "x": 36.5,
+        "y": 0,
+        "z": 34
+      },
+      "footprintXZ": {
+        "x": 34.9,
+        "y": 33.58,
+        "z": 38.1,
+        "w": 34.42
+      },
+      "height": 1.25
+    },
+    {
+      "id": "R2",
+      "position": {
+        "x": 94,
+        "y": 0,
+        "z": 45
+      },
+      "footprintXZ": {
+        "x": 93.58,
+        "y": 43.4,
+        "z": 94.42,
+        "w": 46.6
+      },
+      "height": 1.25
+    },
+    {
+      "id": "R3",
+      "position": {
+        "x": 27.85,
+        "y": 0,
+        "z": 17.3
+      },
+      "footprintXZ": {
+        "x": 26.4,
+        "y": 16.9,
+        "z": 29.3,
+        "w": 17.7
+      },
+      "height": 1.45
+    },
+    {
+      "id": "R4",
+      "position": {
+        "x": 97.525,
+        "y": 0,
+        "z": 12.575
+      },
+      "footprintXZ": {
+        "x": 96.05,
+        "y": 12.1,
+        "z": 99,
+        "w": 13.05
+      },
+      "height": 1.45
+    },
+    {
+      "id": "R5",
+      "position": {
+        "x": 64.8,
+        "y": 0,
+        "z": 22.125
+      },
+      "footprintXZ": {
+        "x": 63.1,
+        "y": 21.7,
+        "z": 66.5,
+        "w": 22.55
+      },
+      "height": 1.6
+    },
+    {
+      "id": "R6",
+      "position": {
+        "x": 106.2,
+        "y": 0,
+        "z": 28
+      },
+      "footprintXZ": {
+        "x": 105.65,
+        "y": 27.45,
+        "z": 106.75,
+        "w": 28.55
+      },
+      "height": 1.9
+    },
+    {
+      "id": "R7",
+      "position": {
+        "x": 107.4,
+        "y": 0,
+        "z": 37.95
+      },
+      "footprintXZ": {
+        "x": 106.6,
+        "y": 37.0,
+        "z": 108.2,
+        "w": 38.9
+      },
+      "height": 0.18
+    },
+    {
+      "id": "R8",
+      "position": {
+        "x": 13.5,
+        "y": 0,
+        "z": 42.4
+      },
+      "footprintXZ": {
+        "x": 12.75,
+        "y": 42.06,
+        "z": 14.25,
+        "w": 42.74
+      },
+      "height": 1.1
+    },
+    {
+      "id": "R9",
+      "position": {
+        "x": 47.9,
+        "y": 0,
+        "z": 36.5
+      },
+      "footprintXZ": {
+        "x": 47.6,
+        "y": 34.7,
+        "z": 48.2,
+        "w": 38.3
+      },
+      "height": 2.5
+    },
+    {
+      "id": "R10",
+      "position": {
+        "x": 78.4,
+        "y": 0,
+        "z": 37.5
+      },
+      "footprintXZ": {
+        "x": 78.1,
+        "y": 35.7,
+        "z": 78.7,
+        "w": 39.3
+      },
+      "height": 2.5
+    },
+    {
+      "id": "R11",
+      "position": {
+        "x": 20.75,
+        "y": 0,
+        "z": 7.34
+      },
+      "footprintXZ": {
+        "x": 19.15,
+        "y": 7.04,
+        "z": 22.35,
+        "w": 7.64
+      },
+      "height": 1.85
+    },
+    {
+      "id": "R12",
+      "position": {
+        "x": 112.625,
+        "y": 0,
+        "z": 21.65
+      },
+      "footprintXZ": {
+        "x": 111.45,
+        "y": 21.35,
+        "z": 113.8,
+        "w": 21.95
+      },
+      "height": 1.55
+    }
+  ],
+  "doors": [
+    {
+      "id": "B1_Doors",
+      "center": {
+        "x": 44.5,
+        "y": 0,
+        "z": 33.120000000000005
+      },
+      "width": 3.7,
+      "height": 2.72,
+      "hinges": [
+        "B1_DoorHinge_L",
+        "B1_DoorHinge_R"
+      ],
+      "leaves": [
+        "B1_DoorLeaf_L",
+        "B1_DoorLeaf_R"
+      ]
+    },
+    {
+      "id": "B2_Doors",
+      "center": {
+        "x": 82.0,
+        "y": 0,
+        "z": 34.120000000000005
+      },
+      "width": 3.7,
+      "height": 2.72,
+      "hinges": [
+        "B2_DoorHinge_L",
+        "B2_DoorHinge_R"
+      ],
+      "leaves": [
+        "B2_DoorLeaf_L",
+        "B2_DoorLeaf_R"
+      ]
+    }
+  ]
+}

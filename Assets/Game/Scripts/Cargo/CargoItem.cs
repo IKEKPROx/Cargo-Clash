@@ -45,6 +45,9 @@ namespace CargoClash
         private readonly Dictionary<PlayerAvatar, float> recentSmashers = new Dictionary<PlayerAvatar, float>();
         private GameConfig config;
         private Rigidbody body;
+        private Vector3 ruinResetPosition;
+        private Quaternion ruinResetRotation;
+        private bool hasRuinResetPoint;
         private Collider[] colliders;
         private float shakeUntil;
         private float squash;
@@ -356,13 +359,20 @@ namespace CargoClash
         public Vector3 GrabPointWorld(PlayerAvatar avatar)
         {
             float sign = CarrierB.Value == avatar.NetworkObjectId ? 1f : -1f;
-            return transform.position + Vector3.right * (sign * (halfExtents.x + 0.55f));
+            Vector3 axis = hasRuinResetPoint ? transform.right : Vector3.right;
+            return transform.position + axis * (sign * (halfExtents.x + 0.55f));
         }
 
         // ---- Host only ----
 
         private void TickServer(float deltaTime)
         {
+            if (hasRuinResetPoint && State.Value == CargoState.Ground &&
+                RuinCourtyard.Instance != null && RuinCourtyard.Instance.TryPitReturn(transform.position, out _))
+            {
+                ServerResetFromRuinPit();
+                return;
+            }
             if (State.Value != CargoState.Carried) return;
 
             PlayerAvatar a = FindAvatar(CarrierA.Value);
@@ -376,6 +386,7 @@ namespace CargoClash
             }
 
             if (definition.requiredCarriers > 1 && a != null && b != null) MoveWithCarriers(a, b, deltaTime);
+            if (State.Value != CargoState.Carried) return;
 
             MatchDirector director = MatchDirector.Instance;
             if (director != null && director.Phase.Value == MatchPhase.Playing) CheckDeposit(a, b);
@@ -388,9 +399,50 @@ namespace CargoClash
 
             Vector3 step = new Vector3(average.x, 0f, average.y) * (config.runSpeed * definition.carrySpeedMultiplier * deltaTime);
             float distance = step.magnitude;
+            Quaternion orientation = hasRuinResetPoint ? transform.rotation : Quaternion.identity;
+            if (hasRuinResetPoint && RuinCourtyard.Instance != null)
+            {
+                RuinCourtyard ruins = RuinCourtyard.Instance;
+                step *= Mathf.Min(ruins.SpeedAt(a.transform.position), ruins.SpeedAt(b.transform.position));
+                distance = step.magnitude;
+                if (BlockedCarrier(a, step, distance) || BlockedCarrier(b, step, distance)) return;
+            }
             bool blocked = Physics.BoxCast(transform.position, halfExtents * 0.95f, step / distance, out _,
-                Quaternion.identity, distance + 0.05f, GameLayers.LevelMask, QueryTriggerInteraction.Ignore);
-            if (!blocked) transform.position += step;
+                orientation, distance + 0.05f, GameLayers.LevelMask, QueryTriggerInteraction.Ignore);
+            if (blocked) return;
+            transform.position += step;
+            if (hasRuinResetPoint && !Physics.Raycast(transform.position, Vector3.down, halfExtents.y + .32f,
+                                                       GameLayers.LevelMask, QueryTriggerInteraction.Ignore))
+            {
+                ServerClearCarriers();
+                ServerBecomeGround(step / Mathf.Max(deltaTime, .001f));
+            }
+        }
+
+        private bool BlockedCarrier(PlayerAvatar player, Vector3 step, float distance)
+        {
+            Vector3 grip = GrabPointWorld(player) - Vector3.up * halfExtents.y;
+            return Physics.CapsuleCast(grip + Vector3.up * .45f, grip + Vector3.up * 1.15f, .43f,
+                                       step / distance, distance + .04f, GameLayers.LevelMask, QueryTriggerInteraction.Ignore);
+        }
+
+        internal void SetRuinResetPoint(Transform spot)
+        {
+            hasRuinResetPoint = true;
+            ruinResetPosition = spot.position;
+            ruinResetRotation = spot.rotation;
+        }
+
+        internal void ServerResetFromRuinPit()
+        {
+            if (!IsServer || !hasRuinResetPoint || State.Value == CargoState.Rescued || State.Value == CargoState.Destroyed) return;
+            ServerClearCarriers();
+            State.Value = CargoState.Ground;
+            SetPhysicsActive(true);
+            transform.SetPositionAndRotation(ruinResetPosition, ruinResetRotation);
+            body.position = ruinResetPosition;
+            body.rotation = ruinResetRotation;
+            body.linearVelocity = body.angularVelocity = Vector3.zero;
         }
 
         private void CheckDeposit(PlayerAvatar a, PlayerAvatar b)
@@ -433,6 +485,7 @@ namespace CargoClash
             if (definition.requiredCarriers > 1)
             {
                 if (!HasFreeSlot) return false;
+                if (hasRuinResetPoint && !RuinCourtyard.CargoReach(avatar, this)) return false;
                 if (CarrierA.Value == NetIds.None) CarrierA.Value = id;
                 else CarrierB.Value = id;
             }
@@ -450,8 +503,11 @@ namespace CargoClash
                 {
                     // Stand it upright so both carriers have a clear side to hold.
                     Vector3 position = transform.position;
-                    position.y = halfExtents.y + 0.02f;
-                    transform.SetPositionAndRotation(position, Quaternion.identity);
+                    if (hasRuinResetPoint && Physics.Raycast(position + Vector3.up, Vector3.down, out RaycastHit floor,
+                            halfExtents.y + 2f, GameLayers.LevelMask, QueryTriggerInteraction.Ignore))
+                        position.y = floor.point.y + halfExtents.y + .02f;
+                    else if (!hasRuinResetPoint) position.y = halfExtents.y + .02f;
+                    transform.SetPositionAndRotation(position, hasRuinResetPoint ? ruinResetRotation : Quaternion.identity);
                 }
             }
             avatar.ServerSetCarry(this);

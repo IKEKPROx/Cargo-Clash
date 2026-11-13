@@ -82,6 +82,20 @@ namespace CargoClash
         public CharacterVisual Visual { get; private set; }
 
         /// <summary>Where the owner is looking. Only meaningful on the owner's computer.</summary>
+        public readonly NetworkVariable<bool> HasRuinVine = new NetworkVariable<bool>();
+        public readonly NetworkVariable<double> RuinBoostReadyUntil = new NetworkVariable<double>();
+        public readonly NetworkVariable<bool> RuinClimbing = new NetworkVariable<bool>();
+        private int ruinSwingWall = -1;
+        private Vector3 ruinSwingAim;
+        private Vector3 ruinSuckAim;
+        private double ruinSwingAimReceived, ruinSuckAimReceived;
+        private float nextRuinAimAt;
+        private double nextRuinUseAt;
+        private float ruinOwnerTraverseEnds;
+        private float ruinPitGraceUntil;
+        private Vector3 ruinTraverseStart, ruinTraverseEnd;
+        private float ruinTraverseDuration;
+
         public float LookYaw { get; private set; }
 
         /// <summary>Degrees above (negative) or below (positive) level. Only meaningful on the owner's computer.</summary>
@@ -232,6 +246,11 @@ namespace CargoClash
         {
             if (input == null) return;
             input.Tick();
+            if (RuinClimbing.Value || ruinOwnerTraverseEnds > 0f)
+            {
+                TickRuinTraverse();
+                return;
+            }
 
             MatchDirector director = MatchDirector.Instance;
             bool canAct = director != null && director.Phase.Value == MatchPhase.Playing && !IsKnockedDown && !IsStaggered;
@@ -255,7 +274,17 @@ namespace CargoClash
             {
                 // The host decides. With nothing in hand, this says what the person was aiming at.
                 if (carried != null) InteractRpc(NetIds.None);
-                else if (AimedGrab != null) InteractRpc(AimedGrab.NetworkObjectId);
+                else
+                {
+                    RuinCourtyard ruins = RuinCourtyard.Instance;
+                    if (!input.LooksAround && AimedGrab != null) InteractRpc(AimedGrab.NetworkObjectId);
+                    else
+                    {
+                        int action = ruins != null ? ruins.FindUse(this, LookDirection, AimedGrab == null) : 0;
+                        if (action != 0) UseRuinRpc(action, LookDirection);
+                        else if (AimedGrab != null) InteractRpc(AimedGrab.NetworkObjectId);
+                    }
+                }
             }
 
             UpdateTools(canAct, carried, wish, deltaTime);
@@ -299,6 +328,13 @@ namespace CargoClash
                 SetSwingingRpc(swing, smashTarget, hitTarget);
             }
             if (swing && !input.LooksAround && wish.sqrMagnitude <= 0.01f) FaceSwingTarget(deltaTime);
+            if (RuinCourtyard.Instance != null && (swing && !collector || free && collector && secondary)
+                && Time.time >= nextRuinAimAt)
+            {
+                nextRuinAimAt = Time.time + .1f;
+                Vector3 aim = input.LooksAround ? LookDirection : transform.forward;
+                SendRuinAimRpc(!collector, aim);
+            }
         }
 
         private void UpdateSuck(bool suck)
@@ -367,6 +403,8 @@ namespace CargoClash
                 AimedGrab = CargoItem.FindGrabbable(transform.position, config.pickupRange);
                 AimedSmash = CargoItem.FindSmashable(transform.position, config.smashRange);
             }
+            if (AimedGrab != null && !RuinCourtyard.CargoReach(this, AimedGrab)) AimedGrab = null;
+            if (AimedSmash != null && !RuinCourtyard.CargoReach(this, AimedSmash)) AimedSmash = null;
             AimedEnemy = FindEnemyInReach();
             AimedSuck = input.LooksAround && Side == Side.Collector
                 ? CargoItem.FindSuckable(transform.position, Quaternion.Euler(0f, LookYaw, 0f) * Vector3.forward)
@@ -421,9 +459,10 @@ namespace CargoClash
             if (carried != null) speed *= carried.Definition.carrySpeedMultiplier;
             if (Sucking.Value) speed *= config.suckMoveMultiplier;
             else if (IsCharging) speed *= config.chargeMoveMultiplier;
-            Vector3 velocity = wish * speed;
+            float terrainSpeed = RuinCourtyard.Instance != null ? RuinCourtyard.Instance.SpeedAt(transform.position) : 1f;
+            Vector3 velocity = wish * speed * terrainSpeed;
             if (Time.time < pullUntil && !IsKnockedDown) velocity += pull;
-            if (Time.time < dashUntil) velocity = dashDirection * config.ramSpeed;
+            if (Time.time < dashUntil) velocity = dashDirection * (config.ramSpeed * terrainSpeed);
             if (slide.sqrMagnitude > 0.01f)
             {
                 velocity += slide;
@@ -489,7 +528,8 @@ namespace CargoClash
             }
 
             Vector3 grab = carried.GrabPointWorld(this);
-            transform.position = new Vector3(grab.x, transform.position.y, grab.z);
+            float height = RuinCourtyard.Instance != null ? grab.y - carried.HalfExtents.y : transform.position.y;
+            transform.position = new Vector3(grab.x, height, grab.z);
             Vector3 toCargo = carried.transform.position - transform.position;
             toCargo.y = 0f;
             if (toCargo.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(toCargo);
@@ -512,6 +552,7 @@ namespace CargoClash
         [Rpc(SendTo.Owner)]
         public void TeleportRpc(Vector3 position, Quaternion rotation)
         {
+            ruinOwnerTraverseEnds = 0f;
             bool wasEnabled = controller.enabled;
             controller.enabled = false;
             netTransform.Teleport(position, rotation, transform.localScale);
@@ -561,7 +602,7 @@ namespace CargoClash
         private bool ServerCanAct()
         {
             MatchDirector director = MatchDirector.Instance;
-            return director != null && director.Phase.Value == MatchPhase.Playing && !IsKnockedDown && !IsStaggered;
+            return director != null && director.Phase.Value == MatchPhase.Playing && !IsKnockedDown && !IsStaggered && !RuinClimbing.Value;
         }
 
         [Rpc(SendTo.Server)]
@@ -578,13 +619,15 @@ namespace CargoClash
             // Pressed again before hearing that the grab worked. That isn't asking to let go.
             if (carried != null) return;
             CargoItem target = CargoItem.Find(aimedCargoId);
-            if (target != null && target.IsWithin(transform.position, config.pickupRange + config.reachTolerance)) target.ServerTryGrab(this);
+            if (target != null && target.IsWithin(transform.position, config.pickupRange + config.reachTolerance)
+                && RuinCourtyard.CargoReach(this, target)) target.ServerTryGrab(this);
         }
 
         [Rpc(SendTo.Server)]
         private void SetSwingingRpc(bool swinging, ulong smashTargetId, ulong hitTargetId)
         {
             Swinging.Value = swinging && ServerCanAct() && CarriedCargo == null;
+            if (!Swinging.Value) ruinSwingWall = -1;
             SmashTargetId.Value = Swinging.Value && Side == Side.Interrupter ? smashTargetId : NetIds.None;
             HitTargetId.Value = Swinging.Value ? hitTargetId : NetIds.None;
         }
@@ -594,6 +637,7 @@ namespace CargoClash
         {
             Sucking.Value = sucking && ServerCanAct() && CarriedCargo == null && Side == Side.Collector;
             if (Sucking.Value) ServerStopSwinging();
+            else ruinSuckAim = Vector3.zero;
         }
 
         [Rpc(SendTo.Server)]
@@ -641,6 +685,18 @@ namespace CargoClash
         private void TickServer(float deltaTime)
         {
             TrackSpeed(deltaTime);
+            if (RuinCourtyard.Instance != null && !RuinClimbing.Value && !KnockedOut.Value &&
+                MatchDirector.Instance != null && MatchDirector.Instance.Phase.Value == MatchPhase.Playing &&
+                Time.time >= ruinPitGraceUntil &&
+                RuinCourtyard.Instance.TryPitReturn(transform.position, out Vector3 returnPoint))
+            {
+                ruinPitGraceUntil = Time.time + 1f;
+                CargoItem cargo = CarriedCargo;
+                if (cargo != null) cargo.ServerResetFromRuinPit();
+                ServerStopActions();
+                TeleportRpc(returnPoint, transform.rotation);
+                return;
+            }
             if (Now < serverRamUntil) ServerCheckRamHit();
             if (serverRespawnAt > 0.0 && Now >= serverRespawnAt) ServerRespawn();
             if (serverSlamAt > 0.0 && Now >= serverSlamAt) ServerSlam();
@@ -691,18 +747,23 @@ namespace CargoClash
             }
 
             CargoItem target = SmashTarget;
-            if (target != null && target.IsWithin(transform.position, config.smashRange + config.reachTolerance))
+            if (target != null && target.IsWithin(transform.position, config.smashRange + config.reachTolerance)
+                && RuinCourtyard.CargoReach(this, target))
                 target.ServerApplySmash(this, config.smashSwingSeconds);
+            else if (!collector && Now - ruinSwingAimReceived < .25)
+                RuinCourtyard.Instance?.ServerHitWall(this, ruinSwingWall, ruinSwingAim);
         }
 
         /// <summary>Everything in front of you gets pulled in, and the first cargo to reach your hands stays there.</summary>
         private void ServerSuck(float deltaTime)
         {
             Vector3 forward = transform.forward;
+            if (Now - ruinSuckAimReceived < .25)
+                RuinCourtyard.Instance?.ServerRestoreWall(this, deltaTime, ruinSuckAim);
             Vector3 mouth = transform.position + forward * 0.7f + Vector3.up * 0.9f;
             foreach (CargoItem cargo in CargoItem.All)
             {
-                if (!cargo.CanBeSuckedFrom(transform.position, forward)) continue;
+                if (!cargo.CanBeSuckedFrom(transform.position, forward) || !RuinCourtyard.CargoReach(this, cargo)) continue;
                 cargo.ServerPullToward(mouth, cargo.Definition.size == CargoSize.Small ? config.suckSpeedSmall : config.suckSpeedMedium, deltaTime);
                 if (cargo.EdgeDistance(transform.position) > config.suckGrabRange) continue;
                 if (cargo.ServerTryGrab(this)) return;
@@ -740,8 +801,12 @@ namespace CargoClash
             for (int i = CargoItem.All.Count - 1; i >= 0; i--)
             {
                 CargoItem cargo = CargoItem.All[i];
-                if (cargo.IsWithin(impact, radius)) cargo.ServerApplySmash(this, config.smashSwingSeconds * config.slamCargoSwings);
+                if (cargo.IsWithin(impact, radius) && RuinCourtyard.CargoReach(this, cargo))
+                    cargo.ServerApplySmash(this, config.smashSwingSeconds * config.slamCargoSwings);
             }
+            RuinCourtyard ruins = RuinCourtyard.Instance;
+            if (ruins != null)
+                ruins.ServerHitWall(this, ruins.FindWall(this, transform.forward, false), transform.forward);
             SlamRpc(impact);
         }
 
@@ -921,6 +986,11 @@ namespace CargoClash
         {
             ServerStopActions();
             ServerClearCarry();
+            HasRuinVine.Value = false;
+            RuinBoostReadyUntil.Value = 0;
+            RuinClimbing.Value = false;
+            ruinSwingWall = -1;
+            ruinSuckAim = Vector3.zero;
             KnockedUntil.Value = 0;
             ImmuneUntil.Value = 0;
             StaggeredUntil.Value = 0;
@@ -930,6 +1000,65 @@ namespace CargoClash
             Health.Value = MaxHealth;
             RamReadyAt.Value = 0;
             TeleportRpc(position, rotation);
+        }
+
+        [Rpc(SendTo.Server, RequireOwnership = true)]
+        private void UseRuinRpc(int action, Vector3 aim)
+        {
+            if (!ServerCanAct() || CarriedCargo != null || Now < nextRuinUseAt) return;
+            nextRuinUseAt = Now + .15;
+            RuinCourtyard.Instance?.ServerUse(this, action, aim);
+        }
+
+        [Rpc(SendTo.Server, Delivery = RpcDelivery.Unreliable, RequireOwnership = true)]
+        private void SendRuinAimRpc(bool hammer, Vector3 aim)
+        {
+            RuinCourtyard ruins = RuinCourtyard.Instance;
+            if (ruins == null || !ServerCanAct() || CarriedCargo != null || !RuinCourtyard.ValidAim(this, aim)) return;
+            if (hammer && Side == Side.Interrupter)
+            {
+                ruinSwingAim = aim;
+                ruinSwingAimReceived = Now;
+                ruinSwingWall = ruins.FindWall(this, aim, false);
+            }
+            if (!hammer && Side == Side.Collector)
+            {
+                ruinSuckAim = aim;
+                ruinSuckAimReceived = Now;
+            }
+        }
+
+        internal void ServerStartRuinTraverse(Vector3 start, Vector3 end, float seconds)
+        {
+            ServerStopActions();
+            RuinClimbing.Value = true;
+            BeginRuinTraverseRpc(start, end, seconds);
+        }
+
+        [Rpc(SendTo.Owner)]
+        private void BeginRuinTraverseRpc(Vector3 start, Vector3 end, float seconds)
+        {
+            ruinTraverseStart = start;
+            ruinTraverseEnd = end;
+            ruinTraverseDuration = seconds;
+            ruinOwnerTraverseEnds = Time.time + seconds;
+        }
+
+        private void TickRuinTraverse()
+        {
+            if (ruinOwnerTraverseEnds <= 0f) return;
+            controller.enabled = false;
+            float progress = 1f - Mathf.Clamp01((ruinOwnerTraverseEnds-Time.time)/ruinTraverseDuration);
+            Vector3 ledge = new Vector3(ruinTraverseStart.x, ruinTraverseEnd.y + .12f, ruinTraverseStart.z);
+            transform.position = progress < .67f
+                ? Vector3.Lerp(ruinTraverseStart, ledge, progress/.67f)
+                : Vector3.Lerp(ledge, ruinTraverseEnd, (progress-.67f)/.33f);
+        }
+
+        internal void ServerFinishRuinTraverse(Vector3 position)
+        {
+            RuinClimbing.Value = false;
+            TeleportRpc(position, transform.rotation);
         }
 
         // ---- Everyone: feedback ----

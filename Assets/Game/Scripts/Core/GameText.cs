@@ -5,6 +5,20 @@ namespace CargoClash
     /// <summary>Player-facing strings in one place, so changing or translating them is easy.</summary>
     public static class GameText
     {
+        public const string RuinOpenDoor = "OPEN GATE";
+        public const string RuinCloseDoor = "CLOSE GATE";
+        public const string RuinDoorBlocked = "GATE BLOCKED";
+        public const string RuinTakeVine = "TAKE VINE";
+        public const string RuinThrowVine = "THROW VINE";
+        public const string RuinAttachVine = "ATTACH VINE";
+        public const string RuinClimb = "CLIMB";
+        public const string RuinBoost = "TEAM BOOST";
+        public const string RuinBreak = "BREAK WALL";
+        public const string RuinRestore = "RESTORE WALL";
+        public const string RuinPullTeammate = "PULL UP TEAMMATE";
+        public const string RuinBoostReady = "READY TO BOOST";
+        public const string RuinTitle = "RUIN COURTYARD";
+
         public const string HostLeft = "The host left the game.";
         public const string JoinFailed = "Could not join that room. Check the code and try again.";
         public const string NeedCloudProject = "Online rooms need the Unity Cloud project. Use the host's LAN address for now.";

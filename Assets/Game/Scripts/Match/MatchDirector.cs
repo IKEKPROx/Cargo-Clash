@@ -64,7 +64,14 @@ namespace CargoClash
         private readonly StringBuilder csv = new StringBuilder();
         private GameConfig config;
         private LevelLayout layout;
+        public readonly NetworkVariable<uint> RuinBits = new NetworkVariable<uint>();
+        internal NetworkList<RuinPatch> RuinPatches;
         private int halfDestroyed;
+
+        private void Awake()
+        {
+            RuinPatches = new NetworkList<RuinPatch>();
+        }
         private int halfTotal;
         private double halfStartedAt;
 
@@ -186,6 +193,8 @@ namespace CargoClash
                 if (cargo.IsSpawned) cargo.NetworkObject.Despawn(true);
             }
             layout.ResetBed();
+            RuinCourtyard ruins = RuinCourtyard.Instance;
+            ruins?.ServerReset();
 
             int players = SessionRoster.Instance.Entries.Count;
             int thirds = players >= 5 ? 3 : players >= 3 ? 2 : 1;
@@ -196,11 +205,14 @@ namespace CargoClash
             foreach (CargoDefinition definition in config.cargo)
             {
                 Transform[] spots = layout.SpotsFor(definition.size);
-                int count = definition.fullCount * thirds / 3;
+                if (spots == null || spots.Length == 0) continue;
+                int count = ruins != null ? spots.Length : definition.fullCount * thirds / 3;
                 for (int i = 0; i < count; i++)
                 {
                     Transform spot = spots[(i * spots.Length / Mathf.Max(1, count)) % spots.Length];
                     GameObject instance = Instantiate(definition.prefab, spot.position, spot.rotation);
+                    if (ruins != null)
+                        instance.GetComponent<CargoItem>().SetRuinResetPoint(spot);
                     instance.GetComponent<NetworkObject>().Spawn(true);
                     halfTotal += definition.value;
                 }
