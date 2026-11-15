@@ -62,6 +62,6 @@ namespace CargoClash
         public static Color ToColor(this Team team) =>
             team == Team.Orange ? new Color(1f, 0.56f, 0.13f) : new Color(0.25f, 0.6f, 1f);
 
-        public static string ToLabel(this Team team) => team == Team.Orange ? "ORANGE" : "BLUE";
+        public static string ToLabel(this Team team) => team == Team.Orange ? GameText.TeamOrange : GameText.TeamBlue;
     }
 }

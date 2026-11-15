@@ -30,7 +30,7 @@ namespace CargoClash
         public void Show(int index, LevelInfo level)
         {
             number.text = (index + 1).ToString();
-            title.text = level.title;
+            title.text = GameText.LevelTitle(level.title);
             picture.sprite = level.picture;
             lockedCover.SetActive(!level.IsReady);
             feel.clickSound = level.IsReady ? "click" : "locked";

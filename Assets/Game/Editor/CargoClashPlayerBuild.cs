@@ -1,15 +1,78 @@
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Debug = UnityEngine.Debug;
 
 /// <summary>Builds playable copies of the game into the Builds folder, which Git ignores.</summary>
 public static class CargoClashPlayerBuild
 {
     [MenuItem("Tools/Cargo Clash/Build Mac Player")]
-    public static void Mac() => Build(BuildTarget.StandaloneOSX, "Builds/Mac/CargoClash.app");
+    public static void Mac()
+    {
+        // Apple silicon only. Unity 6.6 calls Intel Macs deprecated, and a universal build fails here: Burst's
+        // llvm-lipo in this Editor can't be run ("Access denied") when it joins the two halves.
+        EditorUserBuildSettings.SetPlatformSettings(BuildPipeline.GetBuildTargetName(BuildTarget.StandaloneOSX), "Architecture", "ARM64");
+        const string path = "Builds/Mac/CargoClash.app";
+        Build(BuildTarget.StandaloneOSX, path);
+        ApplyMacIcon(path);
+    }
+
+    /// <summary>
+    /// Unity makes the Mac icon from the same square picture as the Windows one, which looks too big next to other Mac
+    /// apps. This puts in AppIcon_Mac.png instead, which follows Apple's grid (a rounded square with a margin and a
+    /// shadow), and signs the app again the way Unity does (ad hoc, with no certificate), since changing it breaks that.
+    /// </summary>
+    private static void ApplyMacIcon(string appPath)
+    {
+        string source = Path.GetFullPath(CargoClashBuilder.MacAppIconPath);
+        string target = Path.Combine(appPath, "Contents/Resources/PlayerIcon.icns");
+        if (!File.Exists(source) || !File.Exists(target))
+        {
+            Debug.LogError($"[Build] Can't put the Mac icon in: {source} or {target} is missing.");
+            if (Application.isBatchMode) EditorApplication.Exit(1);
+            return;
+        }
+
+        string work = Path.Combine(Path.GetTempPath(), "CargoClashIcon");
+        string iconset = Path.Combine(work, "AppIcon.iconset");
+        if (Directory.Exists(work)) Directory.Delete(work, true);
+        Directory.CreateDirectory(iconset);
+        foreach (int size in new[] { 16, 32, 128, 256, 512 })
+        {
+            Run("sips", $"-z {size} {size} \"{source}\" --out \"{iconset}/icon_{size}x{size}.png\"");
+            Run("sips", $"-z {size * 2} {size * 2} \"{source}\" --out \"{iconset}/icon_{size}x{size}@2x.png\"");
+        }
+        string icns = Path.Combine(work, "AppIcon.icns");
+        bool made = Run("iconutil", $"-c icns \"{iconset}\" -o \"{icns}\"");
+        if (made) File.Copy(icns, target, true);
+        bool signed = Run("codesign", $"--force --deep --sign - \"{Path.GetFullPath(appPath)}\"");
+        Directory.Delete(work, true);
+        Debug.Log($"[Build] Mac icon {(made ? "in" : "FAILED")}, signed {(signed ? "again" : "FAILED")}.");
+        if (Application.isBatchMode && !(made && signed)) EditorApplication.Exit(1);
+    }
+
+    private static bool Run(string tool, string arguments)
+    {
+        ProcessStartInfo start = new ProcessStartInfo(tool, arguments)
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+        };
+        using (Process process = Process.Start(start))
+        {
+            string output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            if (process.ExitCode == 0) return true;
+            Debug.LogError($"[Build] {tool} {arguments} failed ({process.ExitCode}): {output}");
+            return false;
+        }
+    }
 
     [MenuItem("Tools/Cargo Clash/Build Windows Player")]
     public static void Windows()

@@ -86,6 +86,7 @@ namespace CargoClash
             // Arrow keys and the right stick turn at a steady rate, for anyone without a mouse.
             Vector2 keys = turn.ReadValue<Vector2>() * (config.keyTurnDegreesPerSecond * GameSettings.LookSpeed * Time.deltaTime);
             lookThisFrame = mouse + keys;
+            if (GameSettings.InvertLookY) lookThisFrame.y = -lookThisFrame.y;
         }
     }
 }

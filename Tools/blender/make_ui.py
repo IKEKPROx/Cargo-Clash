@@ -4,12 +4,13 @@ Run from the repository root:
 
     /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup --python Tools/blender/make_ui.py
 
-Add `-- --only logo`, `-- --only icons`, `-- --only sprites` or `-- --only cards` to make one group.
+Add `-- --only logo`, `-- --only icons`, `-- --only appicon`, `-- --only sprites` or `-- --only cards` to make one group.
 
 Sprites and level cards are painted with numpy. The logo is too, from the shapes of the letters in
-the font Lilita One (see ASSETS.md), with each letter tilted a little. The parcels on the logo and
-the icons are the game's own models, rendered in Blender. The truck on the icon is Astra's TitleTruck.fbx,
-read back from Assets/Game/Models and coloured with her palette (FLEET_PALETTE).
+the font Lilita One (see ASSETS.md), with each letter tilted a little. The cargo on the logo, the Practice
+button's icon and the app icon are Astra's models (Cargo_<Kind>.fbx, and the hammer and vacuum from
+FirstPersonHands.fbx), read back from Assets/Game/Models and coloured as the game colours them (CARGO_PALETTE,
+TOOL_PALETTE). The truck on the icon is her TitleTruck.fbx, coloured with her palette (FLEET_PALETTE).
 """
 import math
 import sys
@@ -20,7 +21,6 @@ import bpy
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
-import make_cargo
 import make_ground
 import modeling
 from make_ground import smoothstep, write_png
@@ -463,11 +463,157 @@ def turn_to_camera(pose, centre=(0.0, 0.0, 0.0)):
     holder.matrix_world = Matrix.Rotation(roll, 4, "Z") @ Matrix.Rotation(lean - math.pi / 2.0, 4, "X") @ Matrix.Rotation(turn, 4, "Z") @ move
 
 
-def render_cargo(builder, pose, size, view_width, folder):
+def hex_rgb(hex_colour):
+    """An sRGB hex colour, as Blender's linear colour."""
+    return tuple(linear(int(hex_colour[i:i + 2], 16) / 255.0) for i in (0, 2, 4))
+
+
+def paint_materials(colour_of):
+    """Gives each imported material the colour the game gives it. `colour_of(name)` is (linear RGB, roughness, metallic) or None."""
+    for material in bpy.data.materials:
+        found = colour_of(material.name.split(".")[0])
+        if found is None or not material.use_nodes:
+            continue
+        tree = material.node_tree
+        shader = tree.nodes.get("Principled BSDF")
+        if shader is None:
+            continue
+        # A picture or a transparency the FBX brought with it would win over the colour.
+        for link in list(tree.links):
+            if link.to_node == shader and link.to_socket.name in ("Base Color", "Alpha"):
+                tree.links.remove(link)
+        rgb, roughness, metallic = found
+        shader.inputs["Base Color"].default_value = (*rgb, 1.0)
+        shader.inputs["Roughness"].default_value = roughness
+        shader.inputs["Metallic"].default_value = metallic
+        shader.inputs["Alpha"].default_value = 1.0
+
+
+def import_fbx(path):
+    """Imports a model and returns the objects it added."""
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.fbx(filepath=str(path))
+    return [item for item in bpy.data.objects if item not in before]
+
+
+def flatten(objects):
+    """Keeps each mesh where it is, without the empties above it, so the meshes can be moved together."""
+    bpy.context.view_layer.update()
+    meshes = [item for item in objects if item.type == "MESH"]
+    placed = {item: item.matrix_world.copy() for item in meshes}
+    for item in meshes:
+        item.parent = None
+        item.matrix_world = placed[item]
+    for item in objects:
+        if item.type != "MESH":
+            bpy.data.objects.remove(item)
+    return meshes
+
+
+def move(meshes, offset=(0.0, 0.0, 0.0), turn=(0.0, 0.0, 0.0), scale=1.0):
+    """Turns meshes about the origin (degrees about X, then Y, then Z), scales them and then moves them."""
+    rx, ry, rz = (math.radians(angle) for angle in turn)
+    matrix = (Matrix.Translation(Vector(offset)) @ Matrix.Rotation(rz, 4, "Z") @ Matrix.Rotation(ry, 4, "Y") @
+              Matrix.Rotation(rx, 4, "X") @ Matrix.Scale(scale, 4))
+    for item in meshes:
+        item.matrix_world = matrix @ item.matrix_world
+
+
+# Astra's cargo colours (独立建模/互动货物_v08, her build_cargo.py PALETTE) as the game draws them
+# (CargoClashBuilder.AddAstraCargoMaterials, which also holds metal to 0.45): sRGB hex, roughness, metallic.
+CARGO_PALETTE = {
+    "Ink": ("172B33", 0.48, 0.1), "Teal": ("367F83", 0.55, 0.05), "TealLight": ("62ABA5", 0.55, 0.05),
+    "Wood": ("B78252", 0.68, 0.0), "WoodCut": ("E7BE83", 0.7, 0.0), "Gold": ("EFB64C", 0.28, 0.45),
+    "GoldLight": ("FFE2A0", 0.25, 0.45), "Steel": ("7D9B9E", 0.4, 0.45), "Silver": ("CFDBD5", 0.35, 0.45),
+    "Red": ("B54F40", 0.5, 0.05), "RedLight": ("E27B59", 0.55, 0.02), "Velvet": ("63476D", 0.9, 0.0),
+    "Foam": ("233A3C", 0.95, 0.0), "Ivory": ("F4E6C3", 0.37, 0.0), "Porcelain": ("E7F0D7", 0.24, 0.05),
+    "Green": ("50896D", 0.7, 0.0), "Paper": ("DBE1B2", 0.8, 0.0), "PaperEdge": ("AFB992", 0.9, 0.0),
+    "Filter": ("C29154", 0.88, 0.0), "Ash": ("686A67", 0.9, 0.0), "Ember": ("F77832", 0.45, 0.0),
+    "Smoke": ("C5D1CA", 1.0, 0.0), "Stage": ("E8DED0", 0.8, 0.0), "NotePrint": ("DBE1B2", 0.8, 0.0),
+}
+
+# The tools' colours in the game (CargoClashBuilder.ModelMaterials): sRGB, then roughness (1 - smoothness) and metallic.
+# The vacuum's team colour is blue here, so the app icon has both teams' colours.
+TOOL_PALETTE = {
+    "Hammer_Handle": ((0.55, 0.35, 0.18), 0.8, 0.0), "Hammer_Head": ((0.5, 0.52, 0.57), 0.4, 0.0),
+    "Hammer_Grip": ((0.7, 0.54, 0.34), 0.8, 0.0), "Vacuum_Housing": ((0.97, 0.72, 0.2), 0.55, 0.0),
+    "Vacuum_Red": ((0.82, 0.32, 0.24), 0.6, 0.0), "Vacuum_Steel": ((0.55, 0.62, 0.62), 0.4, 0.0),
+    "Vacuum_Glass": ((0.3, 0.66, 0.74), 0.15, 0.0), "Vacuum_Ivory": ((0.97, 0.89, 0.76), 0.7, 0.0),
+    "Char_Team": ((0.22, 0.5, 0.95), 0.8, 0.0), "Heli_Dark": ((0.13, 0.14, 0.17), 0.7, 0.0),
+}
+
+
+def cargo_colour(name):
+    if name.startswith("Cargo08_") and name[len("Cargo08_"):] in CARGO_PALETTE:
+        hex_colour, roughness, metallic = CARGO_PALETTE[name[len("Cargo08_"):]]
+        return hex_rgb(hex_colour), roughness, metallic
+    if name in TOOL_PALETTE:
+        rgb, roughness, metallic = TOOL_PALETTE[name]
+        return tuple(linear(channel) for channel in rgb), roughness, metallic
+    return None
+
+
+def import_astra_cargo(kind, lid=0.0, lift=0.0, grow=1.0):
+    """One of Astra's four kinds as the game has it (Assets/Game/Models/Cargo_<kind>.fbx): whole, with its lid opened
+    `lid` degrees (None takes it off) and what's inside lifted `lift` metres and made `grow` times bigger. Her front is
+    -Y and her origin the middle of the bottom."""
+    objects = import_fbx(ROOT / f"Assets/Game/Models/Cargo_{kind}.fbx")
+
+    def stage(item):
+        while item is not None:
+            if item.name.split(".")[0] in ("Stage0", "Stage1", "Stage2"):
+                return item.name.split(".")[0]
+            item = item.parent
+        return None
+
+    # Only the undamaged stage. The other two sit in the same place.
+    for item in [item for item in objects if stage(item) in ("Stage1", "Stage2")]:
+        objects.remove(item)
+        bpy.data.objects.remove(item)
+    bpy.context.view_layer.update()
+    pivot = next(item for item in objects if item.name.startswith("Lid_Pivot0"))
+    if lid is None:
+        for item in [pivot, *pivot.children_recursive]:
+            objects.remove(item)
+            bpy.data.objects.remove(item)
+    else:
+        # Her hinge turns about its own X, and the front edge comes up for negative angles (cargo_actions.LID_OPEN).
+        pivot.matrix_basis = pivot.matrix_basis @ Matrix.Rotation(math.radians(-lid), 4, "X")
+    bpy.context.view_layer.update()
+    inside = next(item for item in objects if item.name.startswith("Slot0"))
+    corners = [inside.matrix_world @ Vector(corner) for corner in inside.bound_box]
+    base = Vector((sum(c.x for c in corners) / 8.0, sum(c.y for c in corners) / 8.0, min(c.z for c in corners)))
+    inside.matrix_world = (Matrix.Translation(base + Vector((0.0, 0.0, lift))) @ Matrix.Scale(grow, 4) @
+                           Matrix.Translation(-base) @ inside.matrix_world)
+    paint_materials(cargo_colour)
+    return flatten(objects)
+
+
+def import_tools():
+    """The hammer and the vacuum from the first-person hands (Assets/Game/Models/FirstPersonHands.fbx)."""
+    objects = import_fbx(ROOT / "Assets/Game/Models/FirstPersonHands.fbx")
+    tools = {}
+    for item in objects:
+        name = item.name.split(".")[0]
+        if name in ("Hammer", "Vacuum"):
+            tools[name] = item
+        else:
+            bpy.data.objects.remove(item)
+    paint_materials(cargo_colour)
+    flatten(list(tools.values()))
+    return tools
+
+
+def render_astra_cargo(kind, pose, size, view_width, folder, lid=0.0, lift=0.0, grow=1.0, centre=None):
     modeling.reset_scene()
     setup_render(size, view_width)
-    builder(modeling.make_materials(make_cargo.PALETTE))
-    turn_to_camera(pose)
+    meshes = import_astra_cargo(kind, lid, lift, grow)
+    if centre is None:
+        # The middle of the case, so the picture is centred on it whatever the pose.
+        lows = [min((item.matrix_world @ Vector(corner)).z for corner in item.bound_box) for item in meshes]
+        highs = [max((item.matrix_world @ Vector(corner)).z for corner in item.bound_box) for item in meshes]
+        centre = (0.0, 0.0, (min(lows) + max(highs)) / 2.0)
+    turn_to_camera(pose, centre)
     return render_to_array(folder)
 
 
@@ -665,9 +811,10 @@ def make_logo():
     }
 
     with tempfile.TemporaryDirectory() as folder:
-        crate = render_cargo(make_cargo.build_medium, (20.0, 24.0, -13.0), 620, 1.72, folder)
-        parcel = render_cargo(make_cargo.build_small, (20.0, -24.0, 12.0), 620, 1.06, folder)
-        parcel_small = render_cargo(make_cargo.build_small, (18.0, 26.0, -16.0), 420, 1.06, folder)
+        # Astra's cargo: the goose crate with the goose looking out, the gold case and the cash case.
+        crate = render_astra_cargo("Art", (14.0, -30.0, -10.0), 820, 1.42, folder, lid=None, lift=0.27, grow=1.3)
+        gold = render_astra_cargo("Gold", (36.0, -26.0, 14.0), 680, 1.04, folder)
+        cash = render_astra_cargo("Cash", (36.0, 26.0, -14.0), 520, 1.04, folder)
 
     modeling.reset_scene()
     font = bpy.data.fonts.load(str(FONT))
@@ -679,9 +826,9 @@ def make_logo():
              (0.0, 0.08, -0.04, 0.08, 0.0), 0.3, 0.4, orange)
     add_word(canvas, silhouette, "CLASH", font, (0.3, -2.72), (4.75, 4.1, 4.1, 4.1, 4.45), (-5.0, 3.0, -2.0, 3.0, 6.0),
              (0.0, 0.1, -0.02, 0.1, 0.0), 0.3, -0.3, blue)
-    add_model(canvas, silhouette, crate, (6.95, 3.35), 8)
-    add_model(canvas, silhouette, parcel, (-7.25, -1.7), 8)
-    add_model(canvas, silhouette, parcel_small, (7.85, -2.75), 7)
+    add_model(canvas, silhouette, crate, (6.85, 2.85), 8)
+    add_model(canvas, silhouette, gold, (-7.1, -1.55), 8)
+    add_model(canvas, silhouette, cash, (7.55, -2.8), 7)
 
     # A white edge around the whole logo and a soft shadow keep it readable over a busy background.
     rim = dilate(silhouette, 13 * SUPER)
@@ -697,11 +844,126 @@ def make_logo():
 
 def make_icons():
     with tempfile.TemporaryDirectory() as folder:
-        icon = render_cargo(make_cargo.build_small, (20.0, -24.0, 6.0), 512, 1.05, folder)
-        write_png(FOLDER / "Icon_Parcel.png", with_outline(icon, 6))
+        # Astra's gold case, which reads well on the orange Practice button.
+        icon = render_astra_cargo("Gold", (40.0, -26.0, 8.0), 512, 1.08, folder)
+        write_png(FOLDER / "Icon_Cargo.png", with_outline(icon, 6))
         # The truck's front points along +Y, so turning it this far shows its side with the cab on the right.
         icon = render_truck((16.0, 62.0, 0.0), 512, 9.8, folder)
         write_png(FOLDER / "Icon_Truck.png", with_outline(icon, 6))
+
+
+# ---- The app icon ----
+
+APP_ICON = 1024
+ORANGE_TEAM = ((1.0, 0.72, 0.28), (0.95, 0.42, 0.08))
+BLUE_TEAM = ((0.36, 0.7, 1.0), (0.1, 0.34, 0.86))
+
+
+def render_icon_scene(size, folder):
+    """Astra's goose crate with its lid off and the goose looking out, in front of the two sides' tools crossed like
+    swords: the Interrupters' hammer and the Collectors' vacuum."""
+    modeling.reset_scene()
+    setup_render(size, 2.05, samples=64)
+    import_astra_cargo("Art", lid=None, lift=0.27, grow=1.3)
+    tools = import_tools()
+    # Both are upright in their file, the hammer's head and the vacuum's mouth facing the viewer. A quarter turn shows
+    # their sides; then they lean opposite ways and cross behind the crate.
+    hammer, vacuum = [tools["Hammer"]], [tools["Vacuum"]]
+    move(hammer, turn=(0.0, 0.0, 90.0), scale=1.45)
+    move(hammer, offset=(-0.02, 0.42, 0.56), turn=(0.0, -40.0, 0.0))
+    move(vacuum, turn=(0.0, 0.0, 90.0), scale=1.55)
+    move(vacuum, offset=(0.04, 0.5, 0.6), turn=(0.0, -40.0, 0.0))
+    turn_to_camera((14.0, -16.0, 0.0), (0.0, 0.0, 0.55))
+    return render_to_array(folder)
+
+
+def resized(image, width, height):
+    """Area-averaged when shrinking, so a rendered model stays crisp at any size."""
+    old_height, old_width = image.shape[:2]
+    premultiplied = image.copy()
+    premultiplied[..., :3] *= premultiplied[..., 3:4]
+    rows = np.minimum((np.arange(height + 1) * old_height / height).astype(np.int64), old_height)
+    columns = np.minimum((np.arange(width + 1) * old_width / width).astype(np.int64), old_width)
+    summed = np.zeros((old_height + 1, old_width + 1, 4), np.float64)
+    summed[1:, 1:] = premultiplied.cumsum(axis=0).cumsum(axis=1)
+    top, bottom = rows[:-1], np.maximum(rows[1:], rows[:-1] + 1)
+    left, right = columns[:-1], np.maximum(columns[1:], columns[:-1] + 1)
+    area = ((bottom - top)[:, None] * (right - left)[None, :])[..., None]
+    total = (summed[bottom][:, right] - summed[top][:, right] - summed[bottom][:, left] + summed[top][:, left]) / area
+    result = total.astype(np.float32)
+    result[..., :3] /= np.maximum(result[..., 3:4], 1e-4)
+    return result
+
+
+def icon_picture(model, inset, radius, shadow):
+    """A rounded square in the two teams' colours, split by a zigzag, with a comic burst behind the model.
+    `inset` is the empty margin round the square, which is what macOS expects (its template is 824 in 1024)."""
+    size = APP_ICON
+    body = size - 2 * inset
+    unit = body / 824.0
+    centre = size / 2.0
+    xs, ys = grid(size, size)
+    shape = box(xs, ys, centre, centre, body / 2.0, body / 2.0, radius)
+
+    image = blank(size, size, (0.0, 0.0, 0.0))
+    if shadow:
+        image[..., 3] = np.clip(blur(np.roll(cover(shape), int(round(10 * unit)), axis=0), 14.0 * unit), 0.0, 1.0) * 0.38
+
+    # Orange top left, blue bottom right, each a little lighter towards the top.
+    u = (xs - centre) / body
+    v = (ys - centre) / body
+    across = (u + v) / math.sqrt(2.0)
+    along = (u - v) / math.sqrt(2.0)
+    zigzag = 0.055 * (2.0 * np.abs(2.0 * (along * 2.6 - np.floor(along * 2.6 + 0.5))) - 1.0)
+    split = (across - zigzag) * body
+    height = np.clip(v + 0.5, 0.0, 1.0)[..., None]
+    orange = from_palette((0.0, 1.0), ORANGE_TEAM, height[..., 0])
+    blue = from_palette((0.0, 1.0), BLUE_TEAM, height[..., 0])
+    background = blank(size, size)
+    paint(background, NAVY, np.ones((size, size), np.float32))
+    paint(background, blue, np.ones((size, size), np.float32))
+    paint(background, orange, cover(split + 4.0 * unit))
+    # The navy seam along the zigzag.
+    paint(background, NAVY, cover(np.abs(split) - 5.0 * unit))
+
+    # The burst: a jagged star behind the crate.
+    rng = np.random.default_rng(12)
+    points = 13
+    angle = np.arctan2(ys - centre, xs - centre) + 0.2
+    sector = math.tau / points
+    index = np.floor(np.mod(angle, math.tau) / sector).astype(np.int32) % points
+    outer = (318.0 + rng.uniform(-22.0, 22.0, points)[index]) * unit
+    burst_centre_y = centre + 12.0 * unit
+    burst = np.hypot(xs - centre, ys - burst_centre_y) - star_radius(angle, sector, outer, 205.0 * unit)
+    paint(background, NAVY, cover(burst - 9.0 * unit))
+    paint(background, (0.96, 0.3, 0.14), cover(burst))
+    paint(background, (1.0, 0.56, 0.12), cover(burst + 34.0 * unit))
+    paint(background, (1.0, 0.8, 0.22), cover(burst + 74.0 * unit))
+
+    # The model, as big as the square allows, a little below the middle to leave room for the goose's crown.
+    picture = resized(model, int(round(model.shape[1] * 0.9 * body / model.shape[1])), int(round(model.shape[0] * 0.9 * body / model.shape[1])))
+    top = int(round(centre - picture.shape[0] / 2.0 + 18.0 * unit))
+    left = int(round(centre - picture.shape[1] / 2.0))
+    region = background[top:top + picture.shape[0], left:left + picture.shape[1]]
+    paint(region, picture[..., :3], picture[..., 3])
+
+    # A navy rim, then a soft light along the top edge, like the game's buttons.
+    rim = cover(shape)
+    inside = cover(shape + 11.0 * unit)
+    gloss = np.clip(1.0 - (ys - (centre - body / 2.0)) / (body * 0.16), 0.0, 1.0) * cover(shape + 16.0 * unit)
+    paint(background, WHITE, gloss * 0.16)
+    paint(image, NAVY, rim)
+    paint(image, background[..., :3], inside)
+    return image
+
+
+def make_app_icon():
+    """AppIcon.png for Windows (and Unity's default), nearly filling its square, and AppIcon_Mac.png on Apple's grid with
+    its shadow, which CargoClashPlayerBuild puts into the Mac app."""
+    with tempfile.TemporaryDirectory() as folder:
+        model = with_outline(render_icon_scene(2000, folder), 11)
+    write_png(FOLDER / "AppIcon.png", icon_picture(model, 22, 196, False))
+    write_png(FOLDER / "AppIcon_Mac.png", icon_picture(model, 100, 185.4, True))
 
 
 def make_ring():
@@ -847,7 +1109,7 @@ def make_cards():
 
 def main():
     only = sys.argv[sys.argv.index("--only") + 1] if "--only" in sys.argv else None
-    groups = {"sprites": make_sprites, "cards": make_cards, "logo": make_logo, "icons": make_icons}
+    groups = {"sprites": make_sprites, "cards": make_cards, "logo": make_logo, "icons": make_icons, "appicon": make_app_icon}
     for name, make in groups.items():
         if only is None or only == name:
             make()

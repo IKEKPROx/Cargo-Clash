@@ -106,6 +106,7 @@ public static partial class CargoClashBuilder
         PlayerSettings.defaultScreenWidth = 1600;
         PlayerSettings.defaultScreenHeight = 900;
         PlayerSettings.resizableWindow = true;
+        SetAppIcon();
         EditorBuildSettings.RemoveConfigObject("com.unity.input.settings.actions");
 
         SerializedObject tags = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
@@ -1984,14 +1985,15 @@ public static partial class CargoClashBuilder
         Text heading = UiText(inside, "Heading", GameText.Paused, 76, UiNavy);
         Rect(heading.gameObject, inside, AnchorTop, new Vector2(0f, -68f), new Vector2(760f, 90f));
 
-        Text speed = UiText(inside, "SpeedLabel", GameText.LookSpeed, 34, new Color(0.86f, 0.42f, 0.05f));
-        Rect(speed.gameObject, inside, AnchorTop, new Vector2(0f, -146f), new Vector2(760f, 44f));
-        hud.lookSpeedSlider = UiSlider(inside, "LookSpeed", AnchorTop, new Vector2(0f, -196f), new Vector2(620f, 52f));
+        hud.pauseResumeButton = UiButton(inside, "Resume", GameText.KeepPlaying, AnchorCentre, new Vector2(0f, 102f), new Vector2(560f, 104f), UiOrange, 42, 0.05f, out _);
+        hud.pauseSettingsButton = UiButton(inside, "Settings", GameText.Settings, AnchorCentre, new Vector2(0f, -16f), new Vector2(560f, 92f), UiBlue, 38, 0.08f, out _);
+        hud.pauseLeaveButton = UiButton(inside, "LeaveMatch", GameText.LeaveMatch, AnchorCentre, new Vector2(0f, -128f), new Vector2(560f, 92f), UiGray, 38, 0.1f, out _);
         Text hint = UiText(inside, "Hint", GameText.ViewHint, 26, new Color(0.34f, 0.37f, 0.48f));
-        Rect(hint.gameObject, inside, AnchorTop, new Vector2(0f, -252f), new Vector2(780f, 36f));
+        Rect(hint.gameObject, inside, AnchorBottom, new Vector2(0f, 52f), new Vector2(780f, 36f));
+        hint.horizontalOverflow = HorizontalWrapMode.Wrap;
 
-        hud.pauseResumeButton = UiButton(inside, "Resume", GameText.KeepPlaying, AnchorBottom, new Vector2(0f, 186f), new Vector2(560f, 104f), UiOrange, 42, 0.05f, out _);
-        hud.pauseLeaveButton = UiButton(inside, "LeaveMatch", GameText.LeaveMatch, AnchorBottom, new Vector2(0f, 66f), new Vector2(560f, 92f), UiGray, 38, 0.1f, out _);
+        // Over the pause card, which it hides while it's open.
+        hud.settings = BuildSettingsPanel(root, 0.9f);
     }
 
     private static Slider UiSlider(Transform parent, string name, Vector2 anchor, Vector2 position, Vector2 size)

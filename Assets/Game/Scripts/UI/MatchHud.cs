@@ -118,8 +118,9 @@ namespace CargoClash
         [Header("Pause")]
         public GameObject pausePanel;
         public Button pauseResumeButton;
+        public Button pauseSettingsButton;
         public Button pauseLeaveButton;
-        public Slider lookSpeedSlider;
+        public SettingsPanel settings;
 
         private readonly List<Text> labelPool = new List<Text>();
         private readonly List<Image> barPool = new List<Image>();
@@ -147,7 +148,7 @@ namespace CargoClash
         private float lastKnockOutAt = -100f;
 
         /// <summary>True while the pointer should be free for clicking, and looking around should stop.</summary>
-        public bool MenuOpen => pausePanel.activeSelf || resultsShown;
+        public bool MenuOpen => pausePanel.activeSelf || settings.IsOpen || resultsShown;
 
         /// <summary>True while the mouse should be steering the view rather than moving a pointer.</summary>
         public bool WantsCursorLocked => !MenuOpen && Application.isFocused && PlayerAvatar.Local != null;
@@ -164,10 +165,16 @@ namespace CargoClash
             pausePanel.SetActive(false);
             pauseResumeButton.onClick.AddListener(() => pausePanel.SetActive(false));
             pauseLeaveButton.onClick.AddListener(() => RoomService.Instance.Leave());
-            lookSpeedSlider.minValue = GameSettings.MinLookSpeed;
-            lookSpeedSlider.maxValue = GameSettings.MaxLookSpeed;
-            lookSpeedSlider.SetValueWithoutNotify(GameSettings.LookSpeed);
-            lookSpeedSlider.onValueChanged.AddListener(value => GameSettings.LookSpeed = value);
+            // The settings page takes the pause card's place, and Back brings the card back.
+            pauseSettingsButton.onClick.AddListener(() =>
+            {
+                pausePanel.SetActive(false);
+                settings.Open();
+            });
+            settings.Closed += () =>
+            {
+                if (!resultsShown) pausePanel.SetActive(true);
+            };
             introCard.SetActive(false);
             promptA.Hide();
             promptB.Hide();
@@ -237,7 +244,7 @@ namespace CargoClash
             bool hurry = seconds <= GameConfig.Get().finalStretchSeconds && phase == MatchPhase.Playing;
             timerText.color = hurry ? new Color(1f, 0.42f, 0.3f) : Color.white;
 
-            halfText.text = GameText.Halftime + director.Half.Value;
+            halfText.text = GameText.HalfLabel(director.Half.Value);
             orangeScoreText.text = director.OrangeScore.Value.ToString();
             blueScoreText.text = director.BlueScore.Value.ToString();
             bool orangeCollects = director.CollectorTeam.Value == Team.Orange;
@@ -399,7 +406,7 @@ namespace CargoClash
         }
 
         private static string ColoredName(PlayerAvatar avatar) =>
-            $"<color=#{ColorUtility.ToHtmlStringRGB(avatar.Team.ToColor())}>{avatar.DisplayName}</color>";
+            $"<color=#{ColorUtility.ToHtmlStringRGB(avatar.Team.ToColor())}>{GameText.Name(avatar.DisplayName)}</color>";
 
         private void UpdateFeed()
         {
@@ -461,6 +468,7 @@ namespace CargoClash
             if (resultsShown || director.Results == null) return;
             resultsShown = true;
             pausePanel.SetActive(false);
+            settings.Close();
             resultsPanel.SetActive(true);
             GameAudio.Play("fanfare");
 
@@ -472,7 +480,7 @@ namespace CargoClash
 
             StringBuilder lines = new StringBuilder();
             foreach (ResultLine line in director.Results)
-                lines.AppendLine($"{line.Title}:  {line.Player}  ({line.Value})");
+                lines.AppendLine(GameText.ResultLine(line.Title.ToString(), line.Player.ToString(), line.Value));
             resultsTitles.text = lines.ToString();
 
             bool isHost = Unity.Netcode.NetworkManager.Singleton.IsServer;
@@ -485,8 +493,10 @@ namespace CargoClash
         private void UpdatePause()
         {
             Keyboard keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame && !resultsShown)
-                pausePanel.SetActive(!pausePanel.activeSelf);
+            if (keyboard == null || !keyboard.escapeKey.wasPressedThisFrame || resultsShown) return;
+            // Esc steps back: out of the settings page to the pause card, then out of the pause card.
+            if (settings.IsOpen) settings.Close();
+            else pausePanel.SetActive(!pausePanel.activeSelf);
         }
 
         private void HandleAgain()
@@ -817,7 +827,7 @@ namespace CargoClash
                 if (screen.z <= 0f || screen.z > NameLabelRange) continue;
 
                 Text label = PoolLabel();
-                label.text = avatar.DisplayName;
+                label.text = GameText.Name(avatar.DisplayName);
                 label.color = avatar.Team.ToColor();
                 label.fontSize = 30;
                 label.rectTransform.position = screen;
@@ -987,6 +997,8 @@ namespace CargoClash
             Outline outline = item.GetComponent<Outline>();
             outline.effectColor = new Color(0.09f, 0.12f, 0.24f, 0.95f);
             outline.effectDistance = new Vector2(2f, -2f);
+            // Draws Chinese with a font that has it.
+            item.AddComponent<LocalizedText>();
             return label;
         }
 

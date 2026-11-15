@@ -3,7 +3,10 @@ using UnityEngine;
 
 namespace CargoClash
 {
-    /// <summary>Plays 2D sound effects and music by name from Resources/Audio.</summary>
+    /// <summary>
+    /// Plays 2D sound effects and music by name from Resources/Audio. The settings page's music and effects volumes
+    /// scale everything here; its overall volume is the AudioListener's.
+    /// </summary>
     public sealed class GameAudio : MonoBehaviour
     {
         private const float MusicVolume = 0.45f;
@@ -20,6 +23,7 @@ namespace CargoClash
         private AudioSource loop;
         private readonly AudioSource[] placed = new AudioSource[8];
         private int nextPlaced;
+        private bool ducked;
 
         private void Awake()
         {
@@ -39,6 +43,16 @@ namespace CargoClash
                 placed[i].playOnAwake = false;
             }
             foreach (AudioClip clip in Resources.LoadAll<AudioClip>("Audio")) clips[clip.name] = clip;
+            ApplyVolumes();
+        }
+
+        /// <summary>Called when the player moves a volume slider.</summary>
+        public static void ApplyVolumes()
+        {
+            if (instance == null) return;
+            instance.music.volume = (instance.ducked ? DuckedMusicVolume : MusicVolume) * GameSettings.MusicVolume;
+            instance.effects.volume = GameSettings.EffectsVolume;
+            foreach (AudioSource source in instance.placed) source.volume = GameSettings.EffectsVolume;
         }
 
         public static void Play(string clipName, float volume = 1f)
@@ -102,7 +116,9 @@ namespace CargoClash
         /// <summary>Turns the music down so something else can be heard over it.</summary>
         public static void SetMusicDucked(bool ducked)
         {
-            if (instance != null) instance.music.volume = ducked ? DuckedMusicVolume : MusicVolume;
+            if (instance == null) return;
+            instance.ducked = ducked;
+            ApplyVolumes();
         }
 
         /// <summary>A looping sound whose volume a script sets every frame. No clip name stops it.</summary>
@@ -116,7 +132,7 @@ namespace CargoClash
                 return;
             }
             if (!instance.clips.TryGetValue(clipName, out AudioClip clip)) return;
-            source.volume = volume;
+            source.volume = volume * GameSettings.EffectsVolume;
             if (source.clip == clip && source.isPlaying) return;
             source.clip = clip;
             source.Play();

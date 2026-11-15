@@ -45,7 +45,7 @@
 ## 写代码的规则
 
 - 角色不要直接读键盘，统一通过 `ICharacterInput`。这样机器人和自动测试才能用。人的 `Move` 是相对视线的，机器人的 `Move` 是世界方向（看 `LooksAround`）。
-- 数值放 `GameConfig` 和 `CargoDefinition`，不要写死在代码里。玩家看到的文字放 `GameText`。
+- 数值放 `GameConfig` 和 `CargoDefinition`，不要写死在代码里。玩家看到的文字放 `GameText`，同时在 `GameText.Chinese.cs` 里加上中文（见下面“设置页和语言”）。
 - 特效和音效不能影响规则，它们只在收到状态变化或 RPC 后播放。
 - 所有联网物体都是从预制体动态生成的，场景里不放 NetworkObject。新增的联网预制体要在 `RoomService.Awake` 里注册。
 - 不要在 Finder 里移动 `Assets` 下的文件，要带上 `.meta` 或在 Unity 里移动。
@@ -62,7 +62,7 @@
 /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup --python Tools/blender/make_scenery.py
 ```
 
-其他模型把脚本换成 `make_crew.py`、`make_hands.py`、`make_cone.py`、`make_astra_cargo.py`，开始页面的 Logo、按钮、卡片图和比赛界面的图标用 `make_ui.py`。末尾加 `-- --sheet 文件夹` 可以同时渲染检查图。运行之后，还要运行上面的生成脚本才会进入游戏。
+其他模型把脚本换成 `make_crew.py`、`make_hands.py`、`make_cone.py`、`make_astra_cargo.py`，开始页面的 Logo、按钮、卡片图、比赛界面的图标和应用图标用 `make_ui.py`（`-- --only logo|icons|appicon|sprites|cards` 只做一组）。Logo 上的货物、PRACTICE 按钮的图标和应用图标用的是 `Assets/Game/Models` 里 Astra 的 FBX，颜色在脚本的 `CARGO_PALETTE`、`TOOL_PALETTE`，要和生成脚本里的材质一致。末尾加 `-- --sheet 文件夹` 可以同时渲染检查图。运行之后，还要运行上面的生成脚本才会进入游戏。
 
 场景的每个模型是一个 FBX，`make_scenery.py` 加 `-- --only Rock_A,Barn` 只重做这几个。生成脚本把它们做成 `Assets/Game/Prefabs/Scenery` 里的预制体，再摆进关卡（`CargoClashBuilder` 的 `AddTrees` 到 `AddOutskirts`）。模型本身没有碰撞，挡人的是单独的 `Blocker` 子物体，所以换模型不影响玩法和寻路。放进可玩区域的新东西，要么加 `Blocker`，要么矮到走过去也不奇怪（比如草和花）。
 
@@ -186,9 +186,30 @@ Astra 的四种货物（`独立建模/互动货物_v08`）：烟盒、现金箱�
 
 开局时主机把选的关卡放进 `SessionRoster.Level`，加载场景都从这里取，不要再写死场景名。
 
-界面的颜色和做法集中在 `CargoClashBuilder.Title.cs` 的 `UiButton`、`UiPanel`、`UiText`。一个控件放在 `PopSlot` 里，弹入的动画缩放外层，鼠标悬停的动画缩放里层，这两个不能放在同一个物体上。图片要先在 `UiSprite` 里设好导入方式。所有字用 `Assets/Game/UI` 里的 Lilita One，它只有拉丁字母，以后要显示中文得另外配字体。
+界面的颜色和做法集中在 `CargoClashBuilder.Title.cs` 的 `UiButton`、`UiPanel`、`UiText`。一个控件放在 `PopSlot` 里，弹入的动画缩放外层，鼠标悬停的动画缩放里层，这两个不能放在同一个物体上。图片要先在 `UiSprite` 里设好导入方式。英文用 `Assets/Game/UI` 里的 Lilita One，它只有拉丁字母，中文用电脑自带的字体（见下面“设置页和语言”）。
+
+开始画面货车上的货是 Astra 的四种（`AddTitleLoad`），放大了 1.3 倍并堆高，因为她的货按人的尺寸做，在车斗里会被 1 米高的侧板挡住。只是摆设，没有网络和规则。
 
 背景的公路、田地、树是一条无限循环的带子：`TitleScenery` 把落到车后面的东西挪到前面。一组东西的循环长度要比镜头能看到的范围长，否则会当着玩家的面跳过去；越远的一组看到的范围越宽，所以循环越长。电线杆都一样高，并埋进地里一点，否则电线接不上。
+
+## 设置页和语言
+
+**设置页**是 `SettingsPanel`，由 `CargoClashBuilder.Settings.cs` 的 `BuildSettingsPanel` 生成，开始场景（主菜单的 SETTINGS）和每一关的比赛界面（暂停菜单的 SETTINGS）各一份，一模一样。值都在 `GameSettings`，存在 PlayerPrefs：
+
+- 一改就生效：语言、视角（和 V 键同一个 `FirstPerson`）、灵敏度、鼠标上下反转（`HumanInput` 里翻转）、垂直同步、帧率上限（关了垂直同步才用）、画质、三个音量（总音量是 `AudioListener.volume`，音乐和音效在 `GameAudio` 里乘）。开局时 `GameBoot` 调 `GameSettings.ApplyAtStart` 把存下的值用上。
+- 窗口模式和分辨率要按 APPLY（`Screen.SetResolution`），它们由 Unity 自己存（PlayerPrefs 里的 `Screenmanager` 那几项），`GameSettings` 不存。窗口从外面变了，页面会重新读。
+- 画质改的是当前 URP 资源的渲染比例、阴影距离和级数，**只在打包的游戏里改**：在编辑器里会改到工程里的 `PC_RPAsset`。
+- 自动测试（有 `-ccMode`）从默认值开始，什么都不存。只有体型外形、灵敏度和视角照样读存下的值（以前就是这样）。
+
+**语言：** 英文和简体中文。
+
+- `GameText` 的每一句是一个属性，用 `T("英文")` 按玩家的语言给出；中文在 `GameText.Chinese.cs`，键就是那句英文，一个字都不能差。同一句英文要有两种中文时，用 `T("英文", "用途")`，表里写 `"英文|用途"`。带数字的用格式串 `F("{0} SECONDS LEFT!", n)`，中文自己决定数字放哪。新加文字时两边都要加，表里没有的会显示英文。
+- 生成脚本里 `UiText` 做的每个文字都带 `LocalizedText`，记着生成时的英文（生成脚本在编辑器里跑，`T` 在编辑器里总是给英文），换语言时自己换；只要代码改写过它，它就不再管内容。代码在运行时新建的文字（比如 `MatchHud.NewLabel`）也要加 `LocalizedText`，它还负责换字体。
+- 中文用电脑自带的字体（`UiFonts`：Mac 上找到 Hiragino Sans GB，Windows 上是 Microsoft YaHei），加粗，包里不带字体。带中文的文字才换字体，数字和英文还是 Lilita One。电脑上没有中文字体时，语言那一行变灰。
+- 没选过语言时跟系统语言走。测试默认英文，加 `-ccLanguage zh` 用中文跑一局。
+- **通过网络发的文字要发英文**，由各电脑按自己的语言显示：结算的称号（`ResultLine.Title`，`GameText.TitleMover` 这几个还是英文常量）、主机起的名字 “Player 2”“Bot 3”（显示时过一遍 `GameText.Name`）。这样主机和客户端可以用不同语言。
+
+**应用图标：** `make_ui.py -- --only appicon` 画出 `Assets/Game/UI/AppIcon.png`（几乎占满方形，生成脚本把它设成 Unity 的默认图标，Windows 用）和 `AppIcon_Mac.png`（苹果的图标网格：1024 里 824 的圆角方块带阴影）。Mac 包打完，`CargoClashPlayerBuild.Mac` 把后者做成 icns 换进 app，再用 `codesign --force --deep --sign -` 重新签名，因为改了 app 里的文件。
 
 ## 河流关卡（RIVER FLATS）
 
@@ -230,8 +251,9 @@ grep CCTEST /tmp/cargo-match.log
 |---|---|
 | `-ccMode host` / `client` | 开局域网主机 / 加入，配合 `-ccAddress`、`-ccExpectClients` 测两台机器 |
 | `-ccLevel 编号` | 练习和开房选第几关（从 0 数），比如 3 是河流关卡。不加就是教学关 |
+| `-ccLanguage zh` | 这一局用中文，不保存。测试默认是英文 |
 | `-ccRiverTest` | 河流关卡的专项测试，见上面“河流关卡”。配合 `-ccLevel 3`，加 `-ccShotDir` 会拍拿木板和挡板的照片 |
-| `-ccMode menu` | 用真实的点击走一遍开始页面的每一屏并拍照，同时检查锁着的关卡点不进去、加入失败有提示，以及 CREW 页的按钮、滑块、预览和改了之后能传到房间。配合 `-ccShotDir`，窗口运行 |
+| `-ccMode menu` | 用真实的点击走一遍开始页面的每一屏并拍照，同时检查锁着的关卡点不进去、加入失败有提示，CREW 页的按钮、滑块、预览和改了之后能传到房间，以及设置页的每一项（垂直同步、帧率上限、画质、音量、鼠标反转、灵敏度、按 APPLY 改窗口、切到中文再切回来、Esc 退出）。配合 `-ccShotDir`，窗口运行。它会改窗口大小，跑之前先存一份 PlayerPrefs（见下面） |
 | `-ccShotDir 目录`、`-ccShotEvery 秒` | 窗口运行时定时截图，用来检查画面 |
 | `-ccSmashScale 倍数` | 临时改砸货时间，用来比较平衡 |
 | `-ccPort 端口` | 同时跑多局时避开端口冲突 |
@@ -252,7 +274,7 @@ grep CCTEST /tmp/cargo-match.log
 
 agent 只能验证规则和流程。手感和两人联机必须由人来测：在 Multiplayer Play Mode 里开两个玩家，确认两边都看到倒地、货掉在同一个位置、冷却时间一致，再合并。
 
-## 出 Windows 包
+## 出包
 
 老师要在实验室的 Windows 电脑上运行，这是最后要交的东西。在仓库根目录运行：
 
@@ -268,6 +290,30 @@ Tools/package_windows.sh 输出文件夹
 - 压缩包里要有 `Tools/windows_readme.txt`，不能带 `_BackUpThisFolder_ButDontShipItWithYourGame` 文件夹，`package_windows.sh` 已经处理好了。
 - Mac 运行不了 Windows 包，打完一定要在 Windows 电脑上试，地图西南角和结算画面要特别看地面有没有变黑。
 - Mac 上要先装 Windows Build Support (Mono) 模块。如果 Hub 下载报 404，是 Unity 把下载转到了中国镜像，而镜像里没有这个文件，可以切到中国以外的网络出口手动下载 pkg。pkg 不能双击安装，要解开后放进 Editor 的 `PlaybackEngines/WindowsStandaloneSupport`，详情见交接说明第 8 节。
+
+Mac 包：
+
+```bash
+"/Applications/Unity/Hub/Editor/6000.6.1f1/Unity.app/Contents/MacOS/Unity" -batchmode -quit -projectPath . -executeMethod CargoClashPlayerBuild.Mac -logFile /tmp/cargo-build.log
+```
+
+```bash
+Tools/package_mac.sh 输出文件夹
+```
+
+- 只打 Apple 芯片（arm64）的。同时支持 Intel 的通用包在这台 Mac 上打不出来：Unity 里 Burst 的 `llvm-lipo` 没有执行权限，合并两种架构时报 Access denied。Unity 6.6 也把 Intel Mac 标成了过时。
+- 打完会自己换上 Mac 的图标并重新签名（日志里有 `Mac icon in, signed again`）。没有苹果的开发者证书，所以别人第一次打开要在“隐私与安全性”里点“仍要打开”，`Tools/mac_readme.txt` 里写了。
+- `package_mac.sh` 用 `ditto` 打 zip，签名和权限不会坏，打之前先验签名。
+
+**跑窗口测试前先存一份 PlayerPrefs**，跑完再导回去，否则用户自己的窗口大小会被测试的 1600×900 盖掉（Unity 退出时自己存）。bundle id 还是 URP 模板的：
+
+```bash
+defaults export com.Unity-Technologies.com.unity.template.urp-blank /tmp/cargo-prefs.plist
+```
+
+```bash
+defaults import com.Unity-Technologies.com.unity.template.urp-blank /tmp/cargo-prefs.plist
+```
 
 ## 协作
 

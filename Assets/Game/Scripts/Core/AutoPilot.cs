@@ -28,6 +28,19 @@ namespace CargoClash
         /// <summary>A test is running. It leaves the mouse pointer alone, because someone may be using the computer.</summary>
         public static bool Active;
 
+        private static bool? requested;
+
+        /// <summary>The game was started for a test (-ccMode). Known from the first moment, for settings read at boot.</summary>
+        public static bool Requested => requested ??= Array.IndexOf(Environment.GetCommandLineArgs(), "-ccMode") >= 0;
+
+        /// <summary>What follows a flag on the command line, or null.</summary>
+        public static string Argument(string name)
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            int index = Array.IndexOf(args, name);
+            return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
+        }
+
         /// <summary>A test is sending real key and mouse events, so the window doesn't need to be in front.</summary>
         public static bool DrivesInput;
 
@@ -1203,11 +1216,28 @@ namespace CargoClash
             yield return null;
             Expect(Mathf.Abs(Mathf.DeltaAngle(yawBefore, local.LookYaw)) < 0.01f, "the view doesn't turn behind the pause menu");
             Expect(Vector3.Distance(positionBefore, local.transform.position) < 0.3f, "the character doesn't walk behind the pause menu");
+            // The settings page opens from the pause menu, and its slider sets the look speed.
+            MatchHud hud = MatchHud.Instance;
             float speedBefore = GameSettings.LookSpeed;
-            MatchHud.Instance.lookSpeedSlider.value = 1.5f;
+            Click(hud.pauseSettingsButton);
+            yield return null;
+            Expect(hud.settings.IsOpen && !hud.pausePanel.activeSelf && hud.MenuOpen, "Settings on the pause menu opens the settings page");
+            yield return new WaitForSeconds(0.8f);
+            yield return ShotThenWait();
+            hud.settings.lookSpeed.value = 1.5f;
             Expect(Mathf.Approximately(GameSettings.LookSpeed, 1.5f), "the slider sets the look speed");
             GameSettings.LookSpeed = speedBefore;
-            MatchHud.Instance.lookSpeedSlider.SetValueWithoutNotify(speedBefore);
+            bool firstPersonBefore = GameSettings.FirstPerson;
+            Click(hud.settings.view.next);
+            yield return null;
+            Expect(GameSettings.FirstPerson != firstPersonBefore, "the settings page switches the view");
+            GameSettings.FirstPerson = firstPersonBefore;
+            SendKeys(keyboard, Key.Escape);
+            yield return null;
+            yield return null;
+            SendKeys(keyboard);
+            yield return null;
+            Expect(!hud.settings.IsOpen && hud.pausePanel.activeSelf, "Esc on the settings page goes back to the pause menu");
 
             SendKeys(keyboard, Key.Escape);
             yield return null;
@@ -1400,6 +1430,8 @@ namespace CargoClash
             flow.codeInput.text = "";
             yield return new WaitForSeconds(0.2f);
 
+            yield return TourTheSettings(flow);
+
             Click(flow.crewButton);
             yield return new WaitForSeconds(1.2f);
             Expect(flow.crewPanel.activeSelf && flow.preview.gameObject.activeSelf, "Crew opens the crew page with the preview");
@@ -1486,6 +1518,122 @@ namespace CargoClash
             Expect(flow.menuPanel.activeSelf && !net.IsListening, "Leave returns to the menu");
             yield return ShotThenWait();
             yield return new WaitForSeconds(0.5f);
+        }
+
+        /// <summary>
+        /// The settings page from the menu: each setting takes effect, the window waits for Apply, and the whole start screen
+        /// changes language. A test saves none of it, and puts back what it changed.
+        /// </summary>
+        private IEnumerator TourTheSettings(TitleFlow flow)
+        {
+            SettingsPanel settings = flow.settings;
+            Click(flow.settingsButton);
+            yield return new WaitForSeconds(1.2f);
+            Expect(settings.IsOpen && !flow.menuPanel.activeSelf, "Settings opens the settings page");
+            Log($"SETTINGS screen={Screen.width}x{Screen.height} mode={Screen.fullScreenMode} sizes={Screen.resolutions.Length} " +
+                $"chinese={UiFonts.HasChinese} renderScale={GameSettings.RenderScale:0.00} vsync={QualitySettings.vSyncCount} fps={Application.targetFrameRate}");
+            yield return ShotThenWait();
+
+            bool vSyncBefore = GameSettings.VSync;
+            Click(settings.vSync.next);
+            yield return null;
+            Expect(GameSettings.VSync != vSyncBefore && QualitySettings.vSyncCount == (GameSettings.VSync ? 1 : 0), "VSync switches");
+            if (!GameSettings.VSync)
+            {
+                Click(settings.maxFps.next);
+                yield return null;
+                Expect(GameSettings.MaxFps > 0 && Application.targetFrameRate == GameSettings.MaxFps, "the frame rate limit applies without VSync");
+                yield return ShotThenWait();
+                GameSettings.MaxFps = 0;
+            }
+            GameSettings.VSync = vSyncBefore;
+
+            Click(settings.graphics.next);
+            yield return null;
+            Expect(GameSettings.Graphics == GraphicsLevel.Medium, "the graphics go down a step");
+            if (!Application.isEditor) Expect(Mathf.Abs(GameSettings.RenderScale - 0.85f) < 0.01f, "medium graphics draw fewer pixels");
+            GameSettings.Graphics = GraphicsLevel.High;
+            if (!Application.isEditor) Expect(Mathf.Abs(GameSettings.RenderScale - 1f) < 0.01f, "high graphics draw every pixel again");
+
+            settings.masterVolume.value = 0.5f;
+            Expect(Mathf.Abs(AudioListener.volume - 0.5f) < 0.01f, "the volume slider sets the volume");
+            GameSettings.MasterVolume = 1f;
+            Click(settings.invertY.next);
+            Expect(GameSettings.InvertLookY, "the mouse can be turned upside down");
+            GameSettings.InvertLookY = false;
+            settings.lookSpeed.value = 2f;
+            Expect(Mathf.Abs(GameSettings.LookSpeed - 2f) < 0.01f, "the slider sets the look speed");
+
+            // A new size waits for Apply. Without a window there's nothing to resize.
+            if (!Application.isBatchMode)
+            {
+                Vector2Int before = new Vector2Int(Screen.width, Screen.height);
+                Click(settings.resolution.back);
+                yield return null;
+                Expect(settings.applyButton.interactable && Screen.width == before.x && Screen.height == before.y, "a new size waits for Apply");
+                yield return ShotThenWait();
+                Click(settings.applyButton);
+                yield return new WaitForSeconds(1.5f);
+                Log($"SETTINGS resized {before.x}x{before.y} to {Screen.width}x{Screen.height}");
+                Expect(Screen.width != before.x || Screen.height != before.y, "Apply resizes the window");
+                Expect(!settings.applyButton.interactable, "nothing waits for Apply after it");
+                yield return ShotThenWait();
+                Screen.SetResolution(before.x, before.y, FullScreenMode.Windowed);
+                yield return new WaitForSeconds(1.5f);
+                Expect(!settings.applyButton.interactable && settings.resolution.value.text == GameText.Resolution(before.x, before.y),
+                    "the page follows a window changed from outside");
+            }
+
+            if (UiFonts.HasChinese)
+            {
+                Click(settings.language.next);
+                yield return new WaitForSeconds(0.3f);
+                Expect(GameSettings.Language == Language.Chinese, "the language switches to Chinese");
+                Expect(settings.backButton.GetComponentInChildren<Text>().text == "返回", "the settings page's labels change language");
+                yield return ShotThenWait();
+                Click(settings.backButton);
+                yield return new WaitForSeconds(1f);
+                Expect(flow.menuPanel.activeSelf && !settings.IsOpen, "Back leaves the settings page");
+                Expect(flow.practiceButton.GetComponentInChildren<Text>().text == "和机器人练习", "the menu changes language");
+                yield return ShotThenWait();
+                Click(flow.practiceButton);
+                yield return new WaitForSeconds(1.5f);
+                Expect(flow.levelCards[0].title.text == "教学关", "the level names change language");
+                yield return ShotThenWait();
+                Click(flow.levelBackButton);
+                yield return new WaitForSeconds(1f);
+                Click(flow.crewButton);
+                yield return new WaitForSeconds(1.2f);
+                yield return ShotThenWait();
+                Click(flow.crewBackButton);
+                yield return new WaitForSeconds(1f);
+                Click(flow.settingsButton);
+                yield return new WaitForSeconds(0.6f);
+                Click(settings.language.next);
+                yield return null;
+                Expect(GameSettings.Language == Language.English && settings.backButton.GetComponentInChildren<Text>().text == "BACK",
+                    "the language switches back to English");
+                // The menu was hidden when the language changed; it catches up when it shows again.
+                Click(settings.backButton);
+                yield return new WaitForSeconds(1f);
+                Expect(flow.practiceButton.GetComponentInChildren<Text>().text == "PRACTICE WITH BOTS", "the menu is back in English");
+                Click(flow.settingsButton);
+                yield return new WaitForSeconds(0.6f);
+            }
+            else
+            {
+                Log("SETTINGS no font with Chinese here");
+            }
+
+            // Esc leaves the page too.
+            Keyboard keyboard = Keyboard.current ?? InputSystem.AddDevice<Keyboard>();
+            SendKeys(keyboard, Key.Escape);
+            yield return null;
+            yield return null;
+            SendKeys(keyboard);
+            yield return null;
+            Expect(!settings.IsOpen && flow.menuPanel.activeSelf, "Esc leaves the settings page");
+            yield return new WaitForSeconds(0.6f);
         }
 
         /// <summary>A screenshot is taken at the end of the frame, so this keeps later changes out of the picture.</summary>

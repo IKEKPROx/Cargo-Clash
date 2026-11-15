@@ -1,15 +1,25 @@
 CARGO CLASH
 COMP4122 course project. A truck has crashed. Collectors carry the scattered cargo back to the
-truck, and Interrupters smash it. A level has two 1-minute halves, and the sides swap at half-time.
+truck, and Interrupters smash it. A level has two halves (1 minute each in the tutorial, 3 minutes
+on River Flats), and the sides swap at half-time.
 
 RUNNING THE GAME
 1. Unzip the whole folder first. The game won't run from inside the zip.
 2. Double-click CargoClash.exe.
    If Windows says it protected your PC, click More info, then Run anyway. The program isn't code-signed.
-3. To play alone, click PLAY, then PRACTICE WITH BOTS, then the TUTORIAL card. The YOUR CREW page
-   opens: pick a body type (SHORT is slow but tough and hits hardest, TALL is fast but fragile), a hat,
-   glasses and a face, then click START. No network or account is needed. The other levels are locked
-   for now. The CREW button on the main menu opens the same page any time.
+3. To play alone, click PLAY, then PRACTICE WITH BOTS, then the TUTORIAL card (or RIVER FLATS). The
+   YOUR CREW page opens: pick a body type (SHORT is slow but tough and hits hardest, TALL is fast but
+   fragile), a hat, glasses and a face, then click START. No network or account is needed. The cards
+   with a lock aren't ready yet. The CREW button on the main menu opens the same page any time.
+
+SETTINGS
+SETTINGS on the main menu, or Esc in a match and then SETTINGS:
+- Language: English or Simplified Chinese (简体中文). Chinese uses the font that comes with Windows.
+- Camera (first person or over the shoulder), look speed, invert mouse Y.
+- Window (full screen or windowed) and resolution: pick them, then click APPLY.
+- VSync, a frame rate limit (when VSync is off), graphics (HIGH / MEDIUM / LOW: lower is faster on a
+  slow PC), and the volume of everything, the music and the effects.
+Settings are saved on this computer.
 
 CONTROLS
 WASD                 Move
@@ -21,7 +31,7 @@ Left-click           Attack with what's in your hands: once pushes someone back,
 Right-click          Collectors hold it to suck in cargo and people. Interrupters hold it to charge, and let go to slam.
 F                    Inspect what's in your hands (first person)
 V                    Switch between first person and over the shoulder
-Esc                  Pause menu, where you can change the look speed
+Esc                  Pause menu, with the settings
 Alt+Enter            Full screen on / off
 A gamepad also works: left stick to move, right stick to look, A / B / X / Y to pick up, ram, attack and inspect, right trigger for right-click.
 

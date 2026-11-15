@@ -180,20 +180,7 @@ public static partial class CargoClashBuilder
         }
         Object.DestroyImmediate(model);
 
-        // Faces point along the truck's width, so they look out at both sides of it. The camera is on
-        // the +X side of the truck, so the chest goes on the far side, with only low parcels in front
-        // of it. Heights are the bed floor at 2.02 plus half an item, on top of whatever it stands on.
-        Transform load = Group("Load", body);
-        Place("Cargo_Large", load, new Vector3(-0.78f, 2.53f, 2.55f), 90f);
-        Place("Cargo_Medium", load, new Vector3(-0.85f, 2.46f, 0.55f), 96f);
-        Place("Cargo_Medium", load, new Vector3(0.72f, 2.46f, 0.2f), 85f);
-        Place("Cargo_Medium", load, new Vector3(0.72f, 2.46f, 1.35f), 92f);
-        Place("Cargo_Small", load, new Vector3(-0.85f, 3.22f, 0.55f), 101f);
-        Place("Cargo_Small", load, new Vector3(-0.78f, 3.36f, 3.2f), 84f);
-        Place("Cargo_Small", load, new Vector3(-0.78f, 3.36f, 1.95f), 97f);
-        Place("Cargo_Small", load, new Vector3(0.72f, 3.22f, 0.2f), 83f);
-        Place("Cargo_Small", load, new Vector3(0.78f, 2.3f, 2.6f), 92f);
-        Place("Cargo_Small", load, new Vector3(0.78f, 2.3f, 3.5f), 100f);
+        AddTitleLoad(Group("Load", body));
 
         // Exhaust from the stack behind the cab, and dust thrown up by the back wheels.
         Color smokeDark = new Color(0.72f, 0.73f, 0.76f);
@@ -209,6 +196,65 @@ public static partial class CargoClashBuilder
         RoverTerrainAnimator rover = root.AddComponent<RoverTerrainAnimator>();
         rover.ConfigureRig(body, pivots, mounts, shocks, feet, arms, axles, differentials);
         return SavePrefab(root, "TitleTruck");
+    }
+
+    /// <summary>
+    /// The full load on the start screen's truck: Astra's four kinds (the same models as in a match, whole and shut), in
+    /// stacks along both sides of the bed. Her cargo is made for people, so it's a size small in a bed three metres
+    /// wide, and the side walls are a metre high (the floor is at 2.02, the walls' tops at 3.0): the load is drawn
+    /// 1.3 times bigger and piled high, with the goose crates on top on the far side, where the camera on the +X side
+    /// sees them. Her cases face +Z with their handles along X, so a quarter turn shows their fronts to the camera. Each
+    /// stack lists its kinds from the bottom up, each a little twisted.
+    /// </summary>
+    private static void AddTitleLoad(Transform load)
+    {
+        const float scale = 1.3f;
+        (float x, float z, CargoKind[] stack)[] stacks =
+        {
+            (-0.8f, 0.15f, new[] { CargoKind.Gold, CargoKind.Gold, CargoKind.Art }),
+            (-0.8f, 1.27f, new[] { CargoKind.Cash, CargoKind.Cash, CargoKind.Cash, CargoKind.Art }),
+            (-0.82f, 2.39f, new[] { CargoKind.Gold, CargoKind.Cash, CargoKind.Gold, CargoKind.Tobacco, CargoKind.Tobacco }),
+            (-0.8f, 3.5f, new[] { CargoKind.Cash, CargoKind.Gold, CargoKind.Art }),
+            (0.78f, 0.15f, new[] { CargoKind.Gold, CargoKind.Cash, CargoKind.Gold, CargoKind.Tobacco }),
+            (0.78f, 1.27f, new[] { CargoKind.Tobacco, CargoKind.Tobacco, CargoKind.Cash, CargoKind.Gold }),
+            (0.78f, 2.39f, new[] { CargoKind.Cash, CargoKind.Gold, CargoKind.Cash, CargoKind.Tobacco }),
+            (0.78f, 3.5f, new[] { CargoKind.Gold, CargoKind.Tobacco, CargoKind.Cash, CargoKind.Tobacco }),
+        };
+        System.Random random = new System.Random(14);
+        foreach ((float x, float z, CargoKind[] stack) in stacks)
+        {
+            float floor = 2.02f;
+            foreach (CargoKind kind in stack)
+            {
+                float yaw = 90f + (float)(random.NextDouble() * 12.0 - 6.0);
+                Vector3 nudge = new Vector3((float)(random.NextDouble() - 0.5) * 0.08f, 0f, (float)(random.NextDouble() - 0.5) * 0.08f);
+                floor += PlaceTitleCargo(kind, load, new Vector3(x, floor, z) + nudge, yaw, scale);
+            }
+        }
+    }
+
+    /// <summary>A still copy of one of Astra's kinds, shut and undamaged. Returns its height.</summary>
+    private static float PlaceTitleCargo(CargoKind kind, Transform parent, Vector3 position, float yaw, float scale)
+    {
+        GameObject model = NewAstraModel("Cargo_" + kind, parent);
+        model.name = "Cargo_" + kind;
+        Object.DestroyImmediate(FindInModel(model, "Stage1").gameObject);
+        Object.DestroyImmediate(FindInModel(model, "Stage2").gameObject);
+        // What's inside a shut case can't be seen, except the goose between the crate's slats.
+        if (kind != CargoKind.Art) Object.DestroyImmediate(FindInModel(model, "Slot0").gameObject);
+        model.transform.SetLocalPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
+        model.transform.localScale = Vector3.one * scale;
+        SetLayerRecursively(model, GameLayers.Outlined);
+
+        Bounds bounds = new Bounds(model.transform.position, Vector3.zero);
+        bool first = true;
+        foreach (Renderer part in model.GetComponentsInChildren<Renderer>())
+        {
+            if (first) bounds = part.bounds;
+            else bounds.Encapsulate(part.bounds);
+            first = false;
+        }
+        return bounds.max.y - model.transform.position.y;
     }
 
     // ---- Scenery ----
@@ -444,6 +490,7 @@ public static partial class CargoClashBuilder
         Text text = item.GetComponent<Text>();
         text.font = uiFont;
         text.text = content;
+        item.AddComponent<LocalizedText>().english = content;
         text.fontSize = size;
         text.color = color;
         text.alignment = TextAnchor.MiddleCenter;
@@ -608,6 +655,7 @@ public static partial class CargoClashBuilder
         BuildLevelPanel(canvas.transform, flow);
         BuildLobbyPanel(canvas.transform, flow);
         BuildCrewPanel(canvas.transform, flow, preview, previewPicture);
+        flow.settings = BuildSettingsPanel(canvas.transform);
         EditorUtility.SetDirty(flow);
     }
 
@@ -640,14 +688,16 @@ public static partial class CargoClashBuilder
         Fill(picture.rectTransform);
         picture.gameObject.AddComponent<UiFloat>().bobHeight = 5f;
 
-        Sprite parcel = UiSprite("Icon_Parcel");
+        Sprite cargo = UiSprite("Icon_Cargo");
         Sprite truck = UiSprite("Icon_Truck");
-        flow.practiceButton = UiButton(panel, "Practice", GameText.Practice, left, new Vector2(columnX, 130f), buttonSize, UiOrange, 40, 0.05f, out _, parcel);
+        flow.practiceButton = UiButton(panel, "Practice", GameText.Practice, left, new Vector2(columnX, 130f), buttonSize, UiOrange, 40, 0.05f, out _, cargo);
         flow.createButton = UiButton(panel, "Create", GameText.CreateRoomButton, left, new Vector2(columnX, 8f), buttonSize, UiBlue, 40, 0.1f, out _, truck);
         flow.codeInput = UiCodeInput(panel, left, new Vector2(columnX - 106f, -112f), new Vector2(328f, 100f), 0.15f);
         flow.joinButton = UiButton(panel, "Join", GameText.Join, left, new Vector2(columnX + 170f, -112f), new Vector2(200f, 100f), UiGreen, 40, 0.15f, out _);
-        flow.crewButton = UiButton(panel, "Crew", GameText.Crew, left, new Vector2(columnX - 138f, -226f), new Vector2(264f, 84f), UiGreen, 34, 0.2f, out _);
-        flow.quitButton = UiButton(panel, "Quit", GameText.Quit, left, new Vector2(columnX + 138f, -226f), new Vector2(264f, 84f), UiGray, 34, 0.2f, out _);
+        Vector2 smallButton = new Vector2(172f, 84f);
+        flow.crewButton = UiButton(panel, "Crew", GameText.Crew, left, new Vector2(columnX - 184f, -226f), smallButton, UiGreen, 30, 0.2f, out _);
+        flow.settingsButton = UiButton(panel, "Settings", GameText.Settings, left, new Vector2(columnX, -226f), smallButton, UiBlue, 30, 0.2f, out _);
+        flow.quitButton = UiButton(panel, "Quit", GameText.Quit, left, new Vector2(columnX + 184f, -226f), smallButton, UiGray, 30, 0.2f, out _);
 
         flow.statusText = UiText(panel, "Status", "", 30, UiYellow, 2f);
         Rect(flow.statusText.gameObject, panel, left, new Vector2(columnX, -320f), new Vector2(560f, 80f));
@@ -883,7 +933,7 @@ public static partial class CargoClashBuilder
         {
             float x = i < 5 ? -212f : 212f;
             float y = 80f - (i % 5) * 40f;
-            Text label = UiText(face, "Label" + i, GameText.FaceSliderNames[i], 22, UiNavy);
+            Text label = UiText(face, "Label" + i, GameText.FaceSliderName(i), 22, UiNavy);
             label.alignment = TextAnchor.MiddleLeft;
             Rect(label.gameObject, face, AnchorCentre, new Vector2(x - 128f, y), new Vector2(150f, 34f));
             Slider slider = UiSlider(face, "Slider" + i, AnchorCentre, new Vector2(x + 72f, y), new Vector2(240f, 32f));

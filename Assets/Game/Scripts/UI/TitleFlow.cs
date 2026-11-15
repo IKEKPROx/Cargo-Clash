@@ -1,6 +1,7 @@
 using System.Text;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace CargoClash
@@ -9,11 +10,11 @@ namespace CargoClash
     /// The screens of the start scene: title, main menu, level select, crew page and a room's lobby.
     /// Practice and creating a room both go through the level select. Joining doesn't, because the host picks.
     /// The crew page is where players pick their body type, hat, glasses and face: from the menu, from the
-    /// lobby, and on the way into practice, where its button starts the match.
+    /// lobby, and on the way into practice, where its button starts the match. The settings page opens from the menu.
     /// </summary>
     public sealed class TitleFlow : MonoBehaviour
     {
-        private enum Page { Title, Menu, Levels, Lobby, Crew }
+        private enum Page { Title, Menu, Levels, Lobby, Crew, Settings }
         private enum Plan { Practice, CreateRoom }
 
         // Once someone has pressed Play, coming back from a match goes straight to the menu.
@@ -31,6 +32,7 @@ namespace CargoClash
         public Button createButton;
         public Button joinButton;
         public Button crewButton;
+        public Button settingsButton;
         public Button quitButton;
         public InputField codeInput;
         public Text statusText;
@@ -83,6 +85,9 @@ namespace CargoClash
         [Tooltip("In CrewLook.FaceSliders order.")]
         public Slider[] faceSliders;
 
+        [Header("Settings")]
+        public SettingsPanel settings;
+
         private GameConfig config;
         private Page page = Page.Title;
         private Plan plan;
@@ -100,6 +105,12 @@ namespace CargoClash
             createButton.onClick.AddListener(() => ChooseLevelFor(Plan.CreateRoom));
             joinButton.onClick.AddListener(HandleJoin);
             crewButton.onClick.AddListener(() => OpenCrew(Page.Menu, false));
+            settingsButton.onClick.AddListener(OpenSettings);
+            settings.Closed += () =>
+            {
+                if (page == Page.Settings) page = Page.Menu;
+            };
+            GameSettings.LanguageChanged += ShowInLanguage;
             quitButton.onClick.AddListener(Application.Quit);
             levelBackButton.onClick.AddListener(() => page = Page.Menu);
             for (int i = 0; i < levelCards.Length; i++)
@@ -130,6 +141,25 @@ namespace CargoClash
             ShowPage();
         }
 
+        private void OnDestroy()
+        {
+            GameSettings.LanguageChanged -= ShowInLanguage;
+        }
+
+        /// <summary>What code wrote is written again in the new language. Labels built into the scene change by themselves.</summary>
+        private void ShowInLanguage()
+        {
+            for (int i = 0; i < levelCards.Length; i++) levelCards[i].Show(i, config.Level(i));
+            if (page == Page.Crew) RefreshCrew();
+        }
+
+        private void OpenSettings()
+        {
+            statusText.text = "";
+            page = Page.Settings;
+            settings.Open();
+        }
+
         private void Update()
         {
             NetworkManager net = NetworkManager.Singleton;
@@ -148,6 +178,8 @@ namespace CargoClash
                 if (page != Page.Lobby) page = Page.Menu;
             }
             ShowPage();
+            Keyboard keyboard = Keyboard.current;
+            if (page == Page.Settings && keyboard != null && keyboard.escapeKey.wasPressedThisFrame) settings.Close();
 
             bool waiting = busy || connected;
             practiceButton.interactable = !waiting;
@@ -168,6 +200,7 @@ namespace CargoClash
             SetActive(lobbyPanel, page == Page.Lobby);
             SetActive(crewPanel, page == Page.Crew);
             SetActive(preview.gameObject, page == Page.Crew);
+            if (page != Page.Settings && settings.IsOpen) settings.panel.SetActive(false);
             if (page != Page.Title) stage.SwingToMenus();
         }
 

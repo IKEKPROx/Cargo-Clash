@@ -21,7 +21,8 @@ namespace CargoClash
                 Physics.IgnoreLayerCollision(GameLayers.RainOnly, layer, true);
             }
             Application.runInBackground = true;
-            if (!Application.isBatchMode) QualitySettings.vSyncCount = 1;
+            // VSync, the frame rate limit, graphics and volume, as the player left them (a test starts from the defaults).
+            GameSettings.ApplyAtStart();
 
             if (NetworkManager.Singleton != null) return;
             GameObject prefab = Resources.Load<GameObject>("NetworkRig");
