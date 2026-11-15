@@ -20,10 +20,12 @@ namespace CargoClash
     /// <summary>
     /// Astra's four kinds of cargo (独立建模/互动货物_v08), each with its own case and something inside to look at:
     /// a carton of cigarettes, a case of cash, a case of gold bars and the crate with the porcelain goose.
+    /// A plank isn't cargo: on the river level it's carried like cargo from the huts to the catcher across the water.
     /// </summary>
-    public enum CargoKind : byte { Tobacco = 0, Cash = 1, Gold = 2, Art = 3 }
+    public enum CargoKind : byte { Tobacco = 0, Cash = 1, Gold = 2, Art = 3, Plank = 4 }
 
-    public enum CargoState : byte { Ground = 0, Carried = 1, Rescued = 2, Destroyed = 3 }
+    /// <summary>Lost: the river carried it off the field. Nobody scores it.</summary>
+    public enum CargoState : byte { Ground = 0, Carried = 1, Rescued = 2, Destroyed = 3, Lost = 4 }
 
     /// <summary>What someone got hit with.</summary>
     public enum Weapon : byte { Hammer = 0, Blast = 1, Slam = 2, Ram = 3 }
@@ -41,6 +43,10 @@ namespace CargoClash
         public const int Debris = 13;
         /// <summary>The character on the crew page. Only its own camera draws this layer.</summary>
         public const int Preview = 14;
+        /// <summary>Walls only people bump into, like the deep water on the river level. Cargo floats on through.</summary>
+        public const int PlayerBlock = 15;
+        /// <summary>Only the rain lands on these, like the hut roofs. Nothing else touches them.</summary>
+        public const int RainOnly = 16;
         public static int LevelMask => 1 << Level;
     }
 

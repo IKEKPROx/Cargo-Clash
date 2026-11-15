@@ -18,6 +18,7 @@ namespace CargoClash
         private static readonly Color AimGrab = new Color(0.38f, 0.95f, 0.5f);
         private static readonly Color AimSmash = new Color(1f, 0.32f, 0.22f);
         private static readonly Color TruckGreen = new Color(0.4f, 1f, 0.5f);
+        private static readonly Color CatcherBlue = new Color(0.55f, 0.85f, 1f);
 
         private const float CargoLabelRange = 20f;
         private const float NameLabelRange = 38f;
@@ -582,6 +583,16 @@ namespace CargoClash
 
         private void ShowCarryPrompts(PlayerAvatar local, CargoItem carried)
         {
+            if (carried.IsPlank)
+            {
+                RiverMatch river = RiverMatch.Instance;
+                bool gap = river != null && river.ReachableGap(local.transform.position) >= 0;
+                promptA.Show(GameText.KeyInteract, gap ? GameText.PromptInsertPlank : GameText.PromptDrop);
+                if (!gap && river != null && river.CatcherInReach(local.transform.position)) promptB.Show(null, GameText.PromptCatcherFull);
+                else if (!gap) promptB.Show(null, GameText.PromptToCatcher);
+                else promptB.Hide();
+                return;
+            }
             bool large = carried.Definition.requiredCarriers > 1;
             bool waiting = large && carried.HasFreeSlot;
             promptA.Show(GameText.KeyInteract, large ? GameText.PromptLetGo : GameText.PromptDrop);
@@ -633,6 +644,7 @@ namespace CargoClash
             }
             string words;
             if (grab.State.Value == CargoState.Carried) words = GameText.PromptHelp;
+            else if (grab.IsPlank) words = GameText.PromptTakePlank;
             else if (grab.Definition.requiredCarriers > 1) words = GameText.PromptLarge;
             else words = GameText.PromptPickUp;
             promptA.Show(GameText.KeyInteract, words);
@@ -773,8 +785,7 @@ namespace CargoClash
             CargoItem held = local.CarriedCargo;
             foreach (CargoItem cargo in CargoItem.All)
             {
-                CargoState state = cargo.State.Value;
-                if (state == CargoState.Destroyed || state == CargoState.Rescued || cargo == held) continue;
+                if (cargo.IsResolved || cargo.IsPlank || cargo == held) continue;
 
                 Vector3 world = cargo.transform.position + Vector3.up * (cargo.Height * 0.5f + 0.3f);
                 Vector3 screen = view.WorldToScreenPoint(world);
@@ -789,7 +800,7 @@ namespace CargoClash
                 label.rectTransform.localScale = Vector3.one * (cargo == aimed ? scale * 1.25f : scale);
 
                 // What you're aiming at has a bigger bar under the crosshair.
-                if (state == CargoState.Ground && cargo.Durability.Value < 1f && cargo != aimed)
+                if (cargo.State.Value == CargoState.Ground && cargo.Durability.Value < 1f && cargo != aimed)
                     DrawBar(screen + Vector3.up * (30f * scale * CanvasScale), cargo.Durability.Value, scale);
             }
         }
@@ -828,15 +839,25 @@ namespace CargoClash
             foreach (CargoItem cargo in CargoItem.All)
             {
                 if (cargo.Definition.size != CargoSize.Large) continue;
-                CargoState state = cargo.State.Value;
-                if (state == CargoState.Destroyed || state == CargoState.Rescued || local.CarriedCargo == cargo) continue;
+                if (cargo.IsResolved || local.CarriedCargo == cargo) continue;
                 DrawMarker(view, cargo.transform.position + Vector3.up * 1.5f, CargoGold, cargo.Definition.value.ToString(), 0.7f);
+            }
+
+            // With a plank in your hands, the place it goes.
+            CargoItem carried = local.CarriedCargo;
+            RiverLevel river = RiverLevel.Instance;
+            if (carried != null && carried.IsPlank && river != null && river.SlotCount > 0)
+            {
+                Vector3 catcher = (river.SlotPosition(0) + river.SlotPosition(river.SlotCount - 1)) * 0.5f + Vector3.up * 2.2f;
+                float beat = 1f + Mathf.Sin(Time.time * 6f) * 0.12f;
+                if ((catcher - local.transform.position).sqrMagnitude > MarkerHideWithin * MarkerHideWithin)
+                    DrawMarker(view, catcher, CatcherBlue, GameText.MarkerCatcher, beat);
             }
 
             LevelLayout layout = LevelLayout.Instance;
             if (layout == null) return;
             bool collector = local.Side == Side.Collector;
-            bool delivering = collector && local.CarriedCargo != null;
+            bool delivering = collector && carried != null && !carried.IsPlank;
             float pulse = delivering ? 1f + Mathf.Sin(Time.time * 6f) * 0.12f : 0.85f;
             Color color = TruckGreen;
             color.a = collector ? 1f : 0.55f;

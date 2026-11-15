@@ -10,7 +10,8 @@
         "Unity.Services.Multiplayer",
         "Unity.InputSystem",
         "Unity.AI.Navigation",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "CargoClash.RiverArt"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

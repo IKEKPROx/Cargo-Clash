@@ -321,6 +321,12 @@ namespace CargoClash
         [Tooltip("How far held cargo is tipped forward, so its face looks back at you.")]
         public float holdTiltDegrees = 30f;
         public float pickUpSeconds = 0.2f;
+        [Tooltip("A plank from the river's huts goes across in front of you, low, resting on both palms: where its middle is.")]
+        public Vector3 plankHold = new Vector3(0f, -0.5f, 0.7f);
+        [Tooltip("How far the plank's far edge dips, so you see its top.")]
+        public float plankTiltDegrees = 12f;
+        [Tooltip("How far each hand is from the middle of the plank, underneath it.")]
+        public float plankHandsApart = 0.3f;
 
         [Header("Body")]
         [Tooltip("The upper body turns around this point.")]
@@ -404,7 +410,7 @@ namespace CargoClash
             float jiggle = walk * (cargo.Definition.size == CargoSize.Small ? 1f : 0.45f);
             Quaternion tilt = Quaternion.Euler(Mathf.Sin(phase * 2f) * 2f * jiggle, Mathf.Cos(phase) * 1.5f * jiggle, Mathf.Cos(phase) * 3.5f * jiggle);
             position = transform.TransformPoint(anchor);
-            rotation = transform.rotation * HoldTilt * tilt;
+            rotation = transform.rotation * (cargo.IsPlank ? PlankTurn : HoldTilt) * tilt;
         }
 
         /// <summary>F: a look at whatever's in your hands. Anything you do with it stops the show.</summary>
@@ -422,8 +428,12 @@ namespace CargoClash
             torsoVelocity += new Vector3(-170f, side * 230f, -side * 150f);
         }
 
+        /// <summary>A plank lies across in front of you (its length, local Z, along your right), its far edge dipped a little.</summary>
+        private Quaternion PlankTurn => Quaternion.Euler(plankTiltDegrees, 0f, 0f) * Quaternion.Euler(0f, 90f, 0f);
+
         private Vector3 HoldPoint(CargoItem cargo)
         {
+            if (cargo.IsPlank) return plankHold;
             Vector3 half = cargo.HalfExtents;
             float z = holdDistance + half.x * holdDistancePerWidth + half.z;
             float sin = Mathf.Sin(holdTiltDegrees * Mathf.Deg2Rad);
@@ -1063,6 +1073,11 @@ namespace CargoClash
 
         private void HoldPoses(CargoItem carried, out ArmPose rightPose, out ArmPose leftPose)
         {
+            if (carried.IsPlank)
+            {
+                PlankPoses(carried, out rightPose, out leftPose);
+                return;
+            }
             // Cargo flies up into the hands, and they come up to meet it. Reaching down to the ground for
             // it would swing a whole arm across the view.
             Vector3 half = carried.HalfExtents;
@@ -1076,6 +1091,24 @@ namespace CargoClash
             float near = -half.z - HoldWristBack;
             rightPose = ArmPose.FlatAgainst(anchor + tilt * new Vector3(outward, low + shift, near), tilt * Vector3.right, HandShape.Open);
             leftPose = ArmPose.FlatAgainst(anchor + tilt * new Vector3(-outward, low - shift, near), tilt * Vector3.left, HandShape.Open);
+        }
+
+        /// <summary>
+        /// A plank carried like a tray: palms up under it, a hand either side of its middle, fingers reaching under toward
+        /// its far edge. It comes up from below into them, as cargo does.
+        /// </summary>
+        private void PlankPoses(CargoItem plank, out ArmPose rightPose, out ArmPose leftPose)
+        {
+            Vector3 half = plank.HalfExtents;
+            float rising = 1f - Mathf.Clamp01(plank.CarryBlend);
+            Vector3 anchor = HoldPoint(plank) + new Vector3(0f, -0.4f, -0.1f) * rising;
+            Quaternion turn = PlankTurn;
+            float shift = Mathf.Cos(FollowCamera.WalkPhase) * 0.008f * FollowCamera.WalkAmount;
+            // In the plank's own frame its width (X) now runs toward you, its length (Z) across, its thickness (Y) up.
+            float under = -half.y - 0.035f;
+            Vector3 palmsDown = turn * Vector3.down;
+            rightPose = ArmPose.FlatAgainst(anchor + turn * new Vector3(0.04f, under + shift, plankHandsApart), palmsDown, HandShape.Open);
+            leftPose = ArmPose.FlatAgainst(anchor + turn * new Vector3(0.04f, under - shift, -plankHandsApart), palmsDown, HandShape.Open);
         }
 
         private void CoCarryPoses(CargoItem carried, float walk, float stride, out ArmPose rightPose, out ArmPose leftPose)

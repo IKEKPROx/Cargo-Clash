@@ -24,7 +24,7 @@ MonoBehaviour:
     scene: 
     picture: {fileID: 21300000, guid: cd1680c89a5a84853a64c704cadd53cb, type: 3}
   - title: RIVER FLATS
-    scene: 
+    scene: LevelRiver
     picture: {fileID: 21300000, guid: caab7b6327add41e9949b2d59ffeb6f6, type: 3}
   - title: ???
     scene: 
@@ -120,6 +120,12 @@ MonoBehaviour:
   smashTimeMultiplier: 1
   smashSwingSeconds: 0.5
   smashFirstHitSeconds: 0.275
+  riverFlowScale: 1
+  riverFlowAcceleration: 1.6
+  wadeSpeedMultiplier: 0.6
+  plankSeconds: 60
+  plankInsertRange: 3.5
+  plank: {fileID: 11400000, guid: 263f59f55dd4a483895c2b73d20b9862, type: 2}
   cargo:
   - {fileID: 11400000, guid: aee7fbe6cc96b4f11ab08fbdc94cba88, type: 2}
   - {fileID: 11400000, guid: 40d1b45efb3054357bcf266e6fe3302d, type: 2}

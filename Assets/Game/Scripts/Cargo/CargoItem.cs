@@ -32,6 +32,12 @@ namespace CargoClash
         public readonly NetworkVariable<ulong> CarrierB = new NetworkVariable<ulong>(NetIds.None);
 
         public CargoDefinition Definition => definition;
+        /// <summary>A plank from the river level's huts: carried like cargo, but it never scores.</summary>
+        public bool IsPlank => definition.kind == CargoKind.Plank;
+        /// <summary>Rescued, smashed or carried off by the river: it's out of play.</summary>
+        public bool IsResolved => State.Value == CargoState.Rescued || State.Value == CargoState.Destroyed || State.Value == CargoState.Lost;
+        /// <summary>Host only: what the river pushes along.</summary>
+        public Rigidbody Body => body;
         public float Radius => Mathf.Max(halfExtents.x, halfExtents.z);
         public float Height => halfExtents.y * 2f;
         public Vector3 HalfExtents => halfExtents;
@@ -43,8 +49,10 @@ namespace CargoClash
         public Vector3 CarryFrom { get; private set; }
 
         public float LastHurtTime { get; private set; } = -100f;
-        public bool HasFreeSlot => definition.requiredCarriers > 1 && State.Value != CargoState.Rescued &&
-            State.Value != CargoState.Destroyed && (CarrierA.Value == NetIds.None || CarrierB.Value == NetIds.None);
+        /// <summary>Host only: when a vacuum last pulled it. The river leaves it to the vacuum for a moment after.</summary>
+        public float LastPulledTime { get; private set; } = -100f;
+        public bool HasFreeSlot => definition.requiredCarriers > 1 && !IsResolved &&
+            (CarrierA.Value == NetIds.None || CarrierB.Value == NetIds.None);
 
         private readonly Dictionary<PlayerAvatar, float> recentSmashers = new Dictionary<PlayerAvatar, float>();
         private GameConfig config;
@@ -113,7 +121,7 @@ namespace CargoClash
             float bestDistance = float.MaxValue;
             foreach (CargoItem cargo in All)
             {
-                if (cargo.State.Value != CargoState.Ground) continue;
+                if (cargo.State.Value != CargoState.Ground || cargo.IsPlank) continue;
                 float distance = cargo.EdgeDistance(position);
                 if (distance <= range && distance < bestDistance)
                 {
@@ -127,9 +135,10 @@ namespace CargoClash
         /// <summary>
         /// The cargo someone is aiming at from their eyes, among what their feet are close enough to reach.
         /// It's mostly about facing it: people don't look at their feet when they're running, so up and
-        /// down only decide between two things that are both in front of you.
+        /// down only decide between two things that are both in front of you. `toSmash` looks only at cargo
+        /// on the ground that a hammer can break, so not at planks.
         /// </summary>
-        public static CargoItem FindAimed(Vector3 eye, float yaw, float pitch, Vector3 feet, float range, bool groundOnly)
+        public static CargoItem FindAimed(Vector3 eye, float yaw, float pitch, Vector3 feet, float range, bool toSmash)
         {
             float allowance = GameConfig.Get().aimDegrees;
             CargoItem best = null;
@@ -137,7 +146,9 @@ namespace CargoClash
             foreach (CargoItem cargo in All)
             {
                 CargoState state = cargo.State.Value;
-                bool usable = state == CargoState.Ground || (!groundOnly && state == CargoState.Carried && cargo.HasFreeSlot);
+                bool usable = toSmash
+                    ? state == CargoState.Ground && !cargo.IsPlank
+                    : state == CargoState.Ground || (state == CargoState.Carried && cargo.HasFreeSlot);
                 if (!usable || cargo.EdgeDistance(feet) > range) continue;
 
                 Vector3 to = cargo.transform.position - eye;
@@ -306,6 +317,7 @@ namespace CargoClash
         private void HandleStateChanged(CargoState previous, CargoState current)
         {
             if (current == CargoState.Destroyed) ShowBreaking();
+            if (current == CargoState.Lost) ShowSwept();
             if (current == CargoState.Carried && previous == CargoState.Ground) GameAudio.PlayAt("pickup", transform.position);
             if (current == CargoState.Ground && previous == CargoState.Carried) GameAudio.PlayAt("drop", transform.position);
         }
@@ -320,6 +332,15 @@ namespace CargoClash
             FxBurst.PlayFlash(middle + Vector3.up * 0.2f, new Color(1f, 0.95f, 0.65f), 1.2f + Radius * 1.4f);
             GameAudio.PlayAt(definition.breakSound, middle);
             FollowCamera.Shake(middle, 0.65f);
+        }
+
+        /// <summary>The river takes it off the field: a splash, and it's gone.</summary>
+        private void ShowSwept()
+        {
+            if (visual != null) visual.gameObject.SetActive(false);
+            Vector3 middle = transform.position;
+            FxBurst.PlayPuff(middle, new Color(0.78f, 0.86f, 0.9f), 8);
+            GameAudio.PlayAt("whoosh", middle, 0.6f);
         }
 
         private void HandleDurabilityChanged(float previous, float current)
@@ -432,6 +453,13 @@ namespace CargoClash
                 hands.HoldPose(this, out position, out rotation);
                 pickUpSeconds = hands.PickUpSeconds;
             }
+            else if (IsPlank)
+            {
+                // Across the body on both palms, for anyone watching.
+                Transform body = carrier.transform;
+                position = carrier.Visual.HandsMiddle + body.up * (halfExtents.y + 0.04f) + body.forward * 0.08f;
+                rotation = body.rotation * Quaternion.Euler(0f, 90f, 0f);
+            }
             else if (carrier.Visual.CaseMarker(out Vector3 carryPosition, out Quaternion carryRotation))
             {
                 // Astra's cases: the carry clip puts the case between the hands.
@@ -522,20 +550,43 @@ namespace CargoClash
             if (director != null && director.Phase.Value == MatchPhase.Playing) CheckDeposit(a, b);
         }
 
+        /// <summary>
+        /// The two carriers walk it along the ground: it keeps its carrying height over slopes and banks, stops at
+        /// walls and rocks, and stops where either carrier couldn't walk, like deep water.
+        /// </summary>
         private void MoveWithCarriers(PlayerAvatar a, PlayerAvatar b, float deltaTime)
         {
             Vector2 average = (a.ServerCoCarryInput + b.ServerCoCarryInput) * 0.5f;
             if (average.sqrMagnitude < 0.0025f) return;
 
-            Vector3 step = new Vector3(average.x, 0f, average.y) * (config.runSpeed * definition.carrySpeedMultiplier * deltaTime);
-            float distance = step.magnitude;
-            bool blocked = Physics.BoxCast(transform.position, halfExtents * 0.95f, step / distance, out _,
-                Quaternion.identity, distance + 0.05f, GameLayers.LevelMask, QueryTriggerInteraction.Ignore);
-            if (!blocked) transform.position += step;
+            float speed = config.runSpeed * definition.carrySpeedMultiplier;
+            RiverLevel river = RiverLevel.Instance;
+            if (river != null) speed *= river.WadeMultiplier(transform.position);
+            Vector3 next = transform.position + new Vector3(average.x, 0f, average.y) * (speed * deltaTime);
+            float lift = definition.coCarryHeight > 0f ? definition.coCarryHeight : halfExtents.y + 0.02f;
+            if (GroundBelow(next, out float ground)) next.y = Mathf.MoveTowards(transform.position.y, ground + lift, 4f * deltaTime);
+
+            if (Physics.CheckBox(next + Vector3.up * 0.06f, halfExtents * 0.9f, Quaternion.identity, GameLayers.LevelMask, QueryTriggerInteraction.Ignore)) return;
+            Vector3 offset = next - transform.position;
+            foreach (PlayerAvatar carrier in new[] { a, b })
+            {
+                Vector3 feet = GrabPointWorld(carrier) + offset;
+                if (Physics.CheckSphere(feet + Vector3.up * 0.9f, 0.3f, 1 << GameLayers.PlayerBlock, QueryTriggerInteraction.Ignore)) return;
+            }
+            transform.position = next;
+        }
+
+        /// <summary>The level's surface under a point, looking down from a little above it.</summary>
+        public static bool GroundBelow(Vector3 point, out float height)
+        {
+            bool found = Physics.Raycast(point + Vector3.up * 1.5f, Vector3.down, out RaycastHit hit, 6f, GameLayers.LevelMask, QueryTriggerInteraction.Ignore);
+            height = found ? hit.point.y : point.y;
+            return found;
         }
 
         private void CheckDeposit(PlayerAvatar a, PlayerAvatar b)
         {
+            if (IsPlank) return;
             LevelLayout layout = LevelLayout.Instance;
             bool aDelivers = a != null && a.Side == Side.Collector && layout.InTruckZone(a.transform.position);
             bool bDelivers = b != null && b.Side == Side.Collector && layout.InTruckZone(b.transform.position);
@@ -548,10 +599,11 @@ namespace CargoClash
             ServerClearCarriers();
             State.Value = CargoState.Rescued;
             MatchDirector.Instance.ServerOnRescued(this, credit);
-            StartCoroutine(FlyToBed(layout.NextBedPoint()));
+            StartCoroutine(FlyToBed(layout.NextBedPoint(), layout.BedRotation));
         }
 
-        private IEnumerator FlyToBed(Vector3 target)
+        /// <summary>It lands square with the bed, so it sits inside it however the truck came to rest.</summary>
+        private IEnumerator FlyToBed(Vector3 target, Quaternion landing)
         {
             SetPhysicsActive(false);
             Vector3 start = transform.position;
@@ -561,10 +613,30 @@ namespace CargoClash
             {
                 Vector3 position = Vector3.Lerp(start, target, t);
                 position.y += Mathf.Sin(t * Mathf.PI) * 3f;
-                transform.SetPositionAndRotation(position, Quaternion.Slerp(startRotation, Quaternion.identity, t));
+                transform.SetPositionAndRotation(position, Quaternion.Slerp(startRotation, landing, t));
                 yield return null;
             }
-            transform.SetPositionAndRotation(target, Quaternion.identity);
+            transform.SetPositionAndRotation(target, landing);
+        }
+
+        /// <summary>The river carried it off the field (host only). Nobody scores it.</summary>
+        public void ServerLose()
+        {
+            if (IsResolved) return;
+            ServerClearCarriers();
+            State.Value = CargoState.Lost;
+            SetPhysicsActive(false);
+            MatchDirector director = MatchDirector.Instance;
+            if (director != null) director.ServerOnLost(this);
+            StartCoroutine(DespawnSoon());
+        }
+
+        /// <summary>A plank pushed into the catcher (host only): the board in the slot takes its place.</summary>
+        public void ServerUseUp()
+        {
+            ServerClearCarriers();
+            SetPhysicsActive(false);
+            if (IsSpawned) NetworkObject.Despawn(true);
         }
 
         public bool ServerTryGrab(PlayerAvatar avatar)
@@ -592,7 +664,7 @@ namespace CargoClash
                     // Stand it upright so both carriers have a clear side to hold, lifted by its handles.
                     Vector3 position = transform.position;
                     float ground = Physics.Raycast(position + Vector3.up * 0.5f, Vector3.down, out RaycastHit floor, 4f,
-                        GameLayers.LevelMask, QueryTriggerInteraction.Ignore) ? floor.point.y : 0f;
+                        GameLayers.LevelMask, QueryTriggerInteraction.Ignore) ? floor.point.y : position.y - halfExtents.y;
                     position.y = ground + (definition.coCarryHeight > 0f ? definition.coCarryHeight : halfExtents.y + 0.02f);
                     transform.SetPositionAndRotation(position, Quaternion.identity);
                 }
@@ -673,6 +745,7 @@ namespace CargoClash
         public void ServerPullToward(Vector3 point, float speed, float deltaTime)
         {
             if (State.Value != CargoState.Ground) return;
+            LastPulledTime = Time.time;
             Vector3 wanted = (point - transform.position).normalized * speed;
             body.linearVelocity = Vector3.MoveTowards(body.linearVelocity, wanted, 45f * deltaTime);
             body.angularVelocity = Vector3.MoveTowards(body.angularVelocity, Vector3.up * 5f, 20f * deltaTime);
@@ -680,7 +753,7 @@ namespace CargoClash
 
         public void ServerApplySmash(PlayerAvatar smasher, float deltaTime)
         {
-            if (State.Value != CargoState.Ground) return;
+            if (State.Value != CargoState.Ground || IsPlank) return;
             recentSmashers[smasher] = Time.time;
             float next = Durability.Value - deltaTime / (definition.smashSeconds * config.EffectiveSmashMultiplier);
             Durability.Value = Mathf.Max(0f, next);

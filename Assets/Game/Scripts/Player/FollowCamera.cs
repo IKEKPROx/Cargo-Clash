@@ -187,7 +187,10 @@ namespace CargoClash
             if (TestEye.HasValue)
             {
                 Vector3 eye = TestEye.Value;
-                position = new Vector3(eye.x, config.eyeHeight, eye.y);
+                // Standing on whatever ground is there: not every level is flat.
+                float ground = Physics.Raycast(new Vector3(eye.x, 60f, eye.y), Vector3.down, out RaycastHit floor, 120f,
+                    GameLayers.LevelMask, QueryTriggerInteraction.Ignore) ? floor.point.y : 0f;
+                position = new Vector3(eye.x, ground + config.eyeHeight, eye.y);
                 rotation = Quaternion.Euler(4f, eye.z, 0f);
                 fov = firstPersonFov;
             }

@@ -1,7 +1,16 @@
+using System;
 using UnityEngine;
 
 namespace CargoClash
 {
+    /// <summary>Where one kind of cargo starts, on a level that places each kind itself.</summary>
+    [Serializable]
+    public sealed class KindSpots
+    {
+        public CargoKind kind;
+        public Transform[] spots;
+    }
+
     /// <summary>
     /// Where things go in a level. Move the child transforms in the scene to change a layout.
     /// </summary>
@@ -9,11 +18,16 @@ namespace CargoClash
     {
         public static LevelLayout Instance { get; private set; }
 
+        [Tooltip("This level's half length in seconds. 0 uses GameConfig.halfSeconds.")]
+        public float halfSeconds;
+
         public Transform[] collectorSpawns;
         public Transform[] interrupterSpawns;
         public Transform[] smallSpots;
         public Transform[] mediumSpots;
         public Transform[] largeSpots;
+        [Tooltip("A level can place each kind of cargo itself (the river does). Then a kind spawns once on each of its spots, fewer with fewer players, and the size spots above are not used.")]
+        public KindSpots[] kindSpots;
 
         [Header("Truck")]
         [Tooltip("Carrying cargo into this area rescues it. Half size is in the transform's local X and Z.")]
@@ -27,6 +41,8 @@ namespace CargoClash
         [Tooltip("The part of the world the map shows, in world X and Z.")]
         public Rect mapArea = new Rect(-23f, -49f, 46f, 98f);
         public Texture mapPicture;
+        [Tooltip("The map shows world -Z at the top instead of +Z, the way the level was drawn.")]
+        public bool mapUpsideDown;
 
         private int bedCount;
 
@@ -55,6 +71,16 @@ namespace CargoClash
             return truckZone.TransformPoint(local);
         }
 
+        public bool PlacesEachKind => kindSpots != null && kindSpots.Length > 0;
+
+        public Transform[] SpotsFor(CargoKind kind)
+        {
+            if (kindSpots == null) return null;
+            foreach (KindSpots entry in kindSpots)
+                if (entry.kind == kind) return entry.spots;
+            return null;
+        }
+
         public Transform[] SpotsFor(CargoSize size)
         {
             switch (size)
@@ -69,6 +95,9 @@ namespace CargoClash
         {
             bedCount = 0;
         }
+
+        /// <summary>Cargo lands square with the bed, turned however the truck came to rest.</summary>
+        public Quaternion BedRotation => bedOrigin != null ? bedOrigin.rotation : Quaternion.identity;
 
         /// <summary>The next landing point in the truck bed; rows stack upward as the bed fills.</summary>
         public Vector3 NextBedPoint()

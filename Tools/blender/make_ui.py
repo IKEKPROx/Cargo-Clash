@@ -840,7 +840,7 @@ def make_sprites():
 def make_cards():
     write_png(FOLDER / "Level02_Card.png", card_forest())
     write_png(FOLDER / "Level03_Card.png", card_mountain())
-    write_png(FOLDER / "Level04_Card.png", card_river())
+    # Level04_Card.png is the river level's real picture now, rendered by CargoClashBuilder.River.cs.
     write_png(FOLDER / "Level05_Card.png", card_unknown((0.42, 0.26, 0.62), (0.86, 0.46, 0.62), (0.3, 0.16, 0.46), 5))
     write_png(FOLDER / "Level06_Card.png", card_unknown((0.12, 0.42, 0.56), (0.42, 0.82, 0.68), (0.06, 0.28, 0.38), 6))
 

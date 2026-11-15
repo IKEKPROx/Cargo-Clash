@@ -57,8 +57,9 @@ public static partial class CargoClashBuilder
         config.inputActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputPath);
 
         config.cargo = BuildCargo();
+        config.plank = BuildPlank();
         config.avatarPrefab = BuildAvatar();
-        config.directorPrefab = BuildNetworkPrefab<MatchDirector>("MatchDirector");
+        config.directorPrefab = BuildDirector();
         config.rosterPrefab = BuildNetworkPrefab<SessionRoster>("SessionRoster");
         config.levels = BuildLevelList();
         EditorUtility.SetDirty(config);
@@ -67,6 +68,13 @@ public static partial class CargoClashBuilder
         AddOutlines();
         BuildNetworkRig();
         BuildLevelScene();
+        BuildRiverScene(config.cargo);
+        // Importing her big model can unload the config, so it's loaded again. The river renders its own card, so the list
+        // picks it up now.
+        config = LoadOrCreate<GameConfig>(ResourcesDir + "/GameConfig.asset");
+        config.levels = BuildLevelList();
+        EditorUtility.SetDirty(config);
+        AssetDatabase.SaveAssets();
         BuildTitleScene();
 
         List<EditorBuildSettingsScene> scenes = new List<EditorBuildSettingsScene> { new EditorBuildSettingsScene(TitleScenePath, true) };
@@ -116,6 +124,7 @@ public static partial class CargoClashBuilder
     {
         List<GameObject> prefabs = new List<GameObject> { config.avatarPrefab, config.directorPrefab, config.rosterPrefab };
         foreach (CargoDefinition definition in config.cargo) prefabs.Add(definition.prefab);
+        if (config.plank != null) prefabs.Add(config.plank.prefab);
         foreach (GameObject prefab in prefabs)
         {
             SerializedObject networkObject = new SerializedObject(prefab.GetComponent<NetworkObject>());
@@ -308,6 +317,16 @@ public static partial class CargoClashBuilder
         root.AddComponent<NetworkObject>();
         root.AddComponent<T>();
         return SavePrefab(root, name);
+    }
+
+    /// <summary>The match on the host. The river level's rules ride along on it; they do nothing on other levels.</summary>
+    private static GameObject BuildDirector()
+    {
+        GameObject root = new GameObject("MatchDirector");
+        root.AddComponent<NetworkObject>();
+        root.AddComponent<MatchDirector>();
+        root.AddComponent<RiverMatch>();
+        return SavePrefab(root, "MatchDirector");
     }
 
     private static void BuildNetworkRig()
@@ -1861,11 +1880,14 @@ public static partial class CargoClashBuilder
         Rect(hud.healthLabel.gameObject, chip, AnchorCentre, new Vector2(30f, 0f), new Vector2(200f, 50f));
     }
 
+    // The same shape as the tutorial: 46 metres across and 98 long. A level of another shape sets its own while its HUD is built.
+    private static readonly Vector2 DefaultMiniMapSize = new Vector2(176f, 356f);
+    private static Vector2 miniMapSize = DefaultMiniMapSize;
+
     private static void BuildMiniMap(Transform parent)
     {
-        // The same shape as the level: 46 metres across and 98 long.
         const float inset = 9f;
-        Vector2 size = new Vector2(176f, 356f);
+        Vector2 size = miniMapSize;
         RectTransform map = UiGroup(parent, "Map", Vector2.one, new Vector2(-30f - size.x * 0.5f, -30f - size.y * 0.5f), size);
         AddSoftShadow(map, 0.4f);
 

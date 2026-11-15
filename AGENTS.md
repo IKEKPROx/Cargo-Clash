@@ -30,6 +30,7 @@
 | 直升机吊走货箱的结尾 | 主机只同步到达时间，各电脑自己播放动画 | `MatchDirector.HelicopterArrivesAt`、`HelicopterExtraction` |
 | 角色动作 | 各电脑按同步下来的状态自己播放，不影响规则 | `CharacterVisual` |
 | 第一人称的手、货物裂开和碎块 | 只在本地播放，不影响规则，也不走网络 | `FirstPersonRig`、`CargoItem`、`CargoPieces` |
+| 河流关卡：水流推货、漂出场地算流失、木屋放木板、插板、木板到时冲走 | 主机。挡板每个槽插进去的时间是 `NetworkList`，各电脑按它显示木板新旧 | `RiverMatch`（挂在 MatchDirector 的网络物体上） |
 
 改联网逻辑时，先想清楚这段代码在哪台电脑上跑。写 `NetworkVariable` 和判定规则都只在主机上做。
 
@@ -177,7 +178,7 @@ Astra 的四种货物（`独立建模/互动货物_v08`）：烟盒、现金箱�
 
 开始场景是 `Assets/CargoRover/Scenes/CargoRover.unity`，整个由 `CargoClashBuilder.BuildTitleScene` 生成。页面的跳转在 `TitleFlow`：标题 → 主菜单 → 选关 → 练习或大厅。加入别人的房间不选关，由主机决定。
 
-**关卡列表**在 `GameConfig.levels`，由 `CargoClashBuilder.BuildLevelList` 写入。第 1 个是教学关（`Level01`），其余是占位：`scene` 为空的关卡，卡片是锁着的。开放一关要做三件事：
+**关卡列表**在 `GameConfig.levels`，由 `CargoClashBuilder.BuildLevelList` 写入。第 1 个是教学关（`Level01`），第 4 个是河流关卡（`LevelRiver`，卡片由生成脚本渲染），其余是占位：`scene` 为空的关卡，卡片是锁着的。一关可以有自己的半场时长（`LevelLayout.halfSeconds`）和按种类摆的货物点（`LevelLayout.kindSpots`）。开放一关要做三件事：
 
 1. 在 `Assets/Game/Scenes` 做好场景（可以复制 `Level01.unity`，`LevelLayout` 和 `MatchHud` 都要有）。
 2. 在 `BuildLevelList` 填上它的 `scene`，运行生成脚本，它会自动进 Build Settings。如果不想再运行生成脚本，就直接改 `GameConfig` 资源，并手动把场景加进 Build Settings。
@@ -188,6 +189,20 @@ Astra 的四种货物（`独立建模/互动货物_v08`）：烟盒、现金箱�
 界面的颜色和做法集中在 `CargoClashBuilder.Title.cs` 的 `UiButton`、`UiPanel`、`UiText`。一个控件放在 `PopSlot` 里，弹入的动画缩放外层，鼠标悬停的动画缩放里层，这两个不能放在同一个物体上。图片要先在 `UiSprite` 里设好导入方式。所有字用 `Assets/Game/UI` 里的 Lilita One，它只有拉丁字母，以后要显示中文得另外配字体。
 
 背景的公路、田地、树是一条无限循环的带子：`TitleScenery` 把落到车后面的东西挪到前面。一组东西的循环长度要比镜头能看到的范围长，否则会当着玩家的面跳过去；越远的一组看到的范围越宽，所以循环越长。电线杆都一样高，并埋进地里一点，否则电线接不上。
+
+## 河流关卡（RIVER FLATS）
+
+Astra 的雨天河流关卡（`game design/独立建模/雨天河流关卡_v16_地表与岸线精修`），玩法是用户和她定的：河水从西（+X）往东流，掉进河的货顺流漂，漂出场地算流失、谁都不得分；深水过不去，只能走两个渡口；木屋里拿木板插到下游的拦截挡板上，挡住漂下来的货，每块板一段时间后被冲走；每半场 3 分钟。
+
+- **她的文件**原样拷在 `Assets/CargoClash_RiverV16`、`_RiverV10`、`_ImpactedBedV12`、`_RainCrashV11`，保留她的 GUID。她出了新版本，就把她的 Unity 包里同样的东西拷过来覆盖（带 `.meta`），再运行生成脚本。**不要拷她的 `Meshes/`**（几百 MB 的文本网格，场景不用它），不要拷她的预览场景、预览渲染设置和 `Editor/` 里的预览生成脚本，也不要运行它。她的运行脚本在 `CargoClash.RiverArt` 这个 asmdef 里，游戏代码引用它。
+- **场景** `Assets/Game/Scenes/LevelRiver.unity` 由 `CargoClashBuilder.River.cs` 生成，和教学关一样不要手改。她的模型不改：材质在导入设置里按名字对到她的材质（`PrepareRiverModel`），碰撞是另外摆的物体（`AddRiverColliders`）。场景里的 `RiverLevel` 记着水流采样、渡口、挡板和木板的位置。
+- **层：** `PlayerBlock`（15）只挡人，用来挡深水和场地边缘；`RainOnly`（16）谁都不碰，只给雨落在木屋屋顶上（`GameBoot` 设的碰撞）。
+- **导航：** `NavMeshModifierVolume` 所在物体的层必须在 NavMeshSurface 的 layerMask 里，否则被忽略。深水的“不可走”体积因此挂在 Level 层的子物体上。生成脚本会检查每个出生点和货物点都走得到货车、深水里没有导航网格，看日志里的 `[Builder] River`。
+- **她的车斗**还是 Blender 的轴向（Unity 里转了 -90°），直升机吊的是外面套的 `BedPivot`，吊点从她的 `LiftAnchor_*` 读。
+- **不要开雾：** 她的着色器在像素阶段拿深度缓冲的值算雾（`RiverWeatherCommon.hlsl`），一开雾她的东西全变成雾的颜色。
+- **木板**是 `CargoKind.Plank` 的货物（`Cargo_Plank`），拿、放、漂和联网都走货物那一套，但不计分、不能砸、送到货车不算（`CargoItem.IsPlank`）。第一人称横在身前托着（`FirstPersonRig.PlankPoses`），别人看到的是托在两个手掌上（`CharacterVisual` 用托烟盒的动作）。
+- **两人合搬**的箱子和人跟着地面高度走（`CargoItem.MoveWithCarriers`、`PlayerAvatar.TickCoCarry`），过不去的深水也挡住。教学关是平地，以前看不出来。
+- 测试：`-ccLevel 3` 选这一关，`-ccRiverTest` 跑河流专项（主机上真的拿木板去插、看货被挡住、等木板冲走、货流失不计分、渡口和深水、机器人过河的路线、两人合搬过坡；客户端上检查看到的木板和挡板对不对）。
 
 ## 怎么验证
 
@@ -214,6 +229,8 @@ grep CCTEST /tmp/cargo-match.log
 | 参数 | 作用 |
 |---|---|
 | `-ccMode host` / `client` | 开局域网主机 / 加入，配合 `-ccAddress`、`-ccExpectClients` 测两台机器 |
+| `-ccLevel 编号` | 练习和开房选第几关（从 0 数），比如 3 是河流关卡。不加就是教学关 |
+| `-ccRiverTest` | 河流关卡的专项测试，见上面“河流关卡”。配合 `-ccLevel 3`，加 `-ccShotDir` 会拍拿木板和挡板的照片 |
 | `-ccMode menu` | 用真实的点击走一遍开始页面的每一屏并拍照，同时检查锁着的关卡点不进去、加入失败有提示，以及 CREW 页的按钮、滑块、预览和改了之后能传到房间。配合 `-ccShotDir`，窗口运行 |
 | `-ccShotDir 目录`、`-ccShotEvery 秒` | 窗口运行时定时截图，用来检查画面 |
 | `-ccSmashScale 倍数` | 临时改砸货时间，用来比较平衡 |

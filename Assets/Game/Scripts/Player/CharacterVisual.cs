@@ -130,6 +130,9 @@ namespace CargoClash
         /// <summary>How far the clip has the lid open, as a turn from the case's own frame.</summary>
         public Quaternion LidTurn => Quaternion.Inverse(look.caseMarker.rotation) * look.lidMarker.rotation;
 
+        /// <summary>Halfway between the hands.</summary>
+        public Vector3 HandsMiddle => (look.handLeft.position + look.handRight.position) * 0.5f;
+
         /// <summary>Where held cargo goes for anyone watching: between the hands, against the belly.</summary>
         public Vector3 CarryPoint(float cargoHalfDepth)
         {
@@ -345,7 +348,9 @@ namespace CargoClash
         {
             switch (definition.kind)
             {
-                case CargoKind.Tobacco: return UpperCarryTobacco;
+                // A plank rests on both palms, the way the cigarette carton does.
+                case CargoKind.Tobacco:
+                case CargoKind.Plank: return UpperCarryTobacco;
                 case CargoKind.Cash: return UpperCarryCash;
                 case CargoKind.Gold: return UpperCarryGold;
                 default: return definition.size == CargoSize.Small ? UpperCarry : UpperCarryBig;

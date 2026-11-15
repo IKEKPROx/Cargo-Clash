@@ -123,9 +123,15 @@ namespace CargoClash
         public const string KeyInspect = "F";
         public const string PromptLookInside = "LOOK INSIDE";
         public const string PromptOpenCrate = "OPEN IT";
+        // The river level's planks and catcher.
+        public const string PromptTakePlank = "TAKE PLANK";
+        public const string PromptInsertPlank = "PUT IN THE CATCHER";
+        public const string PromptToCatcher = "Plug a gap in the catcher downstream!";
+        public const string PromptCatcherFull = "The catcher is full.";
         public const string RamReady = "RAM";
         public const string RamCooling = "RECHARGING";
         public const string MarkerTruck = "TRUCK";
+        public const string MarkerCatcher = "CATCHER";
         public const string You = "YOU";
         public const string Bonk = "BONK!";
         public const string Pow = "POW!";
@@ -148,6 +154,8 @@ namespace CargoClash
         public const string Interrupters = "INTERRUPTERS";
 
         public static string CargoValue(int value) => "+" + value;
+        /// <summary>The river took it. Nobody scores it.</summary>
+        public static string CargoLost(int value) => "LOST " + value;
         public static string Metres(string what, int metres) => what + "  " + metres + "m";
 
         public const string TitleMover = "Mover Supreme";

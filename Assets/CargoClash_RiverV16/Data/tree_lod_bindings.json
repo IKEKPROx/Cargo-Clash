@@ -1,0 +1,174 @@
+{
+  "trees": [
+    {
+      "root": "Tree_00",
+      "parts": [
+        {
+          "high": "V15_Tree_00_BranchStructure",
+          "low": "V15_DistantTree01_01_BranchStructure"
+        },
+        {
+          "high": "V15_Tree_00_LeafBlades",
+          "low": "V15_DistantTree01_01_LeafBlades"
+        },
+        {
+          "high": "V15_Tree_00_BarkDetails",
+          "low": "V15_DistantTree01_01_BarkDetails"
+        }
+      ]
+    },
+    {
+      "root": "Tree_01",
+      "parts": [
+        {
+          "high": "V15_Tree_01_BranchStructure",
+          "low": "V15_DistantTree02_02_BranchStructure"
+        },
+        {
+          "high": "V15_Tree_01_LeafBlades",
+          "low": "V15_DistantTree02_02_LeafBlades"
+        },
+        {
+          "high": "V15_Tree_01_BarkDetails",
+          "low": "V15_DistantTree02_02_BarkDetails"
+        }
+      ]
+    },
+    {
+      "root": "Tree_02",
+      "parts": [
+        {
+          "high": "V15_Tree_02_BranchStructure",
+          "low": "V15_DistantTree03_03_BranchStructure"
+        },
+        {
+          "high": "V15_Tree_02_LeafBlades",
+          "low": "V15_DistantTree03_03_LeafBlades"
+        },
+        {
+          "high": "V15_Tree_02_BarkDetails",
+          "low": "V15_DistantTree03_03_BarkDetails"
+        }
+      ]
+    },
+    {
+      "root": "Tree_03",
+      "parts": [
+        {
+          "high": "V15_Tree_03_BranchStructure",
+          "low": "V15_DistantTree04_04_BranchStructure"
+        },
+        {
+          "high": "V15_Tree_03_LeafBlades",
+          "low": "V15_DistantTree04_04_LeafBlades"
+        },
+        {
+          "high": "V15_Tree_03_BarkDetails",
+          "low": "V15_DistantTree04_04_BarkDetails"
+        }
+      ]
+    },
+    {
+      "root": "Tree_04",
+      "parts": [
+        {
+          "high": "V15_Tree_04_BranchStructure",
+          "low": "V15_DistantTree00_00_BranchStructure"
+        },
+        {
+          "high": "V15_Tree_04_LeafBlades",
+          "low": "V15_DistantTree00_00_LeafBlades"
+        },
+        {
+          "high": "V15_Tree_04_BarkDetails",
+          "low": "V15_DistantTree00_00_BarkDetails"
+        }
+      ]
+    },
+    {
+      "root": "Tree_05",
+      "parts": [
+        {
+          "high": "V15_Tree_05_BranchStructure",
+          "low": "V15_DistantTree01_01_BranchStructure"
+        },
+        {
+          "high": "V15_Tree_05_LeafBlades",
+          "low": "V15_DistantTree01_01_LeafBlades"
+        },
+        {
+          "high": "V15_Tree_05_BarkDetails",
+          "low": "V15_DistantTree01_01_BarkDetails"
+        }
+      ]
+    },
+    {
+      "root": "Tree_06",
+      "parts": [
+        {
+          "high": "V15_Tree_06_BranchStructure",
+          "low": "V15_DistantTree02_02_BranchStructure"
+        },
+        {
+          "high": "V15_Tree_06_LeafBlades",
+          "low": "V15_DistantTree02_02_LeafBlades"
+        },
+        {
+          "high": "V15_Tree_06_BarkDetails",
+          "low": "V15_DistantTree02_02_BarkDetails"
+        }
+      ]
+    },
+    {
+      "root": "Tree_07",
+      "parts": [
+        {
+          "high": "V15_Tree_07_BranchStructure",
+          "low": "V15_DistantTree03_03_BranchStructure"
+        },
+        {
+          "high": "V15_Tree_07_LeafBlades",
+          "low": "V15_DistantTree03_03_LeafBlades"
+        },
+        {
+          "high": "V15_Tree_07_BarkDetails",
+          "low": "V15_DistantTree03_03_BarkDetails"
+        }
+      ]
+    },
+    {
+      "root": "Tree_08",
+      "parts": [
+        {
+          "high": "V15_Tree_08_BranchStructure",
+          "low": "V15_DistantTree04_04_BranchStructure"
+        },
+        {
+          "high": "V15_Tree_08_LeafBlades",
+          "low": "V15_DistantTree04_04_LeafBlades"
+        },
+        {
+          "high": "V15_Tree_08_BarkDetails",
+          "low": "V15_DistantTree04_04_BarkDetails"
+        }
+      ]
+    },
+    {
+      "root": "Tree_09",
+      "parts": [
+        {
+          "high": "V15_Tree_09_BranchStructure",
+          "low": "V15_DistantTree00_00_BranchStructure"
+        },
+        {
+          "high": "V15_Tree_09_LeafBlades",
+          "low": "V15_DistantTree00_00_LeafBlades"
+        },
+        {
+          "high": "V15_Tree_09_BarkDetails",
+          "low": "V15_DistantTree00_00_BarkDetails"
+        }
+      ]
+    }
+  ]
+}

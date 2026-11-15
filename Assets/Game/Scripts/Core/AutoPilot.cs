@@ -17,7 +17,7 @@ namespace CargoClash
     /// Example: CargoClash.app/Contents/MacOS/Cargo\ Clash -ccMode practice -ccBotLocal -ccHalfSeconds 40 -ccQuit
     /// It does nothing unless -ccMode is present.
     /// </summary>
-    public sealed class AutoPilot : MonoBehaviour
+    public sealed partial class AutoPilot : MonoBehaviour
     {
         public static float HalfSecondsOverride;
         public static float SmashScaleOverride;
@@ -35,6 +35,8 @@ namespace CargoClash
         public static bool BotsIdle;
 
         private string mode;
+        private int levelIndex;
+        private bool riverTest;
         private string address = "127.0.0.1";
         private string shotDirectory;
         private float shotEvery = 15f;
@@ -92,6 +94,8 @@ namespace CargoClash
                 switch (args[i])
                 {
                     case "-ccMode": mode = next; break;
+                    case "-ccLevel": levelIndex = int.Parse(next); break;
+                    case "-ccRiverTest": riverTest = true; break;
                     case "-ccAddress": address = next; break;
                     case "-ccHalfSeconds": HalfSecondsOverride = float.Parse(next); break;
                     case "-ccSmashScale": SmashScaleOverride = float.Parse(next); break;
@@ -150,7 +154,11 @@ namespace CargoClash
 
             RoomService rooms = RoomService.Instance;
             NetworkManager net = NetworkManager.Singleton;
+            if (levelIndex < 0 || levelIndex >= GameConfig.Get().levels.Length || !GameConfig.Get().Level(levelIndex).IsReady)
+                throw new ArgumentOutOfRangeException(nameof(levelIndex), "Select an unlocked -ccLevel index.");
+            rooms.SelectedLevel = levelIndex;
             if (!string.IsNullOrEmpty(shotDirectory) && mode != "menu") StartCoroutine(TakeScreenshots());
+            if (riverTest) StartCoroutine(TestTheRiver());
             if (forceCoCarry) StartCoroutine(ForceCoCarry());
             if (uncapped) StartCoroutine(MeasureFrames());
             if (!string.IsNullOrEmpty(tourSpots)) StartCoroutine(TourTheLevel());
@@ -1499,7 +1507,7 @@ namespace CargoClash
             {
                 Click(flow.practiceButton);
                 yield return new WaitForSeconds(1f);
-                Click(flow.levelCards[0].button);
+                Click(flow.levelCards[levelIndex].button);
                 yield return new WaitForSeconds(1f);
                 Click(flow.crewStartButton);
                 yield break;
@@ -1509,7 +1517,7 @@ namespace CargoClash
             {
                 Click(flow.createButton);
                 yield return new WaitForSeconds(1f);
-                Click(flow.levelCards[0].button);
+                Click(flow.levelCards[levelIndex].button);
                 while (SessionRoster.Instance == null || net.ConnectedClientsIds.Count < expectClients) yield return null;
                 yield return new WaitForSeconds(1f);
                 Click(flow.fillButton);

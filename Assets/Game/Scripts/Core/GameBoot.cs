@@ -14,6 +14,12 @@ namespace CargoClash
             // Bits of broken cargo land on the level and pass through everything else.
             for (int layer = 0; layer < 32; layer++)
                 Physics.IgnoreLayerCollision(GameLayers.Debris, layer, layer != GameLayers.Level);
+            // Deep water stops people and nothing else; the hut roofs only keep the rain out.
+            for (int layer = 0; layer < 32; layer++)
+            {
+                Physics.IgnoreLayerCollision(GameLayers.PlayerBlock, layer, layer != GameLayers.Player);
+                Physics.IgnoreLayerCollision(GameLayers.RainOnly, layer, true);
+            }
             Application.runInBackground = true;
             if (!Application.isBatchMode) QualitySettings.vSyncCount = 1;
 

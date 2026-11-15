@@ -165,6 +165,7 @@ namespace CargoClash
         private ulong lastSmashTarget = NetIds.None;
         private ulong lastHitTarget = NetIds.None;
         private Vector2 lastCoCarry;
+        private Vector2? testCoCarry;
         private float nextCoCarrySend;
         private bool inspectMoveLatch;
         private float approachStart = -1f;
@@ -278,7 +279,7 @@ namespace CargoClash
                 : new Vector3(rawMove.x, 0f, rawMove.y);
             bool coCarrying = carried != null && carried.Definition.requiredCarriers > 1;
 
-            if (coCarrying) TickCoCarry(carried, new Vector2(wish.x, wish.z));
+            if (coCarrying) TickCoCarry(carried, testCoCarry ?? new Vector2(wish.x, wish.z));
             else if (approachStart >= 0f) TickApproach();
             else TickRunning(carried, wish, deltaTime);
 
@@ -297,6 +298,8 @@ namespace CargoClash
         // ---- For the automatic tests: what the keys would do, aimed exactly ----
 
         public void TestGrab(CargoItem cargo) => InteractRpc(cargo.NetworkObjectId);
+        /// <summary>Walks a chest you're carrying with someone this way, in the world, until told zero.</summary>
+        public void TestCoCarryMove(Vector2 worldMove) => testCoCarry = worldMove.sqrMagnitude > 0f ? worldMove : (Vector2?)null;
         public void TestLetGo() => InteractRpc(NetIds.None);
         public void TestInspect() => PressInspect(true);
         public void TestOpenCrate(CargoItem crate) => BeginCrateInspect(crate);
@@ -560,6 +563,9 @@ namespace CargoClash
 
             float speed = RunSpeed;
             if (carried != null) speed *= carried.Definition.carrySpeedMultiplier;
+            // Wading across a ford is slow going.
+            RiverLevel river = RiverLevel.Instance;
+            if (river != null) speed *= river.WadeMultiplier(transform.position);
             if (Sucking.Value) speed *= config.suckMoveMultiplier;
             else if (IsCharging) speed *= config.chargeMoveMultiplier;
             Vector3 velocity = wish * speed;
@@ -629,8 +635,10 @@ namespace CargoClash
                 CoCarryInputRpc(worldMove);
             }
 
+            // Standing on the ground beside the chest, wherever the ground is: banks and slopes aren't flat.
             Vector3 grab = carried.GrabPointWorld(this);
-            transform.position = new Vector3(grab.x, transform.position.y, grab.z);
+            float feet = CargoItem.GroundBelow(new Vector3(grab.x, transform.position.y, grab.z), out float ground) ? ground : transform.position.y;
+            transform.position = new Vector3(grab.x, Mathf.MoveTowards(transform.position.y, feet, 6f * Time.deltaTime), grab.z);
             Vector3 toCargo = carried.transform.position - transform.position;
             toCargo.y = 0f;
             if (toCargo.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(toCargo);
@@ -712,6 +720,9 @@ namespace CargoClash
             CargoItem carried = CarriedCargo;
             if (aimedCargoId == NetIds.None)
             {
+                // A plank goes into the catcher if there's a gap within reach; otherwise it's put down like anything else.
+                RiverMatch river = RiverMatch.Instance;
+                if (carried != null && carried.IsPlank && river != null && river.ServerTryInsert(this, carried)) return;
                 if (carried != null) carried.ServerRelease(this);
                 return;
             }

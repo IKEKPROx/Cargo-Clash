@@ -193,6 +193,20 @@ namespace CargoClash
         [Tooltip("From starting to swing until the first hit. Should match where the hit lands in the Smash clip.")]
         public float smashFirstHitSeconds = 0.275f;
 
+        [Header("River level")]
+        [Tooltip("Times the speed Astra suggests for cargo drifting down the river (RiverFlowPath.suggestedCargoSpeed).")]
+        public float riverFlowScale = 1f;
+        [Tooltip("How fast floating cargo catches up with the current, in metres per second each second.")]
+        public float riverFlowAcceleration = 1.6f;
+        [Tooltip("Running speed while wading through a ford.")]
+        public float wadeSpeedMultiplier = 0.6f;
+        [Tooltip("How long a plank stays in the catcher before the water takes it.")]
+        public float plankSeconds = 60f;
+        [Tooltip("How far from an empty slot in the catcher someone can stand and still push a plank into it.")]
+        public float plankInsertRange = 3.5f;
+        [Tooltip("The plank people carry from the huts to the catcher. It is carried like cargo but never scores.")]
+        public CargoDefinition plank;
+
         [Header("Cargo")]
         public CargoDefinition[] cargo;
         [Tooltip("Cargo looks damaged once its durability falls to this.")]
@@ -238,8 +252,19 @@ namespace CargoClash
             }
         }
 
-        /// <summary>Half length for this run. AutoPilot shortens it for automated tests.</summary>
-        public float EffectiveHalfSeconds => AutoPilot.HalfSecondsOverride > 0f ? AutoPilot.HalfSecondsOverride : halfSeconds;
+        /// <summary>
+        /// Half length for this run: the level's own if it has one (the river's halves are 3 minutes), otherwise the
+        /// usual. AutoPilot shortens it for automated tests.
+        /// </summary>
+        public float EffectiveHalfSeconds
+        {
+            get
+            {
+                if (AutoPilot.HalfSecondsOverride > 0f) return AutoPilot.HalfSecondsOverride;
+                LevelLayout layout = LevelLayout.Instance;
+                return layout != null && layout.halfSeconds > 0f ? layout.halfSeconds : halfSeconds;
+            }
+        }
 
         public float EffectiveSmashMultiplier => AutoPilot.SmashScaleOverride > 0f ? AutoPilot.SmashScaleOverride : smashTimeMultiplier;
 

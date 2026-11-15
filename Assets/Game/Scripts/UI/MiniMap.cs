@@ -27,8 +27,7 @@ namespace CargoClash
             used = 0;
             foreach (CargoItem cargo in CargoItem.All)
             {
-                CargoState state = cargo.State.Value;
-                if (state == CargoState.Destroyed || state == CargoState.Rescued) continue;
+                if (cargo.IsResolved || cargo.IsPlank) continue;
                 DrawCargo(layout, cargo);
             }
 
@@ -45,7 +44,7 @@ namespace CargoClash
             {
                 Image arrow = Blip(layout, local.transform.position, 26f, arrowSprite);
                 arrow.color = Color.white;
-                arrow.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -local.LookYaw);
+                arrow.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -local.LookYaw + (layout.mapUpsideDown ? 180f : 0f));
             }
 
             for (int i = used; i < pool.Count; i++)
@@ -95,6 +94,8 @@ namespace CargoClash
             Vector2 place = new Vector2(
                 Mathf.Clamp01(Mathf.InverseLerp(area.xMin, area.xMax, world.x)),
                 Mathf.Clamp01(Mathf.InverseLerp(area.yMin, area.yMax, world.z)));
+            // Turned half round, the way the level was drawn.
+            if (layout.mapUpsideDown) place = Vector2.one - place;
             RectTransform rect = image.rectTransform;
             rect.anchoredPosition = new Vector2((place.x - 0.5f) * box.width, (place.y - 0.5f) * box.height);
             rect.sizeDelta = new Vector2(size, size);

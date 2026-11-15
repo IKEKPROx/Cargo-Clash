@@ -1,0 +1,466 @@
+fileFormatVersion: 2
+guid: af5cf3978bb04440b8e62d492f3a956f
+ModelImporter:
+  serializedVersion: 24600
+  internalIDToNameTable: []
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River10_Bark
+    second: {fileID: 2100000, guid: a41c14762d69043cca12099c0c239708, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River10_Endgrain
+    second: {fileID: 2100000, guid: 264f521ff9b7949229f4551f2d3c45eb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River10_FlowerPink
+    second: {fileID: 2100000, guid: e66188f365d7d41058191056c97653b2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River10_FlowerWhite
+    second: {fileID: 2100000, guid: 50065df3fe5934cb1bfb212b6793b3e4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River10_FlowerYellow
+    second: {fileID: 2100000, guid: dde56309924574e4a896ec9963ea2f62, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River10_Iron
+    second: {fileID: 2100000, guid: ddb1cff16edce48329e41c3f27a1ab95, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River10_Puddle
+    second: {fileID: 2100000, guid: 25bc64eb71bbe414183f90a265be6911, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River10_Road
+    second: {fileID: 2100000, guid: 0e27f72143df74d72b3f46af55b73076, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River10_RoadLine
+    second: {fileID: 2100000, guid: 8237ae33ec20e49a1adf7c3066519b16, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River10_Rock
+    second: {fileID: 2100000, guid: 03581dce7a088491d861232cf560c49f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River10_RockDark
+    second: {fileID: 2100000, guid: 7271356bac1504c4a99a43106840b2ac, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River10_RockLight
+    second: {fileID: 2100000, guid: 709ca8cf213464b788ce8503053ddfad, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River10_Roof2
+    second: {fileID: 2100000, guid: ab551961c19f24ad3ba62534d2707ebf, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River10_Wood
+    second: {fileID: 2100000, guid: 5843e405968404a4291e67eef4487833, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River10_WoodDark
+    second: {fileID: 2100000, guid: aae45df12453e43a088a7455085dabfb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River10_WoodLight
+    second: {fileID: 2100000, guid: 4d54caa233a0340eb960d15c7ee19ce6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Bark
+    second: {fileID: 2100000, guid: f0b05ed4c33af46639f35524e323fd8c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Endgrain
+    second: {fileID: 2100000, guid: 7a1a4817fb13a4d6bb3cbb8b2d9c7276, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Fern
+    second: {fileID: 2100000, guid: 731c1a667485346959ad3f8271b78235, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_Iron
+    second: {fileID: 2100000, guid: 3e31abd57d980475aa5e3d3296b8bd51, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_Red0
+    second: {fileID: 2100000, guid: 1390b3b16009346dc8c5e47b13d8fbd4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_Red1
+    second: {fileID: 2100000, guid: d75de5e5af2d1481faa6d7990ff7eeb3, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_Red2
+    second: {fileID: 2100000, guid: 8e79e92c1a76248e1b5593d6178df4c7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_Red3
+    second: {fileID: 2100000, guid: 5fc2f64f48c974fe4b940a5870c33e97, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_Red4
+    second: {fileID: 2100000, guid: bb7cdbe5d1d874894acf3f3aeb7f5f08, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_Road
+    second: {fileID: 2100000, guid: 0746dc454d2ed46fbbc92662eb12e686, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_RoadLine
+    second: {fileID: 2100000, guid: 1c0917e3c11aa4111bba4e3e5fdbe3f7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_RockDark
+    second: {fileID: 2100000, guid: b951ca56972364237b89efc23ab9e8d9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_Roof0
+    second: {fileID: 2100000, guid: 34ac4e6147f0443baa0a8283785edacc, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_Roof1
+    second: {fileID: 2100000, guid: 41ccd4f05ceb04ac6bcdce25782c26a0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_Roof2
+    second: {fileID: 2100000, guid: 6189bb76583ba4f5e9ca5200cf15d555, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_Roof3
+    second: {fileID: 2100000, guid: bab5c555833884cdf9049df924e8f340, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_Steel
+    second: {fileID: 2100000, guid: e32df82974a13456bb120861bc3e8c74, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_Wood
+    second: {fileID: 2100000, guid: 77ed5017b9c564152be807fac861f2ad, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_WoodDark
+    second: {fileID: 2100000, guid: f9e19151696844a819eda2fbb3314c49, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_WoodLight
+    second: {fileID: 2100000, guid: a007d60851dea421c99da76084cd7a6e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Finish_WoodWet
+    second: {fileID: 2100000, guid: 58fd09a35400044ac8aeae7f5d152dc6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_GroundCover
+    second: {fileID: 2100000, guid: b3d6bfe28d443437c9c43e83cfa97d23, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_IronPatina
+    second: {fileID: 2100000, guid: e7b43ec4f23ef434cb807010dcb683b9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_LeafLitter
+    second: {fileID: 2100000, guid: c67a05c65cb7a4e0b87e405da891cacd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_Moss
+    second: {fileID: 2100000, guid: e0db5376282fb479391caf8f9a33622c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_RockCrevice
+    second: {fileID: 2100000, guid: 48ea646c448f14b68bd9b2193108ffda, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_RoofMoss
+    second: {fileID: 2100000, guid: c73846133b7ab4356aa8463413a5ab35, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_StratifiedStone
+    second: {fileID: 2100000, guid: 91a28c4b9678d44c3bd5812be33909a9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River13_WoodSplit
+    second: {fileID: 2100000, guid: 356381c57d8e74679ad919a36034b74f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River14_AsphaltPatch
+    second: {fileID: 2100000, guid: 203c2f25cfbde49b4b1d708456285c43, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River14_Bark
+    second: {fileID: 2100000, guid: dabcc132fb47b4f6fa610f361ad825e0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River14_BarkLight
+    second: {fileID: 2100000, guid: 83ab639f296804cb3b56935a64a00b32, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River14_ChippedStone
+    second: {fileID: 2100000, guid: 4f58fd3ddf65d4335961afe389166c15, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River14_Clover
+    second: {fileID: 2100000, guid: b0b1e429ee7104652abc81e8d5bf6db6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River14_LeafVein
+    second: {fileID: 2100000, guid: 1ebf620fe704549038e7a5aa30f31808, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River14_Litter
+    second: {fileID: 2100000, guid: 555ba837cc1a44e538ffc9c28b354fb5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River14_Metal
+    second: {fileID: 2100000, guid: 595ca9329c98b4ef0952aa45f07de264, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River14_Mineral
+    second: {fileID: 2100000, guid: e4efbb1a91d9942b48ea17288f845e08, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River14_MossFine
+    second: {fileID: 2100000, guid: ecebe4d65596643579981e9abf535942, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River14_Mushroom
+    second: {fileID: 2100000, guid: 35d017e66ca804b0aa38b7bafd72475b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River14_Petal
+    second: {fileID: 2100000, guid: 5e1d084c0a5214ce4a5ae861370c3e78, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River14_RoadGravel
+    second: {fileID: 2100000, guid: f807ba454c50f472393d1c89281fc359, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River14_SignCream
+    second: {fileID: 2100000, guid: 8770d2657effe40488794413f4f0cc72, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River14_SignGold
+    second: {fileID: 2100000, guid: 213cca7bd206c4f768d1a986ed1b54b0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River14_SignInk
+    second: {fileID: 2100000, guid: ec6f328359bd14fd8ab1597f6e3bb36d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River14_TarmacCrack
+    second: {fileID: 2100000, guid: 0318dc9cc5f4c43038aeacd894b60579, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River15_SoftLeaf
+    second: {fileID: 2100000, guid: 7b85135161f854a578b19f990ca5315e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River16_Downpipe
+    second: {fileID: 2100000, guid: fe2e6f15e6713446a9260627dc1536d9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River16_Foundation
+    second: {fileID: 2100000, guid: 829759ba7820e43fc8c187bb03419a0f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River16_GroundFinish
+    second: {fileID: 2100000, guid: a857debce4b3c4ff6ab0c95ff9839973, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River16_RoadTread
+    second: {fileID: 2100000, guid: c7456037148634c1bb1a121476f93e08, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River16_ShoreShale
+    second: {fileID: 2100000, guid: ed695937723eb44c2ae541379da1c3a7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River16_WetAsphalt
+    second: {fileID: 2100000, guid: 23b88e50f214e4c33829eeae23edf0fc, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: River16_WetRoots
+    second: {fileID: 2100000, guid: 5dada5da82e9f40348c9b4fa96d91951, type: 2}
+  materials:
+    materialImportMode: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+    searchTexturesGlobally: 0
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    preBakeConvexCollisionMesh: 0
+    preBakeTriangleCollisionMesh: 0
+    importPhysicalCameras: 1
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 0
+    importLights: 0
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    importUVs: -1
+    importVertexColors: 1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+    calculateBlendshapeNormalsDeltaFromImportedNormals: 0
+  referencedClips: []
+  importAnimation: 0
+  humanDescription:
+    serializedVersion: 3
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 0
+  humanoidOversampling: 1
+  avatarSetup: 0
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -29,7 +29,7 @@ public static partial class CargoClashBuilder
             new LevelInfo { title = "TUTORIAL", scene = "Level01", picture = CardPicture(1) },
             new LevelInfo { title = "FOREST ROAD", picture = CardPicture(2) },
             new LevelInfo { title = "MOUNTAIN PASS", picture = CardPicture(3) },
-            new LevelInfo { title = "RIVER FLATS", picture = CardPicture(4) },
+            new LevelInfo { title = "RIVER FLATS", scene = RiverSceneName, picture = CardPicture(4) },
             new LevelInfo { title = "???", picture = CardPicture(5) },
             new LevelInfo { title = "???", picture = CardPicture(6) },
         };

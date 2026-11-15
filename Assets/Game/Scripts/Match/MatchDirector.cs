@@ -65,6 +65,7 @@ namespace CargoClash
         private GameConfig config;
         private LevelLayout layout;
         private int halfDestroyed;
+        private int halfLost;
         private int halfTotal;
         private double halfStartedAt;
 
@@ -103,6 +104,8 @@ namespace CargoClash
 
         private IEnumerator RunMatch()
         {
+            // Everything else on this object (the river level's rules) finishes spawning first.
+            yield return null;
             SpawnAvatars();
             for (int half = 1; half <= 2; half++)
             {
@@ -145,6 +148,7 @@ namespace CargoClash
         {
             foreach (CargoItem cargo in CargoItem.All)
             {
+                if (cargo.IsPlank) continue;
                 if (cargo.State.Value == CargoState.Ground || cargo.State.Value == CargoState.Carried) return false;
             }
             return true;
@@ -192,7 +196,45 @@ namespace CargoClash
             HalfRescued.Value = 0;
             CargoRanOut.Value = false;
             halfDestroyed = 0;
+            halfLost = 0;
             halfTotal = 0;
+            if (layout.PlacesEachKind) SpawnEachKind(thirds);
+            else SpawnBySize(thirds);
+
+            // The river level's planks and catcher start over too.
+            RiverMatch river = RiverMatch.Instance;
+            if (river != null) river.ServerResetHalf();
+
+            int orangeIndex = 0;
+            int blueIndex = 0;
+            foreach (PlayerAvatar avatar in PlayerAvatar.All)
+            {
+                int index = avatar.Team == Team.Orange ? orangeIndex++ : blueIndex++;
+                Transform spot = SpawnFor(avatar.Team, index, CollectorTeam.Value);
+                avatar.ServerResetForHalf(spot.position, spot.rotation);
+            }
+        }
+
+        /// <summary>A level that places every kind itself: one on each of its spots, a third or two fewer with fewer players.</summary>
+        private void SpawnEachKind(int thirds)
+        {
+            foreach (CargoDefinition definition in config.cargo)
+            {
+                Transform[] spots = layout.SpotsFor(definition.kind);
+                if (spots == null || spots.Length == 0) continue;
+                int count = Mathf.Max(1, spots.Length * thirds / 3);
+                for (int i = 0; i < count; i++)
+                {
+                    Transform spot = spots[i * spots.Length / count];
+                    GameObject instance = Instantiate(definition.prefab, spot.position, spot.rotation);
+                    instance.GetComponent<NetworkObject>().Spawn(true);
+                    halfTotal += definition.value;
+                }
+            }
+        }
+
+        private void SpawnBySize(int thirds)
+        {
             // Kinds of the same size share its spots: taken in turn, spread evenly over them.
             foreach (CargoSize size in new[] { CargoSize.Small, CargoSize.Medium, CargoSize.Large })
             {
@@ -217,15 +259,6 @@ namespace CargoClash
                     instance.GetComponent<NetworkObject>().Spawn(true);
                     halfTotal += pieces[i].value;
                 }
-            }
-
-            int orangeIndex = 0;
-            int blueIndex = 0;
-            foreach (PlayerAvatar avatar in PlayerAvatar.All)
-            {
-                int index = avatar.Team == Team.Orange ? orangeIndex++ : blueIndex++;
-                Transform spot = SpawnFor(avatar.Team, index, CollectorTeam.Value);
-                avatar.ServerResetForHalf(spot.position, spot.rotation);
             }
         }
 
@@ -254,6 +287,16 @@ namespace CargoClash
                 if (stats.TryGetValue(smasher, out PlayerStats entry)) entry.Destroyed += share;
             }
             CargoEventRpc(cargo.transform.position, value, TeamOn(Side.Interrupter), false);
+        }
+
+        /// <summary>The river carried it off the field. Nobody scores it.</summary>
+        public void ServerOnLost(CargoItem cargo)
+        {
+            if (cargo.IsPlank) return;
+            int value = cargo.Definition.value;
+            halfLost += value;
+            AutoPilot.Log($"LOST {cargo.Definition.kind} value={value} at={cargo.transform.position}");
+            LostRpc(cargo.transform.position, value);
         }
 
         public void ServerOnRam(PlayerAvatar avatar)
@@ -303,9 +346,9 @@ namespace CargoClash
         private void RecordHalf(int half)
         {
             int rescued = HalfRescued.Value;
-            int untouched = halfTotal - rescued - halfDestroyed;
-            AutoPilot.Log($"HALF {half} seconds={Now - halfStartedAt:0} collectors={CollectorTeam.Value} rescued={rescued} destroyed={halfDestroyed} untouched={untouched} total={halfTotal} orange={OrangeScore.Value} blue={BlueScore.Value}");
-            csv.AppendLine($"half,{half},{Now - halfStartedAt:0},{CollectorTeam.Value},{rescued},{halfDestroyed},{untouched},{halfTotal}");
+            int untouched = halfTotal - rescued - halfDestroyed - halfLost;
+            AutoPilot.Log($"HALF {half} seconds={Now - halfStartedAt:0} collectors={CollectorTeam.Value} rescued={rescued} destroyed={halfDestroyed} lost={halfLost} untouched={untouched} total={halfTotal} orange={OrangeScore.Value} blue={BlueScore.Value}");
+            csv.AppendLine($"half,{half},{Now - halfStartedAt:0},{CollectorTeam.Value},{rescued},{halfDestroyed},{untouched},{halfTotal},{halfLost}");
         }
 
         private void FinishMatch()
@@ -371,6 +414,13 @@ namespace CargoClash
             if (hud != null) hud.ShowPopup(position, GameText.CargoValue(value), team.ToColor());
             if (rescued) GameAudio.Play("rescue");
             else GameAudio.PlayAt("break", position);
+        }
+
+        [Rpc(SendTo.Everyone)]
+        private void LostRpc(Vector3 position, int value)
+        {
+            MatchHud hud = MatchHud.Instance;
+            if (hud != null) hud.ShowPopup(position, GameText.CargoLost(value), new Color(0.72f, 0.82f, 0.9f));
         }
 
         [Rpc(SendTo.Everyone)]

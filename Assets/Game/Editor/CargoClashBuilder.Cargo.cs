@@ -282,8 +282,10 @@ public static partial class CargoClashBuilder
     {
         crew.caseMarker = FindInModel(model, "Marker_Case");
         crew.lidMarker = FindInModel(model, "Marker_Lid");
-        crew.props = new GameObject[4];
-        foreach (CargoKind kind in (CargoKind[])Enum.GetValues(typeof(CargoKind)))
+        // The four kinds with a case and something in it. A plank has no inspect.
+        CargoKind[] cases = { CargoKind.Tobacco, CargoKind.Cash, CargoKind.Gold, CargoKind.Art };
+        crew.props = new GameObject[cases.Length];
+        foreach (CargoKind kind in cases)
         {
             GameObject prop = FindInModel(model, "Prop_" + kind).gameObject;
             prop.SetActive(false);
