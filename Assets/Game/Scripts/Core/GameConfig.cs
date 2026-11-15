@@ -96,6 +96,15 @@ namespace CargoClash
         [Tooltip("How far off the middle of the view cargo can be and still count as being aimed at, measured sideways. The size of the cargo adds to this.")]
         public float aimDegrees = 34f;
 
+        [Header("Inspecting cargo (F)")]
+        [Tooltip("Stepping round to the front of the goose crate before opening it.")]
+        public float inspectApproachSeconds = 0.3f;
+        [Tooltip("The crate can be opened when it leans no further than this off upright.")]
+        public float inspectMaxTilt = 20f;
+        [Tooltip("Over the shoulder, the camera swings round this far to watch you from the front, and comes in this close.")]
+        public float inspectOrbitDegrees = 150f;
+        public float inspectOrbitDistance = 2.5f;
+
         [Header("Ram")]
         public float ramCooldown = 3f;
         [Tooltip("Cooldown for the smaller team when teams are uneven. Level 1 has no items to compensate with.")]
@@ -202,6 +211,8 @@ namespace CargoClash
         public Material particleMaterial;
         public Material puffMaterial;
         public Material flashMaterial;
+        [Tooltip("Astra's play-money note, for the notes thrown in the cash inspect.")]
+        public Material noteMaterial;
 
         [Header("Input")]
         public InputActionAsset inputActions;

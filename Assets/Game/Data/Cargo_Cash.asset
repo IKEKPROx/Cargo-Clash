@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8370719cbcf3f4649a006f12761d6bb4, type: 3}
+  m_Name: Cargo_Cash
+  m_EditorClassIdentifier: CargoClash::CargoClash.CargoDefinition
+  size: 0
+  kind: 1
+  prefab: {fileID: 9024646505713521775, guid: c30744131d97f4d118ee4caf5058a828, type: 3}
+  value: 15
+  smashSeconds: 3
+  carrySpeedMultiplier: 0.9
+  requiredCarriers: 1
+  fullCount: 6
+  coCarryHeight: 0
+  coCarryReach: 0
+  inspectState: InspectCash
+  inspectOnGround: 0
+  inspectDistance: 0.7056
+  inspect:
+    seconds: 3.5333
+    drop: 0.0667
+    land: 0.2667
+    out: 0.3333
+    start: 0.6
+    back: 3.2667
+    shut: 3.3
+    lift: 3.2667
+    caught: 3.5333
+    lidOpen: -1
+    notes: 1.7333
+    puff: -1
+    flick: -1
+  piecesPrefab: {fileID: 44678895074059300, guid: 1181b0fe9d719416195fb25b2e0d3b92, type: 3}
+  chipColor: {r: 0.71, g: 0.31, b: 0.25, a: 1}
+  breakSound: coins

@@ -23,6 +23,10 @@ namespace CargoClash
         private const int UpperBlast = 9;
         private const int UpperCharge = 10;
         private const int UpperSlam = 11;
+        /// <summary>Astra's cases: the carry clips for the tobacco carton, the cash case and the gold case.</summary>
+        private const int UpperCarryTobacco = 12;
+        private const int UpperCarryCash = 13;
+        private const int UpperCarryGold = 14;
         private const int MoodCheer = 1;
         private const int MoodGrumble = 2;
 
@@ -46,6 +50,7 @@ namespace CargoClash
         private static readonly int SmashState = Animator.StringToHash("Smash");
         private static readonly int BlastState = Animator.StringToHash("Blast");
         private static readonly int OutParam = Animator.StringToHash("Out");
+        private static readonly int LocomotionState = Animator.StringToHash("Locomotion");
 
         [Header("Model")]
         public Transform pivot;
@@ -75,6 +80,9 @@ namespace CargoClash
         private CargoItem lastCarried;
         private float nextWispAt;
         private bool wasSucking;
+        private int inspectState;
+        private float lastInspectTime;
+        private int upperPose;
 
         /// <summary>How far through a swing the character is, from 0 to 1. The first-person hands follow this.</summary>
         public float SwingCycle { get; private set; }
@@ -97,6 +105,30 @@ namespace CargoClash
         }
 
         private Vector3 VacuumAim => avatar == PlayerAvatar.Local ? avatar.LookDirection : transform.forward;
+
+        /// <summary>True while the inspect clip (F) is showing on this character.</summary>
+        public bool ShowsInspect => inspectState != 0;
+
+        public bool HasCargoMarkers => look != null && look.caseMarker != null && look.lidMarker != null;
+
+        /// <summary>
+        /// Where the clip has the case right now (cargo_actions.py): between the hands in a carry clip, or wherever the
+        /// inspect puts it. False when no clip is placing one.
+        /// </summary>
+        public bool CaseMarker(out Vector3 position, out Quaternion rotation)
+        {
+            position = default;
+            rotation = Quaternion.identity;
+            if (!HasCargoMarkers) return false;
+            bool carrying = upperWeight > 0.5f && (upperPose == UpperCarryTobacco || upperPose == UpperCarryCash || upperPose == UpperCarryGold);
+            if (!carrying && inspectState == 0) return false;
+            position = look.caseMarker.position;
+            rotation = look.caseMarker.rotation;
+            return true;
+        }
+
+        /// <summary>How far the clip has the lid open, as a turn from the case's own frame.</summary>
+        public Quaternion LidTurn => Quaternion.Inverse(look.caseMarker.rotation) * look.lidMarker.rotation;
 
         /// <summary>Where held cargo goes for anyone watching: between the hands, against the belly.</summary>
         public Vector3 CarryPoint(float cargoHalfDepth)
@@ -168,8 +200,79 @@ namespace CargoClash
             animator.SetBool(OutParam, avatar.KnockedOut.Value);
             animator.SetInteger(MoodParam, CurrentMood());
 
+            UpdateInspect();
             UpdateUpperBody(carried, coCarrying, knockedDown, deltaTime);
             UpdateSuction();
+        }
+
+        /// <summary>
+        /// F with cargo: Astra's clip for what's inside, on the whole body, from the moment the owner started it (so
+        /// someone joining late sees it where it's got to). Its things happen at the times written with the clip.
+        /// </summary>
+        private void UpdateInspect()
+        {
+            CargoItem target = avatar.InspectedCargo;
+            float time = avatar.InspectTime;
+            bool on = target != null && target.Definition.Inspectable && time >= 0f && time < target.Definition.inspect.seconds &&
+                !avatar.IsKnockedDown && !avatar.IsDashing;
+            if (!on)
+            {
+                if (inspectState == 0) return;
+                inspectState = 0;
+                look.ShowProp(-1);
+                if (!avatar.IsKnockedDown && !avatar.IsDashing) animator.CrossFadeInFixedTime(LocomotionState, 0.15f, 0);
+                return;
+            }
+
+            CargoDefinition definition = target.Definition;
+            int state = Animator.StringToHash(definition.inspectState);
+            if (inspectState != state)
+            {
+                inspectState = state;
+                lastInspectTime = time;
+                animator.CrossFadeInFixedTime(state, 0.1f, 0, time);
+            }
+            else if (!animator.IsInTransition(0))
+            {
+                // Put back on the owner's moment if it has drifted, say after a hitch.
+                AnimatorStateInfo info = animator.GetCurrentAnimatorStateInfo(0);
+                if (info.shortNameHash == state && Mathf.Abs(info.normalizedTime * info.length - time) > 0.2f)
+                    animator.PlayInFixedTime(state, 0, time);
+            }
+            look.ShowProp((int)definition.kind);
+            PlayInspectMoments(definition.inspect, target, time);
+            lastInspectTime = time;
+        }
+
+        private bool Reached(float moment, float time) => moment >= 0f && lastInspectTime < moment && time >= moment;
+
+        private void PlayInspectMoments(InspectTimes times, CargoItem target, float time)
+        {
+            Vector3 casePosition = look.caseMarker.position;
+            bool mine = avatar == PlayerAvatar.Local;
+            if (Reached(times.land, time))
+            {
+                // Set down, not dropped: no dust, which would also be right in front of the camera in third person.
+                GameAudio.PlayAt("drop", casePosition, 0.5f);
+                squash = Mathf.Max(squash, 0.15f);
+            }
+            if (Reached(times.land + 0.05f, time) || Reached(times.lidOpen, time)) GameAudio.PlayAt("clunk", casePosition, 0.45f);
+            if (Reached(times.@out, time)) GameAudio.PlayAt("whoosh", casePosition, 0.3f);
+            if (Reached(times.notes, time))
+            {
+                Vector3 hand = look.handRight.position;
+                FxBurst.PlayNotes(hand + transform.forward * 0.1f, transform.forward * 0.8f + Vector3.up * 0.9f - transform.right * 0.2f);
+                GameAudio.PlayAt("coins", hand, 0.45f);
+            }
+            if (Reached(times.puff, time))
+            {
+                Transform head = look.starsBone != null ? look.starsBone.parent : look.handRight;
+                Vector3 mouth = head.position + transform.forward * 0.28f - Vector3.up * 0.12f;
+                FxBurst.PlaySmoke(mouth, transform.forward);
+                GameAudio.PlayAt("whoosh", mouth, 0.25f);
+            }
+            if (Reached(times.back, time) || Reached(times.shut, time)) GameAudio.PlayAt("clunk", casePosition, 0.4f);
+            if (Reached(times.caught, time) && mine) GameAudio.Play("pickup", 0.4f);
         }
 
         private void UpdateSuction()
@@ -203,12 +306,12 @@ namespace CargoClash
                 lastCarried = carried;
             }
 
-            // A ram is all in the base layer, so it shows through.
+            // A ram is all in the base layer, so it shows through. So does the inspect, which moves the whole body.
             int pose = 0;
-            if (!knockedDown && !avatar.IsDashing)
+            if (!knockedDown && !avatar.IsDashing && inspectState == 0)
             {
                 if (avatar.IsStaggered) pose = UpperFlinch;
-                else if (carried != null && !coCarrying) pose = carried.Definition.size == CargoSize.Small ? UpperCarry : UpperCarryBig;
+                else if (carried != null && !coCarrying) pose = CarryPose(carried.Definition);
                 else if (Time.time < tossUntil) pose = UpperToss;
                 else if (ToolOut(carried, knockedDown))
                 {
@@ -218,10 +321,14 @@ namespace CargoClash
                     else pose = avatar.Swinging.Value ? UpperSmash : UpperReadyHammer;
                 }
             }
-            if (pose != 0) animator.SetInteger(UpperPoseParam, pose);
+            if (pose != 0)
+            {
+                animator.SetInteger(UpperPoseParam, pose);
+                upperPose = pose;
+            }
 
             float target = pose != 0 ? 1f : 0f;
-            float speed = knockedDown ? 30f : pose != 0 ? 12f : 6f;
+            float speed = knockedDown || inspectState != 0 ? 30f : pose != 0 ? 12f : 6f;
             upperWeight = Mathf.MoveTowards(upperWeight, target, speed * deltaTime);
             animator.SetLayerWeight(UpperBodyLayer, upperWeight);
 
@@ -231,6 +338,17 @@ namespace CargoClash
             {
                 lastSwingCycle = 0f;
                 SwingCycle = 0f;
+            }
+        }
+
+        private static int CarryPose(CargoDefinition definition)
+        {
+            switch (definition.kind)
+            {
+                case CargoKind.Tobacco: return UpperCarryTobacco;
+                case CargoKind.Cash: return UpperCarryCash;
+                case CargoKind.Gold: return UpperCarryGold;
+                default: return definition.size == CargoSize.Small ? UpperCarry : UpperCarryBig;
             }
         }
 
@@ -367,7 +485,8 @@ namespace CargoClash
             // The sides swap at half-time, and everyone changes into the other company's clothes.
             look.Wear(WearsPorter);
 
-            bool toolOut = ToolOut(avatar.CarriedCargo, avatar.IsKnockedDown);
+            // Both hands are busy with the cargo during an inspect, the crate's too.
+            bool toolOut = inspectState == 0 && ToolOut(avatar.CarriedCargo, avatar.IsKnockedDown);
             bool interrupter = avatar.Side == Side.Interrupter;
             if (look.hammer.activeSelf != (toolOut && interrupter)) look.hammer.SetActive(toolOut && interrupter);
             if (look.vacuum.activeSelf != (toolOut && !interrupter)) look.vacuum.SetActive(toolOut && !interrupter);

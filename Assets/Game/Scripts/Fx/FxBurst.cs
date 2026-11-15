@@ -10,6 +10,7 @@ namespace CargoClash
         private static ParticleSystem flashes;
         private static ParticleSystem blasts;
         private static ParticleSystem wisps;
+        private static ParticleSystem notes;
 
         public static void Play(Vector3 position, Color color, int count)
         {
@@ -109,6 +110,45 @@ namespace CargoClash
                     startLifetime = life,
                 };
                 wisps.Emit(parameters, 1);
+            }
+        }
+
+        /// <summary>A handful of notes thrown into the air, fluttering down (the cash inspect's MakeItRain).</summary>
+        public static void PlayNotes(Vector3 origin, Vector3 throwVelocity)
+        {
+            if (Application.isBatchMode) return;
+            if (notes == null) CreateNotes();
+            for (int i = 0; i < 12; i++)
+            {
+                ParticleSystem.EmitParams parameters = new ParticleSystem.EmitParams
+                {
+                    position = origin + Random.insideUnitSphere * 0.05f,
+                    velocity = throwVelocity * Random.Range(0.7f, 1.3f) + Random.insideUnitSphere * 0.9f,
+                    startLifetime = Random.Range(1.4f, 2.1f),
+                    rotation3D = new Vector3(Random.Range(0f, 360f), Random.Range(0f, 360f), Random.Range(0f, 360f)),
+                };
+                notes.Emit(parameters, 1);
+            }
+        }
+
+        /// <summary>A breath of smoke going out ahead and up, swelling and fading (the tobacco inspect's Smoke).</summary>
+        public static void PlaySmoke(Vector3 mouth, Vector3 forward)
+        {
+            if (Application.isBatchMode) return;
+            if (puffs == null) CreatePuffs();
+            Vector3 ahead = Vector3.ProjectOnPlane(forward, Vector3.up).normalized;
+            for (int i = 0; i < 7; i++)
+            {
+                ParticleSystem.EmitParams parameters = new ParticleSystem.EmitParams
+                {
+                    position = mouth + ahead * (0.03f * i),
+                    velocity = ahead * Random.Range(0.35f, 0.7f) + Vector3.up * Random.Range(0.12f, 0.3f) + Random.insideUnitSphere * 0.08f,
+                    startColor = new Color(0.86f, 0.9f, 0.88f, 0.9f),
+                    startSize = Random.Range(0.07f, 0.12f),
+                    startLifetime = Random.Range(0.9f, 1.4f),
+                    applyShapeToPosition = false,
+                };
+                puffs.Emit(parameters, 1);
             }
         }
 
@@ -255,6 +295,40 @@ namespace CargoClash
             renderer.lengthScale = 1f;
             renderer.velocityScale = 0.06f;
             renderer.sharedMaterial = GameConfig.Get().particleMaterial;
+        }
+
+        private static void CreateNotes()
+        {
+            notes = NewSystem("FxNotes", 120, 0.18f);
+            ParticleSystem.MainModule main = notes.main;
+            main.startSpeed = 0f;
+            main.startSize3D = true;
+            // Her note, at the game's scale: 12.5 by 7.2 cm in her units.
+            main.startSizeX = 0.105f;
+            main.startSizeY = 0.061f;
+            main.startSizeZ = 1f;
+            main.startRotation3D = true;
+
+            ParticleSystem.ShapeModule shape = notes.shape;
+            shape.enabled = false;
+
+            // Paper catches the air: it slows down fast and tumbles as it falls.
+            ParticleSystem.LimitVelocityOverLifetimeModule drag = notes.limitVelocityOverLifetime;
+            drag.enabled = true;
+            drag.limit = 0.6f;
+            drag.dampen = 0.08f;
+            ParticleSystem.RotationOverLifetimeModule spin = notes.rotationOverLifetime;
+            spin.enabled = true;
+            spin.separateAxes = true;
+            spin.x = new ParticleSystem.MinMaxCurve(-5f, 5f);
+            spin.y = new ParticleSystem.MinMaxCurve(-3f, 3f);
+            spin.z = new ParticleSystem.MinMaxCurve(-5f, 5f);
+
+            ParticleSystemRenderer renderer = notes.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Mesh;
+            renderer.mesh = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
+            Material material = GameConfig.Get().noteMaterial;
+            renderer.sharedMaterial = material != null ? material : GameConfig.Get().particleMaterial;
         }
 
         private static void CreateFlashes()

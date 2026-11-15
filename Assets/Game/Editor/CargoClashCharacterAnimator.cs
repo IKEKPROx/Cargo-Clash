@@ -15,7 +15,12 @@ public static class CargoClashCharacterAnimator
     private static readonly HashSet<string> LoopingClips = new HashSet<string>
     {
         "Idle", "Run", "Carry", "CarryBig", "CoCarryIdle", "CoCarryWalk", "Smash", "ReadyHammer", "ReadyVacuum", "Blast", "Charge", "Cheer", "Grumble",
+        "CarryTobacco", "CarryCash", "CarryGold",
     };
+
+    /// <summary>Astra's cargo (Tools/blender/cargo_actions.py): carrying each case, and looking at what's in each kind.</summary>
+    private static readonly string[] CarryClips = { "CarryTobacco", "CarryCash", "CarryGold" };
+    private static readonly string[] InspectClips = { "InspectTobacco", "InspectCash", "InspectGold", "InspectArt" };
 
     public static void ConfigureImport(string modelPath, float scale = 1f, bool blendShapes = false)
     {
@@ -57,7 +62,10 @@ public static class CargoClashCharacterAnimator
         {
             if (asset is AnimationClip clip && !clip.name.StartsWith("__preview__")) clips[clip.name] = clip;
         }
-        foreach (string needed in new[] { "Idle", "Run", "Carry", "CarryBig", "CoCarryIdle", "CoCarryWalk", "Ram", "Knocked", "KnockedOut", "Smash", "Toss", "ReadyHammer", "ReadyVacuum", "Blast", "Charge", "Slam", "Flinch", "Cheer", "Grumble" })
+        List<string> neededClips = new List<string> { "Idle", "Run", "Carry", "CarryBig", "CoCarryIdle", "CoCarryWalk", "Ram", "Knocked", "KnockedOut", "Smash", "Toss", "ReadyHammer", "ReadyVacuum", "Blast", "Charge", "Slam", "Flinch", "Cheer", "Grumble" };
+        neededClips.AddRange(CarryClips);
+        neededClips.AddRange(InspectClips);
+        foreach (string needed in neededClips)
         {
             if (!clips.ContainsKey(needed)) Debug.LogError($"[Builder] {name} has no {needed} clip.");
         }
@@ -96,6 +104,8 @@ public static class CargoClashCharacterAnimator
         AnimatorState knockedOut = ClipState(machine, "KnockedOut", clips["KnockedOut"]);
         AnimatorState cheer = ClipState(machine, "Cheer", clips["Cheer"]);
         AnimatorState grumble = ClipState(machine, "Grumble", clips["Grumble"]);
+        // CharacterVisual cross-fades into these at the moment the owner pressed F, and back to Locomotion after.
+        foreach (string inspect in InspectClips) ClipState(machine, inspect, clips[inspect]);
 
         Transition(locomotion, coCarry, 0.12f).AddCondition(AnimatorConditionMode.Equals, 2, "Carry");
         Transition(coCarry, locomotion, 0.12f).AddCondition(AnimatorConditionMode.NotEqual, 2, "Carry");
@@ -153,6 +163,11 @@ public static class CargoClashCharacterAnimator
         AnyTransition(machine, blast, 0.04f).AddCondition(AnimatorConditionMode.Equals, 9, "UpperPose");
         AnyTransition(machine, charge, 0.12f).AddCondition(AnimatorConditionMode.Equals, 10, "UpperPose");
         AnyTransition(machine, slam, 0.03f).AddCondition(AnimatorConditionMode.Equals, 11, "UpperPose");
+        for (int i = 0; i < CarryClips.Length; i++)
+        {
+            AnimatorState carryCase = ClipState(machine, CarryClips[i], clips[CarryClips[i]]);
+            AnyTransition(machine, carryCase, 0.08f).AddCondition(AnimatorConditionMode.Equals, 12 + i, "UpperPose");
+        }
     }
 
     /// <summary>The spine, neck, head, arms and fingers. The hips and legs stay with the base layer.</summary>
@@ -170,7 +185,9 @@ public static class CargoClashCharacterAnimator
             string bone = item.name;
             bool upper = bone == "Spine" || bone == "Chest" || bone == "Neck" || bone == "Head" || bone == "Stars" ||
                 bone.EndsWith("Shoulder") || bone.EndsWith("UpperArm") || bone.EndsWith("LowerArm") || bone.EndsWith("Hand") ||
-                bone.Contains("Thumb") || bone.Contains("Index") || bone.Contains("Middle") || bone.Contains("Ring") || bone.Contains("Little");
+                bone.Contains("Thumb") || bone.Contains("Index") || bone.Contains("Middle") || bone.Contains("Ring") || bone.Contains("Little") ||
+                // The case rides on these in the carry clips, so it stays between the hands while the legs run.
+                bone.StartsWith("Prop_");
             paths.Add(AnimationUtility.CalculateTransformPath(item, modelRoot));
             active.Add(upper);
         }

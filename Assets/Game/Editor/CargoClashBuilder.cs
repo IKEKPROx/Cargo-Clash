@@ -53,6 +53,7 @@ public static partial class CargoClashBuilder
         config.particleMaterial = ParticleMaterial();
         config.puffMaterial = PuffMaterial();
         config.flashMaterial = FlashMaterial();
+        config.noteMaterial = NoteMaterial();
         config.inputActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputPath);
 
         config.cargo = BuildCargo();
@@ -435,6 +436,7 @@ public static partial class CargoClashBuilder
         crew.handLeft = FindInModel(model, "LeftHand");
         crew.handRight = FindInModel(model, "RightHand");
         crew.starsBone = FindInModel(model, "Stars");
+        SetUpCrewCargo(crew, model);
         crew.renderers = model.GetComponentsInChildren<Renderer>(true);
 
         crew.Dress(CrewLook.Default);
@@ -456,7 +458,15 @@ public static partial class CargoClashBuilder
     }
 
     /// <summary>The project's materials for every Blender model, by the name the model's script gives them.</summary>
-    private static Dictionary<string, Material> ModelMaterials() => modelMaterials ??= new Dictionary<string, Material>
+    private static Dictionary<string, Material> ModelMaterials()
+    {
+        if (modelMaterials != null) return modelMaterials;
+        modelMaterials = BaseModelMaterials();
+        AddAstraCargoMaterials(modelMaterials);
+        return modelMaterials;
+    }
+
+    private static Dictionary<string, Material> BaseModelMaterials() => new Dictionary<string, Material>
     {
         { "Char_Team", Mat("Team_Orange", TeamOrange) },
         { "Char_Band", Mat("Char_Band", new Color(0.97f, 0.97f, 0.9f), 0.5f) },
@@ -744,108 +754,6 @@ public static partial class CargoClashBuilder
     private static void SetLayerRecursively(GameObject root, int layer)
     {
         foreach (Transform child in root.GetComponentsInChildren<Transform>(true)) child.gameObject.layer = layer;
-    }
-
-    private static CargoDefinition[] BuildCargo()
-    {
-        CargoDefinition small = LoadOrCreate<CargoDefinition>(DataDir + "/Cargo_Small.asset");
-        small.size = CargoSize.Small;
-        small.value = 10;
-        small.smashSeconds = 2.5f;
-        small.carrySpeedMultiplier = 0.9f;
-        small.requiredCarriers = 1;
-        small.fullCount = 12;
-        small.chipColor = new Color(0.82f, 0.66f, 0.42f);
-        small.breakSound = "crack";
-
-        CargoDefinition medium = LoadOrCreate<CargoDefinition>(DataDir + "/Cargo_Medium.asset");
-        medium.size = CargoSize.Medium;
-        medium.value = 30;
-        medium.smashSeconds = 7f;
-        medium.carrySpeedMultiplier = 0.7f;
-        medium.requiredCarriers = 1;
-        medium.fullCount = 6;
-        medium.chipColor = new Color(0.2f, 0.66f, 0.56f);
-        medium.breakSound = "crack";
-
-        CargoDefinition large = LoadOrCreate<CargoDefinition>(DataDir + "/Cargo_Large.asset");
-        large.size = CargoSize.Large;
-        large.value = 100;
-        large.smashSeconds = 16f;
-        large.carrySpeedMultiplier = 0.5f;
-        large.requiredCarriers = 2;
-        large.fullCount = 2;
-        large.chipColor = new Color(0.47f, 0.26f, 0.72f);
-        large.breakSound = "coins";
-
-        small.piecesPrefab = BuildCargoPieces("Cargo_Small");
-        medium.piecesPrefab = BuildCargoPieces("Cargo_Medium");
-        large.piecesPrefab = BuildCargoPieces("Cargo_Large");
-        small.prefab = BuildCargoPrefab("Cargo_Small", new Vector3(0.3f, 0.3f, 0.3f), 1f, small);
-        medium.prefab = BuildCargoPrefab("Cargo_Medium", new Vector3(0.52f, 0.46f, 0.46f), 3f, medium);
-        large.prefab = BuildCargoPrefab("Cargo_Large", new Vector3(1.16f, 0.53f, 0.56f), 8f, large);
-        foreach (CargoDefinition definition in new[] { small, medium, large }) EditorUtility.SetDirty(definition);
-        return new[] { small, medium, large };
-    }
-
-    /// <summary>The models come from Tools/blender/make_cargo.py and fit these box colliders.</summary>
-    private static GameObject BuildCargoPrefab(string name, Vector3 half, float mass, CargoDefinition definition)
-    {
-        GameObject root = CargoRoot(name, half, mass, definition, out Transform visual);
-        GameObject model = NewStaticModel(name, visual);
-        model.name = "Model";
-
-        List<Transform> eyes = new List<Transform>();
-        List<Transform> mouths = new List<Transform>();
-        foreach (Transform part in model.GetComponentsInChildren<Transform>(true))
-        {
-            if (part.name.StartsWith("Eye_")) eyes.Add(part);
-            if (part.name.StartsWith("Mouth_")) mouths.Add(part);
-        }
-        CargoFace face = root.AddComponent<CargoFace>();
-        face.eyes = eyes.ToArray();
-        face.mouths = mouths.ToArray();
-
-        // The bodies it changes into as it gets hit. The face stays on, so it can watch.
-        GameObject damaged = NewStaticModel(name + "_Damaged", visual);
-        damaged.name = "Damaged";
-        GameObject dented = damaged.transform.Find("Body_D1").gameObject;
-        GameObject wrecked = damaged.transform.Find("Body_D2").gameObject;
-        dented.SetActive(false);
-        wrecked.SetActive(false);
-        SerializedObject item = new SerializedObject(root.GetComponent<CargoItem>());
-        SerializedProperty bodies = item.FindProperty("damageBodies");
-        bodies.arraySize = 3;
-        bodies.GetArrayElementAtIndex(0).objectReferenceValue = model.transform.Find("Body").gameObject;
-        bodies.GetArrayElementAtIndex(1).objectReferenceValue = dented;
-        bodies.GetArrayElementAtIndex(2).objectReferenceValue = wrecked;
-        item.ApplyModifiedPropertiesWithoutUndo();
-
-        SetLayerRecursively(root, GameLayers.Cargo);
-        return SavePrefab(root, name);
-    }
-
-    /// <summary>What's left when it breaks: each piece gets its own collider and physics, and lands on the level.</summary>
-    private static GameObject BuildCargoPieces(string name)
-    {
-        GameObject root = NewStaticModel(name + "_Pieces", null);
-        root.name = name + "_Pieces";
-        PhysicsMaterial bounce = BouncyMaterial();
-        foreach (MeshFilter part in root.GetComponentsInChildren<MeshFilter>(true))
-        {
-            Bounds bounds = part.sharedMesh.bounds;
-            BoxCollider box = part.gameObject.AddComponent<BoxCollider>();
-            box.center = bounds.center;
-            box.size = Vector3.Max(bounds.size, Vector3.one * 0.04f);
-            box.sharedMaterial = bounce;
-            Rigidbody body = part.gameObject.AddComponent<Rigidbody>();
-            body.mass = Mathf.Clamp(bounds.size.x * bounds.size.y * bounds.size.z * 8f, 0.1f, 2f);
-            body.linearDamping = 0.15f;
-            body.angularDamping = 0.35f;
-        }
-        root.AddComponent<CargoPieces>();
-        SetLayerRecursively(root, GameLayers.Debris);
-        return SavePrefab(root, name + "_Pieces");
     }
 
     private static GameObject CargoRoot(string name, Vector3 half, float mass, CargoDefinition definition, out Transform visual)
@@ -1169,6 +1077,7 @@ public static partial class CargoClashBuilder
             part.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             part.receiveShadows = false;
         }
+        BuildInspectArms(rig);
     }
 
     private static FirstPersonRig.ArmParts BuildFirstPersonArm(GameObject model, string side)
@@ -1265,20 +1174,56 @@ public static partial class CargoClashBuilder
         GroundQuad(name, parent, new Rect(-10f, fromZ, 20f, toZ - fromZ), -0.02f, road, uvFrom, uvTo);
     }
 
+    /// <summary>One vertex the way the imported models store theirs once the build compresses them.</summary>
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct CompressedVertex
+    {
+        public Vector3 position;
+        public ushort normalX, normalY, normalZ, normalW;
+        public ushort tangentX, tangentY, tangentZ, tangentW;
+        public ushort u, v;
+
+        public CompressedVertex(Vector3 position, Vector2 uv)
+        {
+            this.position = position;
+            normalX = normalZ = normalW = Mathf.FloatToHalf(0f);
+            normalY = Mathf.FloatToHalf(1f);
+            // Along +x with u, and the bitangent (normal x tangent, times w) along +z with v.
+            tangentX = Mathf.FloatToHalf(1f);
+            tangentY = tangentZ = Mathf.FloatToHalf(0f);
+            tangentW = Mathf.FloatToHalf(-1f);
+            u = Mathf.FloatToHalf(uv.x);
+            v = Mathf.FloatToHalf(uv.y);
+        }
+    }
+
+    /// <summary>
+    /// A flat rectangle of ground facing up. Its vertices are laid out exactly like an imported model's after the
+    /// build's vertex compression (Player Settings, Vertex Compression): position in floats, then normal and tangent
+    /// in four half floats each, then the UV in two, 32 bytes in all. With Mesh.vertices and friends it came out as
+    /// floats, also 32 bytes but arranged differently, and on Metal with the SRP Batcher the ground was then drawn
+    /// with the layout of a model drawn just before it (Astra's cargo, a billboard): its normal came out as zero and
+    /// the ground pure black. Other code-made meshes that are drawn with URP/Lit need the same layout.
+    /// </summary>
     private static void GroundQuad(string name, Transform parent, Rect area, float height, Material material, Vector2 uvFrom, Vector2 uvTo)
     {
         Mesh mesh = new Mesh { name = name };
-        mesh.vertices = new[]
+        mesh.SetVertexBufferParams(4,
+            new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Position, UnityEngine.Rendering.VertexAttributeFormat.Float32, 3),
+            new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Normal, UnityEngine.Rendering.VertexAttributeFormat.Float16, 4),
+            new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.Tangent, UnityEngine.Rendering.VertexAttributeFormat.Float16, 4),
+            new UnityEngine.Rendering.VertexAttributeDescriptor(UnityEngine.Rendering.VertexAttribute.TexCoord0, UnityEngine.Rendering.VertexAttributeFormat.Float16, 2));
+        mesh.SetVertexBufferData(new[]
         {
-            new Vector3(area.xMin, 0f, area.yMin), new Vector3(area.xMax, 0f, area.yMin),
-            new Vector3(area.xMin, 0f, area.yMax), new Vector3(area.xMax, 0f, area.yMax),
-        };
-        mesh.uv = new[]
-        {
-            uvFrom, new Vector2(uvTo.x, uvFrom.y), new Vector2(uvFrom.x, uvTo.y), uvTo,
-        };
-        mesh.triangles = new[] { 0, 2, 1, 1, 2, 3 };
-        mesh.normals = new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
+            new CompressedVertex(new Vector3(area.xMin, 0f, area.yMin), uvFrom),
+            new CompressedVertex(new Vector3(area.xMax, 0f, area.yMin), new Vector2(uvTo.x, uvFrom.y)),
+            new CompressedVertex(new Vector3(area.xMin, 0f, area.yMax), new Vector2(uvFrom.x, uvTo.y)),
+            new CompressedVertex(new Vector3(area.xMax, 0f, area.yMax), uvTo),
+        }, 0, 0, 4);
+        mesh.SetIndexBufferParams(6, UnityEngine.Rendering.IndexFormat.UInt16);
+        mesh.SetIndexBufferData(new ushort[] { 0, 2, 1, 1, 2, 3 }, 0, 0, 6);
+        mesh.subMeshCount = 1;
+        mesh.SetSubMesh(0, new UnityEngine.Rendering.SubMeshDescriptor(0, 6));
         mesh.RecalculateBounds();
         string path = Root + "/Models/" + name + ".asset";
         AssetDatabase.DeleteAsset(path);

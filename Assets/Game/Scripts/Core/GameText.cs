@@ -120,6 +120,9 @@ namespace CargoClash
         public const string PromptWaiting = "Waiting for a second carrier...";
         public const string PromptToTruck = "Carry it to the truck!";
         public const string PromptTogether = "Walk the same way together!";
+        public const string KeyInspect = "F";
+        public const string PromptLookInside = "LOOK INSIDE";
+        public const string PromptOpenCrate = "OPEN IT";
         public const string RamReady = "RAM";
         public const string RamCooling = "RECHARGING";
         public const string MarkerTruck = "TRUCK";

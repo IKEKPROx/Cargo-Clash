@@ -55,13 +55,13 @@
 
 ## 模型和动作
 
-货物、交通锥和场景都是用脚本在 Blender 里做的，比用 Unity 的方块和球拼出来的好看。人物、锤子、收集器、货车和直升机是组员 Astra 在 Blender 里做的，见下面的“人物”和“货车和直升机”。脚本写出 `Assets/Game/Models` 里的 FBX，生成脚本再按材质名换成 `Assets/Game/Materials` 里的材质，对照表在 `CargoClashBuilder.ModelMaterials`。在仓库根目录运行：
+交通锥和场景是用脚本在 Blender 里做的，比用 Unity 的方块和球拼出来的好看。人物、锤子、收集器、货车、直升机和货物是组员 Astra 在 Blender 里做的，见下面的“人物”“货车和直升机”“货物”。脚本写出 `Assets/Game/Models` 里的 FBX，生成脚本再按材质名换成 `Assets/Game/Materials` 里的材质，对照表在 `CargoClashBuilder.ModelMaterials`。在仓库根目录运行：
 
 ```bash
-/Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup --python Tools/blender/make_cargo.py
+/Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup --python Tools/blender/make_scenery.py
 ```
 
-其他模型把脚本换成 `make_crew.py`、`make_hands.py`、`make_cone.py`、`make_scenery.py`，开始页面的 Logo、按钮、卡片图和比赛界面的图标用 `make_ui.py`。末尾加 `-- --sheet 文件夹` 可以同时渲染检查图。运行之后，还要运行上面的生成脚本才会进入游戏。
+其他模型把脚本换成 `make_crew.py`、`make_hands.py`、`make_cone.py`、`make_astra_cargo.py`，开始页面的 Logo、按钮、卡片图和比赛界面的图标用 `make_ui.py`。末尾加 `-- --sheet 文件夹` 可以同时渲染检查图。运行之后，还要运行上面的生成脚本才会进入游戏。
 
 场景的每个模型是一个 FBX，`make_scenery.py` 加 `-- --only Rock_A,Barn` 只重做这几个。生成脚本把它们做成 `Assets/Game/Prefabs/Scenery` 里的预制体，再摆进关卡（`CargoClashBuilder` 的 `AddTrees` 到 `AddOutskirts`）。模型本身没有碰撞，挡人的是单独的 `Blocker` 子物体，所以换模型不影响玩法和寻路。放进可玩区域的新东西，要么加 `Blocker`，要么矮到走过去也不奇怪（比如草和花）。
 
@@ -69,9 +69,11 @@
 
 直升机结尾的镜头从地图东南边往西看。高的东西不要放进 `OutskirtsIsFree` 排除的区域，否则会挡住这个镜头，或者挡住地图南端。
 
-**场景物件不要勾 Static（Batching Static）。** 这台 Mac 上试过：静态合批和 SRP Batcher 一起用时，镜头转到某些位置，地面贴图和货车旁的黄色区域会整片变黑或消失。去掉静态合批就好了，原因没有查清。
+**代码生成的网格，顶点格式要和导入的模型一样。** 打包时 Unity 会压缩导入模型的顶点（Player Settings 的 Vertex Compression）：位置单精度，法线、切线各 4 个半精度，UV 2 个半精度，每个顶点 32 字节。用 `Mesh.vertices` 这些写出来的网格全是单精度，没有切线时也是 32 字节，但排法不同。在 Metal 上用 SRP Batcher 时，这样两种网格挨着画，后一个会用前一个的顶点格式，读到的法线是零，光照算出 NaN，整片纯黑：地面就是这样变黑的，前面是 Astra 的货物或广告牌时就会出现（交接说明第 8 节第 15 条）。所以 `CargoClashBuilder.GroundQuad` 用 `SetVertexBufferParams` 按压缩后的格式直接写顶点。再用代码做网格就照它写。Unity 自带的方块和球（`CreatePrimitive`）是另一种格式，每个顶点 56 字节，别的网格没有用这个长度，没有问题。
 
-货物的尺寸要和 `CargoClashBuilder.BuildCargo` 里的碰撞盒一致。
+**场景物件不要勾 Static（Batching Static）。** 静态合批会把网格合并成别的顶点格式，和上一条是同一个问题。
+
+货物的碰撞盒由 `CargoClashBuilder.Cargo.cs` 量她的模型得出（包括两侧的把手），换了模型不用手改。`cargo_actions.SIZE` 是同样的尺寸，人怎么拿箱子按它算，她改了尺寸要跟着改。
 
 ### 货车和直升机
 
@@ -115,6 +117,30 @@ Animator 有两层：`Base` 管全身，`UpperBody` 只管上半身，这样搬�
 
 描边是 URP 渲染器上的 `ModelOutline` 功能，会描 Player、Cargo、Outlined、ViewModel 和 Debris 这些层上的模型。线条的屏幕宽度不变，太远的东西会变成一团黑线，所以 `Outline.shader` 让它随距离淡出（`_FadeStart`、`_FadeEnd`）。要描别的东西，把它放到 Outlined 层。方块这类有硬边的模型描出来会断开，要先换成圆角模型。场景模型里名字以 `Plain` 开头的部分（电线、广告牌文字）不描边，草、花和云也不描。
 
+### 货物
+
+Astra 的四种货物（`独立建模/互动货物_v08`）：烟盒、现金箱、金条箱、装着鹅的木箱，对应 `CargoKind` 的 `Tobacco`、`Cash`、`Gold`、`Art`。`make_astra_cargo.py` 原样分组导出她的模型：每种一个 `Cargo_<Kind>.fbx`（三个阶段，每个阶段分 `Body`、带合页的 `Lid_Pivot`、检视时拿出来的那一件 `Slot`）和一个 `Cargo_<Kind>_Pieces.fbx`。她的模型换了，就重跑它和生成脚本。
+
+搬货和检视的动作在 `cargo_actions.py`，`make_crew.py` 烘焙人物时调用它，所以三种体型都有。她的四段动作（抽烟、撒钱、看金条、看鹅）和她的开盖是从她的脚本搬过来的，用的是同一套求解器。游戏加的部分：箱子从手里放到地上、开盖、东西跳到手里，播完再反过来。
+
+- 人物骨架上多了四根道具骨骼（`Prop_Case`、`Prop_Lid`、`Prop_Item`、`Prop_Notes`）和两个标记点（`Marker_Case`、`Marker_Lid`）。游戏里真的货物跟着标记点走（`CargoItem.PoseOnMarker`），所以箱子和手对得上。道具骨骼缩到 0.001 就是藏起来。
+- 每段动作里什么时候落地、开盖、撒钞票、冒烟，`make_crew.py` 写进 `Assets/Game/Models/CargoInspect.json`，生成脚本放进 `CargoDefinition.inspect`，特效和声音按这个时间播（`CharacterVisual.PlayInspectMoments`）。改了动作的时长或节奏，要重跑生成脚本。
+- **空着的手要给朝向。** 姿势里不给 `palm`，手就跟着前臂转，常常掌心朝前或朝上，看起来是反的（用户指出过开鹅箱时的手）。没事做的手用 `hanging()`：垂在大腿旁、掌心朝腿，手指顺着手臂。
+- **混合出来的姿势是新的 `Pose`，带不过去 `lock_contacts`、`contact_sides`、`optimize_wrists` 这些标记。** 用 `placed()`（手正在箱子上或去箱子上，不许挪）、`free()`（空手，和她的动作一样推到身体外面）、`her_elbows()`（手肘按她的办法放，手腕最直）重新标上，否则过渡的第一帧和最后一帧会跳，手肘会翻起来。
+- 手要从低处去高处拿东西时，先抬到身前再伸过去（`CrateClip.lifted`），直着插过去会穿过箱子的边。
+
+改了动作就检查。先只烘焙这几段，存成 .blend：
+
+```bash
+/Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup --python Tools/blender/make_crew.py -- --only Medium --no-export --check /tmp/crew --clips InspectArt,InspectCash
+```
+
+```bash
+/Applications/Blender.app/Contents/MacOS/Blender --background /tmp/crew/crew_Medium.blend --python Tools/blender/check_cargo.py -- --step 1 --where
+```
+
+每段动作每一帧都查：手里的东西、钞票、箱子有没有碰到人、帽子、眼镜（要是 `touching: none`），手套插进箱子多深（抓把手那一两帧碰到 6–8 毫米是正常的），手腕弯多少度（过了 60° 左右就像断了）。三种体型都要查。**这个检查看不出手是反的**，也看不出手肘像翅膀一样张开：要渲染出来看（`--out 文件夹`），再用 `-ccInspectShots` 在游戏里拍。
+
 ## 第一人称
 
 默认是第一人称，按 V 切到肩后第三人称（`FollowCamera`，选择存在 `GameSettings`）。比赛时鼠标被锁住，打开暂停菜单或结算才放开（`MatchHud.UpdateCursor`）。自动测试不锁鼠标，也不保存设置。
@@ -139,7 +165,9 @@ Animator 有两层：`Base` 管全身，`UpperBody` 只管上半身，这样搬�
 
 看手的动作要用连拍（`-ccSwingBurst`），单张截图看不出协不协调。自己的身体只投影子（`ShadowsOnly`），别人看到的还是 Animator 动作。
 
-**货物的损坏。** `make_cargo.py` 给每种货多输出两个文件：`_Damaged` 里是两个受损的箱体（`Body_D1`、`Body_D2`，按 `GameConfig.damagedBelow` 和 `wreckedBelow` 切换），`_Pieces` 里是碎掉之后的各个碎块，每块是一个物体，起始位置就在完整模型的对应位置。生成脚本给碎块加碰撞和刚体，放在 `Debris` 层，只和 `Level` 层碰撞（`GameBoot`）。
+**货物的损坏。** 每种货的 FBX 里有三个阶段 `Stage0`、`Stage1`、`Stage2`（完整、凹陷、砸烂，按 `GameConfig.damagedBelow` 和 `wreckedBelow` 切换），`_Pieces` 里是碎掉之后的各个碎块，每块是一个物体，起始位置就在完整模型的对应位置。生成脚本给碎块加碰撞和刚体，放在 `Debris` 层，只和 `Level` 层碰撞（`GameBoot`）。
+
+**检视货物时的第一人称。** 不用代码摆的手，换成人物模型里的 `FP_Arms`（中等体型真正的手臂，播和身体同一个检视动作，带着手指和手里的东西），挂在镜头下面、往上翘 `inspectPitch` 度，手才在视野里。在地上的鹅箱前检视时，它留在身体的位置，手才碰得到盖子（`FirstPersonRig.UpdateCargoInspect`）。
 
 **界面。** 比赛界面在 `BuildHud`，用的是开始页面那套控件。小地图是 `MiniMap`，地图范围和底图在 `LevelLayout.mapArea`、`mapPicture`，做新关卡要填这两个。`MatchHud` 里的距离和大小都是屏幕上的固定值，改的时候在 1600×900 和别的窗口比例下都看一看。
 
@@ -199,6 +227,7 @@ grep CCTEST /tmp/cargo-match.log
 | `-ccBody short` / `medium` / `tall` | 这一局用哪种体型，不加就是中等，不保存。开局后检查自己选的就是比赛里的（客户端也查）。高瘦的血少，客户端用它跑 48 秒的半场时，偶尔会因为被打倒太多次没砸碎货而报错，重跑一次再查 |
 | `-ccSwingBurst 秒` | 配合 `-ccDriveInput`、`-ccShotDir` 和 `-ccView first`：每半场按这个间隔连拍跑步、站立、挥击、检视、右键，拿货和合搬时也拍，用来看手的动作 |
 | `-ccView first` / `third` | 这一局用第一人称或肩后视角，不保存。不加就用上次玩时存下的视角，截图时记得加 |
+| `-ccInspectShots 秒` | 配合 `-ccShotDir`：机器人不动，依次拿起烟盒、现金、金条，走几步，按 F 检视，再走开；最后去开鹅箱。检视时按这个间隔截图，并检查检视会自己结束、箱子回到手里、走动会打断。窗口运行 |
 | `-ccEyeTour "x,z,yaw;x,z,yaw"` | 站在这些位置平视并截图，用来检查场景从地面看是什么样 |
 | `-ccTour "x,z;x,z"` | 用老的高空镜头依次看这些位置并截图（要配合 `-ccShotDir`），用来检查场景的每个角落 |
 | `-ccCameraZoom 倍数` | 把上面那个高空镜头拉近，比如 0.42 |

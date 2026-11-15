@@ -42,9 +42,11 @@ from mathutils.bvhtree import BVHTree
 from mathutils.geometry import barycentric_transform
 
 sys.path.insert(0, str(Path(__file__).parent))
+import cargo_actions
 import modeling
 
 importlib.reload(modeling)
+importlib.reload(cargo_actions)
 
 ROOT = Path(__file__).resolve().parents[2]
 GAME_SCALE = 0.84
@@ -1254,6 +1256,15 @@ class CrewRig:
                 # Share the hand's twist with the forearm, so the wrist doesn't wring like a towel.
                 rest_axis = self.frames[f"{prefix}LowerArm"].col[1]
                 angle = twist_about(lower_turn.inverted() @ hand_turn, rest_axis)
+                if getattr(self, "continuous_hand_twist", False):
+                    # Astra's fix (互动货物_v08): half of a wrapped +/-pi twist jumps by pi at the branch cut, so in
+                    # her interactions it's unwrapped against the last frame before it's split with the forearm.
+                    previous_twist = self.continuous_twists.get(prefix, angle)
+                    while angle - previous_twist > math.pi:
+                        angle -= math.tau
+                    while angle - previous_twist < -math.pi:
+                        angle += math.tau
+                    self.continuous_twists[prefix] = angle
                 lower_turn = Quaternion(lower, angle * 0.5) @ lower_turn
             delta[f"{prefix}UpperArm"] = upper_turn
             delta[f"{prefix}LowerArm"] = lower_turn
@@ -1297,6 +1308,9 @@ class CrewRig:
         root_turn = deg_quat(pose.root_rot)
         for pose_bone in self.arm.pose.bones:
             name = pose_bone.name
+            if name.startswith("Prop_"):
+                # The cargo's bones (cargo_actions.py) are placed after the body, from where the hands ended up.
+                continue
             rest_turn = self.rot[name]
             if name in finger_turns:
                 local = finger_turns[name]
@@ -1339,6 +1353,7 @@ class CrewRig:
         for pose_bone in self.arm.pose.bones:
             pose_bone.location = (0, 0, 0)
             pose_bone.rotation_quaternion = (1, 0, 0, 0)
+            pose_bone.scale = (1, 1, 1)
 
 
 # ---- The clips ----
@@ -1448,21 +1463,38 @@ def toss(b, u):
     return keyed(keys, 0.36)(u)
 
 
+# Two people carry Astra's goose crate (互动货物_v08), each holding the bar of one of its side handles in both
+# hands, overhand. The game lifts the crate so that bar is this high, and stands each carrier this far from it
+# (CargoClashBuilder.CoCarryHandleHeight and CoCarryReach, in the game's metres).
+CO_CARRY_HANDLE = 0.75
+CO_CARRY_REACH = 0.466
+CO_CARRY_HANDS = 0.055
+
+
 def co_carry_values(b, a):
-    """Leaning in to hold the end of the big crate, which is waist high in front of you."""
-    reach = b.hips.z + 0.25 * (b.shoulder["L"].z - b.hips.z) - 0.05 * b.leg
-    height = min(reach, 0.75 / GAME_SCALE)
-    lean = 14.0 + 26.0 * max(0.0, min(1.0, (b.shoulder["L"].z - 1.0) / 0.5))
-    x = 0.38 / GAME_SCALE
-    y = -0.55 / GAME_SCALE + 0.1
+    """Leaning in to hold the side handle of the goose crate, which hangs waist high in front of you: only as
+    far as it takes to reach it comfortably, and with the fists closed round the bar along the forearms."""
+    height = CO_CARRY_HANDLE / GAME_SCALE
+    y = -CO_CARRY_REACH / GAME_SCALE
+    bar = Vector((CO_CARRY_HANDS, y, height))
+    hips = b.hips + Vector((0.0, 0.06 * b.leg, -0.1 * b.leg))
+    lean = 30.0
+    shoulder = b.shoulder["L"]
+    for degrees in range(4, 32, 2):
+        turn = Quaternion((1.0, 0.0, 0.0), math.radians(degrees))
+        shoulder = hips + turn @ (b.shoulder["L"] - b.hips)
+        if (bar - shoulder).length <= 0.86 * b.arm:
+            lean = degrees
+            break
+    # Both fists on the bar, which runs across them. The solver treats it like the hammer's handle: each hand turns
+    # round it to follow its forearm, and the elbows go where the wrists bend least.
     return dict(
-        hands_in_body=1.0,
-        hand_l=(x, y, height), hand_r=(-x, y, height),
-        palm_l=((0, -1, -0.2), (1, 0, 0.3)), palm_r=((0, -1, -0.2), (-1, 0, 0.3)),
-        elbow_l=(1.0, 0.4, -0.3), elbow_r=(-1.0, 0.4, -0.3),
+        tool="Hammer", grip=(-CO_CARRY_HANDS, y, height), axis=(1.0, 0.0, 0.0), left_grip=-2 * CO_CARRY_HANDS, clear=0.0,
+        back_r=(0.0, -0.5, 0.87), back_l=(0.0, -0.5, 0.87),
+        elbow_l=(0.6, 0.5, -0.6), elbow_r=(-0.6, 0.5, -0.6),
         hips=(lean * 0.5, 0, 0), spine=(lean * 0.3, 0, 0),
         chest=(lean * 0.2 + 1.0 * math.sin(4 * a), 1.2 * math.sin(2 * a), 0), head=(-lean * 0.6, 0, 0),
-        fingers_l=CARRY, fingers_r=CARRY,
+        fingers_l=GRIP, fingers_r=GRIP,
     )
 
 
@@ -1863,7 +1895,8 @@ def export(body):
     bpy.ops.export_scene.fbx(
         filepath=str(output),
         use_selection=False,
-        object_types={"ARMATURE", "MESH"},
+        # The empties are the markers the game lines the real cargo up with (cargo_actions.py).
+        object_types={"ARMATURE", "MESH", "EMPTY"},
         use_mesh_modifiers=False,
         mesh_smooth_type="FACE",
         add_leaf_bones=False,
@@ -1887,15 +1920,17 @@ def export(body):
 
 def main():
     options = arguments()
+    cargo_actions.bind(sys.modules[__name__])
     for body in options["only"]:
         rig, hands, meshes, report, top = load_body(options["source"], body)
         hammer_mesh, vacuum_mesh = attach_tools(rig, options["source"], hands)
         report["Hammer"] = triangles(hammer_mesh)
         report["Vacuum"] = triangles(vacuum_mesh)
         print(f"[crew] {body}: triangles {report}, top {top:.3f}")
-        fingers = capture_fingers(rig, options["source"])
         measured = Body(body, rig, [meshes["Wrecker"], meshes["Porter"]])
-        crew_rig = CrewRig(rig, measured, hands, fingers)
+        # Her cargo props, their bones and the finger poses her interactions use (cargo_actions.py).
+        fingers = cargo_actions.setup(rig, options["source"], hands, body, meshes, measured)
+        crew_rig = cargo_actions.rig_class()(rig, measured, hands, fingers)
         scene = bpy.context.scene
         scene.render.fps = FPS
         actions = []
@@ -1903,9 +1938,17 @@ def main():
             if options["clips"] and name not in options["clips"]:
                 continue
             action, frames = crew_rig.bake(name, seconds, function)
+            cargo_actions.hide_props(rig, frames)
+            actions.append((name, action, frames))
+        for name, clip in cargo_actions.clips():
+            if options["clips"] and name not in options["clips"]:
+                continue
+            action, frames = crew_rig.bake_cargo(name, clip)
             actions.append((name, action, frames))
         crew_rig.clear()
         scene.frame_set(0)
+        if options["export"] and not options["clips"]:
+            cargo_actions.write_times(ROOT / "Assets/Game/Models/CargoInspect.json", body, measured)
         # Her review poses would go out as extra clips.
         keep = {action for _, action, _ in actions}
         for action in list(bpy.data.actions):

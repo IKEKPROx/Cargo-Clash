@@ -31,6 +31,9 @@ namespace CargoClash
         /// <summary>A test is sending real key and mouse events, so the window doesn't need to be in front.</summary>
         public static bool DrivesInput;
 
+        /// <summary>Bots stand still and do nothing, for pictures of the local player.</summary>
+        public static bool BotsIdle;
+
         private string mode;
         private string address = "127.0.0.1";
         private string shotDirectory;
@@ -48,6 +51,7 @@ namespace CargoClash
         private string eyeTourSpots;
         private bool driveInput;
         private float burstEvery;
+        private float inspectShotEvery;
         private int peopleHit;
         private int cargoSucked;
         private bool suckUntested;
@@ -108,6 +112,7 @@ namespace CargoClash
                     case "-ccEyeTour": eyeTourSpots = next; break;
                     case "-ccDriveInput": driveInput = true; break;
                     case "-ccSwingBurst": burstEvery = float.Parse(next); break;
+                    case "-ccInspectShots": inspectShotEvery = float.Parse(next); BotsIdle = true; break;
                     case "-ccView": startView = next; break;
                     case "-ccHideUi": hideUi = true; break;
                     case "-ccBody": body = (BodyType)Enum.Parse(typeof(BodyType), next, true); break;
@@ -151,6 +156,7 @@ namespace CargoClash
             if (!string.IsNullOrEmpty(tourSpots)) StartCoroutine(TourTheLevel());
             if (!string.IsNullOrEmpty(eyeTourSpots)) StartCoroutine(TourAtEyeLevel());
             if (driveInput) StartCoroutine(DriveWithKeysAndMouse());
+            if (inspectShotEvery > 0f) StartCoroutine(PhotographInspects());
             if (!string.IsNullOrEmpty(startView)) GameSettings.FirstPerson = startView != "third";
 
             if (useUi)
@@ -546,6 +552,130 @@ namespace CargoClash
         }
 
         /// <summary>Just after picking something up, and walking with it. For checking how the hands hold it.</summary>
+        /// <summary>
+        /// Pictures of every kind of cargo being carried and looked at (F), in the view this run uses, then the goose crate
+        /// opened on the ground. The bots stand still. Checks that each one starts, ends, and leaves the case back in the hands.
+        /// </summary>
+        private IEnumerator PhotographInspects()
+        {
+            DrivesInput = true;
+            InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+            foreach (InputDevice device in InputSystem.devices) InputSystem.DisableDevice(device);
+            Keyboard keyboard = InputSystem.AddDevice<Keyboard>("TestKeyboard");
+            Mouse mouse = InputSystem.AddDevice<Mouse>("TestMouse");
+            keyboard.MakeCurrent();
+            mouse.MakeCurrent();
+
+            while (MatchDirector.Instance == null || !MatchDirector.Instance.IsSpawned || MatchDirector.Instance.Phase.Value != MatchPhase.Playing ||
+                   PlayerAvatar.Local == null)
+            {
+                SendKeys(keyboard);
+                SendMouse(mouse, Vector2.zero, false, false);
+                yield return null;
+            }
+            PlayerAvatar local = PlayerAvatar.Local;
+            yield return new WaitForSeconds(0.5f);
+
+            foreach (CargoKind kind in new[] { CargoKind.Tobacco, CargoKind.Cash, CargoKind.Gold })
+            {
+                CargoItem cargo = CargoItem.All.Find(c => c.Definition.kind == kind && c.State.Value == CargoState.Ground);
+                if (cargo == null)
+                {
+                    Expect(false, $"there is a {kind} on the ground to look at");
+                    continue;
+                }
+                // Stand a step from it, facing it, and pick it up.
+                Vector3 toCargo = cargo.transform.position - local.transform.position;
+                toCargo.y = 0f;
+                Vector3 facing = toCargo.sqrMagnitude > 0.01f ? toCargo.normalized : Vector3.forward;
+                Vector3 spot = cargo.transform.position - facing * 1.1f;
+                spot.y = local.transform.position.y;
+                local.TeleportRpc(spot, Quaternion.LookRotation(facing));
+                yield return new WaitForSeconds(0.3f);
+                local.TestLook(Quaternion.LookRotation(facing).eulerAngles.y, 8f);
+                local.TestGrab(cargo);
+                float waited = 0f;
+                while ((local.CarriedCargo != cargo || cargo.CarryBlend < 0.99f) && waited < 3f)
+                {
+                    waited += Time.deltaTime;
+                    yield return null;
+                }
+                Expect(local.CarriedCargo == cargo, $"picked up the {kind}");
+                if (local.CarriedCargo != cargo) continue;
+                yield return new WaitForSeconds(0.5f);
+                Shot($"{kind}-carry");
+                float walkEnds = Time.time + 0.9f;
+                while (Time.time < walkEnds)
+                {
+                    SendKeys(keyboard, Key.W);
+                    yield return new WaitForSeconds(0.3f);
+                    Shot($"{kind}-walk");
+                }
+                SendKeys(keyboard);
+                yield return new WaitForSeconds(0.5f);
+
+                local.TestInspect();
+                yield return null;
+                Expect(local.IsInspecting && local.InspectedCargo == cargo, $"F with the {kind} looks inside it");
+                float started = Time.time;
+                bool sawItOnTheGround = false;
+                while (local.IsInspecting && Time.time - started < 10f)
+                {
+                    yield return new WaitForSeconds(inspectShotEvery);
+                    if (!local.IsInspecting) break;
+                    if (cargo.transform.position.y < local.transform.position.y + 0.3f) sawItOnTheGround = true;
+                    Shot($"{kind}-inspect-{local.InspectTime:0.00}");
+                }
+                Expect(!local.IsInspecting, $"the {kind} inspect ends by itself");
+                Expect(sawItOnTheGround, $"the {kind} went down onto the ground while looked at");
+                yield return new WaitForSeconds(0.4f);
+                Shot($"{kind}-after");
+                Expect(local.CarriedCargo == cargo && cargo.transform.position.y > local.transform.position.y + 0.5f,
+                    $"the {kind} is back in the hands afterwards");
+
+                // Started again and walked away from: it stops, and the case comes back.
+                local.TestInspect();
+                yield return new WaitForSeconds(1.3f);
+                SendKeys(keyboard, Key.W);
+                yield return new WaitForSeconds(0.3f);
+                SendKeys(keyboard);
+                Expect(!local.IsInspecting && local.CarriedCargo == cargo, $"walking stops the {kind} inspect and keeps the case");
+                yield return new WaitForSeconds(0.6f);
+                Shot($"{kind}-stopped");
+                local.TestLetGo();
+                yield return new WaitForSeconds(1.2f);
+            }
+
+            // The goose crate, where it stands.
+            CargoItem crate = CargoItem.All.Find(c => c.Definition.kind == CargoKind.Art && c.State.Value == CargoState.Ground);
+            if (crate == null) Expect(false, "there is a goose crate to open");
+            else
+            {
+                Vector3 front = crate.FrontDirection;
+                Vector3 spot = crate.transform.position + front * 1.3f;
+                spot.y = local.transform.position.y;
+                local.TeleportRpc(spot, Quaternion.LookRotation(-front));
+                yield return new WaitForSeconds(0.4f);
+                local.TestLook(Quaternion.LookRotation(-front).eulerAngles.y, 30f);
+                yield return new WaitForSeconds(0.2f);
+                Expect(crate.CanBeOpenedHere(local.transform.position), "the goose crate can be opened from here");
+                local.TestOpenCrate(crate);
+                float started = Time.time;
+                while (local.IsInspecting && Time.time - started < 10f)
+                {
+                    yield return new WaitForSeconds(inspectShotEvery);
+                    if (!local.IsInspecting) break;
+                    Shot($"Art-inspect-{local.InspectTime:0.00}");
+                }
+                Expect(!local.IsInspecting, "the crate inspect ends by itself");
+                yield return new WaitForSeconds(0.5f);
+                Shot("Art-after");
+            }
+
+            Log($"DONE errors={errorCount} timedOut=False");
+            if (quitAtEnd) Application.Quit(errorCount > 0 ? 1 : 0);
+        }
+
         private IEnumerator PhotographPickingUp(Keyboard keyboard, Mouse mouse)
         {
             SendMouse(mouse, Vector2.zero, false, false);
@@ -1413,7 +1543,7 @@ namespace CargoClash
             }
         }
 
-        private void Shot()
+        private void Shot(string label = null)
         {
             if (string.IsNullOrEmpty(shotDirectory)) return;
             Directory.CreateDirectory(shotDirectory);
@@ -1421,7 +1551,8 @@ namespace CargoClash
             {
                 foreach (Canvas canvas in FindObjectsByType<Canvas>()) canvas.enabled = false;
             }
-            string path = Path.Combine(shotDirectory, $"{mode}-{shotNumber++:00}.png");
+            string name = label == null ? $"{mode}-{shotNumber++:00}" : $"{mode}-{shotNumber++:000}-{label}";
+            string path = Path.Combine(shotDirectory, name + ".png");
             ScreenCapture.CaptureScreenshot(path);
             Log("SHOT " + path);
         }

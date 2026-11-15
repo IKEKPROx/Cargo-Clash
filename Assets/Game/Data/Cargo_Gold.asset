@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8370719cbcf3f4649a006f12761d6bb4, type: 3}
+  m_Name: Cargo_Gold
+  m_EditorClassIdentifier: CargoClash::CargoClash.CargoDefinition
+  size: 1
+  kind: 2
+  prefab: {fileID: 6767598046206237391, guid: fe5074e08358349fe82cc42992c2ebba, type: 3}
+  value: 30
+  smashSeconds: 7
+  carrySpeedMultiplier: 0.7
+  requiredCarriers: 1
+  fullCount: 6
+  coCarryHeight: 0
+  coCarryReach: 0
+  inspectState: InspectGold
+  inspectOnGround: 0
+  inspectDistance: 0.7056
+  inspect:
+    seconds: 3.7333
+    drop: 0.0667
+    land: 0.2667
+    out: 0.3333
+    start: 0.6
+    back: 3.4667
+    shut: 3.5
+    lift: 3.4667
+    caught: 3.7333
+    lidOpen: -1
+    notes: -1
+    puff: -1
+    flick: -1
+  piecesPrefab: {fileID: 5112691475923313000, guid: 15f5e620e6f7e4d7e863ad34d14559ed, type: 3}
+  chipColor: {r: 0.94, g: 0.71, b: 0.3, a: 1}
+  breakSound: coins

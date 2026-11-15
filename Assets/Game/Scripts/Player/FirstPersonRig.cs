@@ -302,6 +302,16 @@ namespace CargoClash
         [Tooltip("The upper arms and forearms, which take the material of the clothes you have on.")]
         public Renderer[] sleeves;
 
+        [Header("Looking inside cargo (F)")]
+        [Tooltip("The medium body with only the shirt's arms, the gloves and the props showing (cargo_actions.py). It plays the same clip as your body while you look at what's in a case.")]
+        public CrewModel inspectArms;
+        [Tooltip("The middle between its eyes, in its own space. It goes on the camera.")]
+        public Vector3 inspectEyes = new Vector3(0f, 1.36f, 0.17f);
+        [Tooltip("How far the arms are tipped up into view while you hold what was in a case: the clip has your hands at your chest.")]
+        public float inspectPitch = 38f;
+        [Tooltip("And pushed this far away, so the hands aren't against the lens.")]
+        public float inspectBack = 0.04f;
+
         [Header("Holding cargo")]
         [Tooltip("How far in front of your eyes the near side of held cargo is. Wider cargo goes farther out, as well as this much for each metre of half width.")]
         public float holdDistance = 0.5f;
@@ -361,6 +371,11 @@ namespace CargoClash
         private bool colorsApplied;
         private bool placed;
         private Material sleeveShown;
+        private bool cargoInspecting;
+        private bool inspectInWorld;
+        private Renderer[] proceduralParts;
+        private Renderer[] inspectParts;
+        private int inspectSleeveSlot = -1;
 
         public float PickUpSeconds => pickUpSeconds;
 
@@ -374,7 +389,10 @@ namespace CargoClash
         private Quaternion HoldTilt => Quaternion.Euler(holdTiltDegrees, 0f, 0f);
 
         /// <summary>True if this character's cargo is in your hands in first person, rather than on their chest.</summary>
-        public bool HoldsCargoOf(PlayerAvatar carrier) => carrier == PlayerAvatar.Local && content.activeSelf;
+        public bool HoldsCargoOf(PlayerAvatar carrier) => carrier == PlayerAvatar.Local && content.activeSelf && !cargoInspecting;
+
+        /// <summary>While you look inside cargo, the arms you see are the inspect clip's.</summary>
+        public bool InspectsCargo => cargoInspecting;
 
         /// <summary>Where held cargo goes this frame. CargoItem runs after this script, so it follows without any lag.</summary>
         public void HoldPose(CargoItem cargo, out Vector3 position, out Quaternion rotation)
@@ -427,6 +445,18 @@ namespace CargoClash
             // Built here rather than up front because they start and end in the ready poses, which depend on the shoulders.
             hammerInspect = BuildHammerInspect();
             vacuumInspect = BuildVacuumInspect();
+            proceduralParts = content.GetComponentsInChildren<Renderer>(true);
+            if (inspectArms != null)
+            {
+                inspectParts = inspectArms.GetComponentsInChildren<Renderer>(true);
+                Material[] slots = inspectArms.firstPersonArms.sharedMaterials;
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    if (slots[i] != null && slots[i].name.StartsWith("Porter_Shirt")) inspectSleeveSlot = i;
+                }
+                inspectArms.animator.speed = 0f;
+                inspectArms.gameObject.SetActive(false);
+            }
         }
 
         private void OnDestroy()
@@ -446,6 +476,7 @@ namespace CargoClash
                 toolInHand = Tool.None;
                 inspectTime = -1f;
                 inspectWeight = 0f;
+                if (cargoInspecting) SetCargoInspecting(false);
                 return;
             }
 
@@ -454,6 +485,7 @@ namespace CargoClash
             UpdateSleeves(local);
             NoticeChanges(local);
             MoveBody(local, deltaTime);
+            UpdateCargoInspect(local);
 
             CargoItem carried = local.CarriedCargo;
             bool knocked = local.IsKnockedDown;
@@ -538,10 +570,66 @@ namespace CargoClash
             lastCarried = carried;
         }
 
+        // ---- Looking inside cargo (F) ----
+
+        /// <summary>
+        /// While you look at what's in a case, the arms are the medium body's real ones playing the same clip as your body,
+        /// with their fingers and what they hold. They hang from the camera, tipped up so your hands are in sight. At the
+        /// goose crate on the ground they stay where your body is instead, so they meet its lid.
+        /// </summary>
+        private void UpdateCargoInspect(PlayerAvatar local)
+        {
+            CargoItem target = local.InspectedCargo;
+            float time = local.InspectTime;
+            bool on = inspectArms != null && target != null && target.Definition.Inspectable && time >= 0f &&
+                time < target.Definition.inspect.seconds && !local.IsKnockedDown && local.Visual != null && local.Visual.ShowsInspect;
+            if (on != cargoInspecting) SetCargoInspecting(on);
+            if (!on) return;
+
+            CargoDefinition definition = target.Definition;
+            Animator animator = inspectArms.animator;
+            animator.Play(definition.inspectState, 0, Mathf.Clamp01(time / definition.inspect.seconds));
+            animator.Update(0f);
+            inspectArms.ShowProp((int)definition.kind);
+
+            bool inWorld = definition.inspectOnGround;
+            if (inWorld != inspectInWorld)
+            {
+                inspectInWorld = inWorld;
+                int layer = inWorld ? GameLayers.Player : GameLayers.ViewModel;
+                foreach (Renderer part in inspectParts) part.gameObject.layer = layer;
+            }
+            if (inWorld)
+            {
+                Transform body = local.Visual.pivot;
+                inspectArms.transform.SetPositionAndRotation(body.position, body.rotation);
+            }
+            else
+            {
+                Quaternion tip = Quaternion.Euler(-inspectPitch, 0f, 0f);
+                inspectArms.transform.localRotation = tip;
+                inspectArms.transform.localPosition = -(tip * inspectEyes) + Vector3.forward * inspectBack;
+            }
+        }
+
+        private void SetCargoInspecting(bool on)
+        {
+            cargoInspecting = on;
+            foreach (Renderer part in proceduralParts) part.enabled = !on;
+            if (inspectArms != null) inspectArms.gameObject.SetActive(on);
+            // Coming back, your hands come up into view with the case, as when you pick something up.
+            if (!on) placed = false;
+            inspectInWorld = false;
+            if (on && inspectParts != null)
+            {
+                foreach (Renderer part in inspectParts) part.gameObject.layer = GameLayers.ViewModel;
+            }
+        }
+
         /// <summary>What's in your hands: nothing while they're busy or you're on the ground, and otherwise what your side carries.</summary>
         private Tool ToolFor(PlayerAvatar local, CargoItem carried, bool knocked)
         {
-            if (carried != null || knocked || Time.time < tossUntil || Time.time < pushUntil) return Tool.None;
+            if (carried != null || knocked || Time.time < tossUntil || Time.time < pushUntil || local.IsInspecting) return Tool.None;
             return local.Side == Side.Interrupter ? Tool.Hammer : Tool.Vacuum;
         }
 
@@ -1169,6 +1257,12 @@ namespace CargoClash
             if (sleeve == null || sleeve == sleeveShown) return;
             sleeveShown = sleeve;
             foreach (Renderer part in sleeves) part.sharedMaterial = sleeve;
+            if (inspectArms != null && inspectSleeveSlot >= 0)
+            {
+                Material[] slots = inspectArms.firstPersonArms.sharedMaterials;
+                slots[inspectSleeveSlot] = sleeve;
+                inspectArms.firstPersonArms.sharedMaterials = slots;
+            }
         }
 
         private void ApplyTeamColor(PlayerAvatar local)
@@ -1176,7 +1270,9 @@ namespace CargoClash
             if (colorsApplied) return;
             colorsApplied = true;
             if (local.Team == Team.Orange) return;
-            foreach (Renderer part in content.GetComponentsInChildren<Renderer>(true))
+            Renderer[] parts = content.GetComponentsInChildren<Renderer>(true);
+            if (inspectParts != null) parts = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Concat(parts, inspectParts));
+            foreach (Renderer part in parts)
             {
                 Material[] slots = part.sharedMaterials;
                 for (int i = 0; i < slots.Length; i++)

@@ -502,8 +502,10 @@ namespace CargoClash
         {
             PlayerAvatar local = PlayerAvatar.Local;
             bool playing = director.Phase.Value == MatchPhase.Playing && local != null && !local.IsKnockedDown;
-            if (crosshairDot.enabled != playing) crosshairDot.enabled = playing;
-            if (!playing)
+            // Nothing to aim at or press while looking inside cargo, and the dot would sit on the face in the front view.
+            bool aiming = playing && !local.IsInspecting;
+            if (crosshairDot.enabled != aiming) crosshairDot.enabled = aiming;
+            if (!aiming)
             {
                 crosshairRing.enabled = false;
                 promptA.Hide();
@@ -585,6 +587,7 @@ namespace CargoClash
             promptA.Show(GameText.KeyInteract, large ? GameText.PromptLetGo : GameText.PromptDrop);
             if (waiting) promptB.Show(null, GameText.PromptWaiting);
             else if (large) promptB.Show(null, GameText.PromptTogether);
+            else if (carried.Definition.Inspectable) promptB.Show(GameText.KeyInspect, GameText.PromptLookInside);
             else if (local.Side == Side.Collector) promptB.Show(null, GameText.PromptToTruck);
             else promptB.Hide();
         }
@@ -633,6 +636,7 @@ namespace CargoClash
             else if (grab.Definition.requiredCarriers > 1) words = GameText.PromptLarge;
             else words = GameText.PromptPickUp;
             promptA.Show(GameText.KeyInteract, words);
+            if (grab.CanBeOpenedHere(local.transform.position)) promptB.Show(GameText.KeyInspect, GameText.PromptOpenCrate);
         }
 
         // ---- Being hit ----

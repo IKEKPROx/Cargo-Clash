@@ -17,6 +17,12 @@ namespace CargoClash
 
     public enum CargoSize : byte { Small = 0, Medium = 1, Large = 2 }
 
+    /// <summary>
+    /// Astra's four kinds of cargo (独立建模/互动货物_v08), each with its own case and something inside to look at:
+    /// a carton of cigarettes, a case of cash, a case of gold bars and the crate with the porcelain goose.
+    /// </summary>
+    public enum CargoKind : byte { Tobacco = 0, Cash = 1, Gold = 2, Art = 3 }
+
     public enum CargoState : byte { Ground = 0, Carried = 1, Rescued = 2, Destroyed = 3 }
 
     /// <summary>What someone got hit with.</summary>

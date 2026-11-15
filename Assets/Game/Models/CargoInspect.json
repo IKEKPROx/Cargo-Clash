@@ -1,0 +1,98 @@
+{
+  "fps": 30,
+  "clips": [
+    {
+      "name": "InspectTobacco",
+      "kind": "Tobacco",
+      "seconds": 5.3333,
+      "drop": 0.0667,
+      "land": 0.2667,
+      "out": 0.3333,
+      "start": 0.6,
+      "back": 5.1,
+      "shut": 5.1,
+      "lift": 5.0667,
+      "caught": 5.3333,
+      "notes": -1.0,
+      "puff": 3.0667,
+      "flick": 4.2667,
+      "lidOpen": -1.0
+    },
+    {
+      "name": "InspectCash",
+      "kind": "Cash",
+      "seconds": 3.5333,
+      "drop": 0.0667,
+      "land": 0.2667,
+      "out": 0.3333,
+      "start": 0.6,
+      "back": 3.2667,
+      "shut": 3.3,
+      "lift": 3.2667,
+      "caught": 3.5333,
+      "notes": 1.7333,
+      "puff": -1.0,
+      "flick": -1.0,
+      "lidOpen": -1.0
+    },
+    {
+      "name": "InspectGold",
+      "kind": "Gold",
+      "seconds": 3.7333,
+      "drop": 0.0667,
+      "land": 0.2667,
+      "out": 0.3333,
+      "start": 0.6,
+      "back": 3.4667,
+      "shut": 3.5,
+      "lift": 3.4667,
+      "caught": 3.7333,
+      "notes": -1.0,
+      "puff": -1.0,
+      "flick": -1.0,
+      "lidOpen": -1.0
+    },
+    {
+      "name": "InspectArt",
+      "kind": "Art",
+      "seconds": 5.82,
+      "drop": -1.0,
+      "land": -1.0,
+      "out": 1.2,
+      "start": 1.56,
+      "back": 4.92,
+      "shut": 5.6533,
+      "lift": -1.0,
+      "caught": -1.0,
+      "notes": -1.0,
+      "puff": -1.0,
+      "flick": -1.0,
+      "lidOpen": 0.9
+    }
+  ],
+  "eyes": [
+    {
+      "body": "Short",
+      "x": -0.0006,
+      "y": -0.1707,
+      "z": 1.1272
+    },
+    {
+      "body": "Medium",
+      "x": 0.0012,
+      "y": -0.1629,
+      "z": 1.4007
+    },
+    {
+      "body": "Tall",
+      "x": -0.0002,
+      "y": -0.3621,
+      "z": 1.648
+    }
+  ],
+  "crateDistance": 0.7056,
+  "coCarryHandleHeight": 0.75,
+  "coCarryReach": 0.466,
+  "handleOut": 0.095,
+  "handleAt": 0.46
+}

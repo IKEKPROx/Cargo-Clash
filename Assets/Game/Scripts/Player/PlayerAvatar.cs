@@ -38,6 +38,16 @@ namespace CargoClash
         /// <summary>When the hammer started charging, or 0 if it isn't.</summary>
         public readonly NetworkVariable<double> ChargingSince = new NetworkVariable<double>();
         public readonly NetworkVariable<double> SlammingUntil = new NetworkVariable<double>();
+        /// <summary>
+        /// F with cargo: when this person started looking at what's in it, in server time, or 0. It's only for show, so
+        /// their own computer decides and everyone plays it from this moment. A start in the future means they're still
+        /// stepping up to a crate on the ground.
+        /// </summary>
+        public readonly NetworkVariable<double> InspectStart = new NetworkVariable<double>(0.0,
+            NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        /// <summary>The cargo being looked at: the case in their hands, or the goose crate in front of them.</summary>
+        public readonly NetworkVariable<ulong> InspectTarget = new NetworkVariable<ulong>(NetIds.None,
+            NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         public Team Team => TeamVar.Value;
         public string DisplayName => NameVar.Value.ToString();
@@ -71,6 +81,18 @@ namespace CargoClash
         public bool WantsToUseTool => lastSwing || lastSuck || lastCharge;
 
         public float Health01 => Mathf.Clamp01((float)Health.Value / MaxHealth);
+
+        public bool IsInspecting => InspectStart.Value > 0.0;
+        public CargoItem InspectedCargo => IsInspecting ? CargoItem.Find(InspectTarget.Value) : null;
+
+        /// <summary>Seconds into the inspect clip: negative while still stepping up to a crate, and -1 when not inspecting.</summary>
+        public float InspectTime => IsInspecting ? (float)(Now - InspectStart.Value) : -1f;
+
+        /// <summary>
+        /// In the over-the-shoulder view the camera swings round to the front while you inspect, and the mouse turns it
+        /// round you instead of turning you. Degrees from behind. Only meaningful on the owner's computer.
+        /// </summary>
+        public float InspectOrbitYaw { get; private set; }
 
         /// <summary>From 0 to 1 once the hammer has charged enough to slam.</summary>
         public float Charge01 => IsCharging ? Mathf.Clamp01((float)((Now - ChargingSince.Value) / config.chargeSeconds)) : 0f;
@@ -144,6 +166,13 @@ namespace CargoClash
         private ulong lastHitTarget = NetIds.None;
         private Vector2 lastCoCarry;
         private float nextCoCarrySend;
+        private bool inspectMoveLatch;
+        private float approachStart = -1f;
+        private float approachEnd;
+        private Vector3 approachFrom;
+        private Vector3 approachTo;
+        private float approachYawFrom;
+        private float approachYawTo;
 
         // Host state
         private double serverRamUntil;
@@ -236,17 +265,21 @@ namespace CargoClash
             MatchDirector director = MatchDirector.Instance;
             bool canAct = director != null && director.Phase.Value == MatchPhase.Playing && !IsKnockedDown && !IsStaggered;
             if (input.SwitchViewPressed && IsLocalPlayer) FollowCamera.ToggleView();
-            if (input.InspectPressed && IsLocalPlayer && FirstPersonRig.Instance != null) FirstPersonRig.Instance.StartInspecting();
+            if (input.InspectPressed) PressInspect(canAct);
             UpdateLook(director);
 
             Vector2 rawMove = canAct ? Vector2.ClampMagnitude(input.Move, 1f) : Vector2.zero;
+            CargoItem carried = CarriedCargo;
+            UpdateInspect(director, rawMove, carried);
+            // Looking at cargo, you stand still: the case is on the ground in front of you.
+            if (IsInspecting) rawMove = Vector2.zero;
             Vector3 wish = input.LooksAround
                 ? Quaternion.Euler(0f, LookYaw, 0f) * new Vector3(rawMove.x, 0f, rawMove.y)
                 : new Vector3(rawMove.x, 0f, rawMove.y);
-            CargoItem carried = CarriedCargo;
             bool coCarrying = carried != null && carried.Definition.requiredCarriers > 1;
 
             if (coCarrying) TickCoCarry(carried, new Vector2(wish.x, wish.z));
+            else if (approachStart >= 0f) TickApproach();
             else TickRunning(carried, wish, deltaTime);
 
             UpdateAim();
@@ -259,6 +292,107 @@ namespace CargoClash
             }
 
             UpdateTools(canAct, carried, wish, deltaTime);
+        }
+
+        // ---- For the automatic tests: what the keys would do, aimed exactly ----
+
+        public void TestGrab(CargoItem cargo) => InteractRpc(cargo.NetworkObjectId);
+        public void TestLetGo() => InteractRpc(NetIds.None);
+        public void TestInspect() => PressInspect(true);
+        public void TestOpenCrate(CargoItem crate) => BeginCrateInspect(crate);
+        public void TestLook(float yaw, float pitch)
+        {
+            LookYaw = yaw;
+            LookPitch = pitch;
+            transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+        }
+
+        // ---- F: looking at the cargo ----
+
+        /// <summary>
+        /// F looks at what's in your hands. With a case, that's what's inside it (Astra's InspectArt, InspectGold, MakeItRain
+        /// and Smoke); aimed at the goose crate on the ground, you step up and open it. Otherwise it's your tool, which only
+        /// you see.
+        /// </summary>
+        private void PressInspect(bool canAct)
+        {
+            if (IsInspecting) return;
+            CargoItem carried = CarriedCargo;
+            if (canAct && carried != null && carried.Definition.requiredCarriers == 1 && carried.Definition.Inspectable &&
+                carried.CarryBlend >= 0.99f)
+            {
+                BeginInspect(carried, 0f);
+                return;
+            }
+            CargoItem aimed = AimedGrab;
+            if (canAct && carried == null && aimed != null && aimed.CanBeOpenedHere(transform.position))
+            {
+                BeginCrateInspect(aimed);
+                return;
+            }
+            if (IsLocalPlayer && FirstPersonRig.Instance != null) FirstPersonRig.Instance.StartInspecting();
+        }
+
+        private void BeginInspect(CargoItem cargo, float delay)
+        {
+            InspectTarget.Value = cargo.NetworkObjectId;
+            InspectStart.Value = Now + delay;
+            // Keys already held when you pressed F don't count until you let go of them.
+            inspectMoveLatch = true;
+            InspectOrbitYaw = 0f;
+            AutoPilot.Log($"INSPECT {DisplayName} {cargo.Definition.kind}");
+        }
+
+        /// <summary>The crate opens away from you, so you step round to its front first.</summary>
+        private void BeginCrateInspect(CargoItem crate)
+        {
+            Vector3 front = crate.FrontDirection;
+            Vector3 spot = crate.transform.position + front * crate.Definition.inspectDistance;
+            approachFrom = transform.position;
+            approachTo = new Vector3(spot.x, transform.position.y, spot.z);
+            approachYawFrom = transform.eulerAngles.y;
+            approachYawTo = Quaternion.LookRotation(-front).eulerAngles.y;
+            approachStart = Time.time;
+            approachEnd = Time.time + config.inspectApproachSeconds;
+            BeginInspect(crate, config.inspectApproachSeconds);
+        }
+
+        private void TickApproach()
+        {
+            if (!controller.enabled) controller.enabled = true;
+            float t = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(approachStart, approachEnd, Time.time));
+            Vector3 wanted = Vector3.Lerp(approachFrom, approachTo, t);
+            Vector3 step = wanted - transform.position;
+            step.y = 0f;
+            verticalSpeed = controller.isGrounded ? -2f : verticalSpeed - 20f * Time.deltaTime;
+            controller.Move(step + Vector3.up * verticalSpeed * Time.deltaTime);
+            float yaw = Mathf.LerpAngle(approachYawFrom, approachYawTo, t);
+            transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            // The camera turns with you, so you face the crate as you open it.
+            if (input.LooksAround) LookYaw = yaw;
+            if (Time.time >= approachEnd) approachStart = -1f;
+        }
+
+        /// <summary>Anything you do stops the show, as does losing what you're looking at.</summary>
+        private void UpdateInspect(MatchDirector director, Vector2 rawMove, CargoItem carried)
+        {
+            if (!IsInspecting) return;
+            CargoItem target = InspectedCargo;
+            bool moving = rawMove.sqrMagnitude > 0.01f;
+            if (!moving) inspectMoveLatch = false;
+            bool lost = target == null ||
+                (target.Definition.inspectOnGround ? target.State.Value != CargoState.Ground : carried != target);
+            bool stop = director == null || director.Phase.Value != MatchPhase.Playing || IsKnockedDown || IsStaggered || lost ||
+                (moving && !inspectMoveLatch) || input.InteractPressed || input.RamPressed || input.AttackHeld || input.SecondaryHeld ||
+                InspectTime >= target.Definition.inspect.seconds;
+            if (stop) EndInspect();
+        }
+
+        private void EndInspect()
+        {
+            InspectStart.Value = 0.0;
+            InspectTarget.Value = NetIds.None;
+            approachStart = -1f;
         }
 
         /// <summary>
@@ -343,6 +477,13 @@ namespace CargoClash
                 // You can look around during the countdown, but not while flat on your back or during a cutscene.
                 bool canLook = !IsKnockedDown && !outro;
                 LookThisFrame = canLook ? input.Look : Vector2.zero;
+                if (IsInspecting && IsLocalPlayer && !FollowCamera.ShowsHands)
+                {
+                    InspectOrbitYaw += LookThisFrame.x;
+                    LookPitch = Mathf.Clamp(LookPitch - LookThisFrame.y, -config.maxLookUp, config.maxLookDown);
+                    return;
+                }
+                if (!IsInspecting) InspectOrbitYaw = 0f;
                 LookYaw = Mathf.Repeat(LookYaw + LookThisFrame.x, 360f);
                 LookPitch = Mathf.Clamp(LookPitch - LookThisFrame.y, -config.maxLookUp, config.maxLookDown);
                 return;
@@ -437,8 +578,8 @@ namespace CargoClash
 
             if (input.LooksAround)
             {
-                // Knocked flat, the body stays turned toward whoever did it.
-                if (!IsKnockedDown) transform.rotation = Quaternion.Euler(0f, LookYaw, 0f);
+                // Knocked flat, the body stays turned toward whoever did it; inspecting, it stays over the case.
+                if (!IsKnockedDown && !IsInspecting) transform.rotation = Quaternion.Euler(0f, LookYaw, 0f);
             }
             else if (wish.sqrMagnitude > 0.01f && Time.time >= dashUntil)
             {

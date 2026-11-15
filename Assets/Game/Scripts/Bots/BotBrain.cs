@@ -68,6 +68,14 @@ namespace CargoClash
         {
             interact = false;
             ram = false;
+            if (AutoPilot.BotsIdle)
+            {
+                // A test photographing someone wants nobody else moving about or hitting them.
+                move = Vector2.zero;
+                attack = false;
+                secondary = false;
+                return;
+            }
 
             if (Time.time >= thinkAt)
             {

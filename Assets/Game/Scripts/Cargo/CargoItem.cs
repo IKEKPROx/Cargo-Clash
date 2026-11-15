@@ -21,6 +21,10 @@ namespace CargoClash
         [SerializeField] private Vector3 halfExtents = new Vector3(0.3f, 0.3f, 0.3f);
         [Tooltip("The body when whole, then as it gets more damaged.")]
         [SerializeField] private GameObject[] damageBodies;
+        [Tooltip("For each of those: its lid's hinge, which opens for the inspect.")]
+        [SerializeField] private Transform[] lids;
+        [Tooltip("For each of those: the thing the hands take out during the inspect, hidden while it's out.")]
+        [SerializeField] private GameObject[] slots;
 
         public readonly NetworkVariable<CargoState> State = new NetworkVariable<CargoState>(CargoState.Ground);
         public readonly NetworkVariable<float> Durability = new NetworkVariable<float>(1f);
@@ -60,6 +64,19 @@ namespace CargoClash
         private float flashUntil;
         private bool flashing;
         private MaterialPropertyBlock flashBlock;
+        private Quaternion[] lidRest;
+        private bool inspectShown;
+        private int inspectStage;
+        private bool followingMarker;
+        private float markerSince;
+        private Vector3 markerFrom;
+        private Quaternion markerFromRotation;
+        private bool heldStill;
+        /// <summary>Where the case's own origin sits in this object, for lining it up with a clip's marker.</summary>
+        private Vector3 frameOffset;
+        private Quaternion frameTurn = Quaternion.identity;
+
+        private const float MarkerBlendSeconds = 0.12f;
 
         public static CargoItem Find(ulong networkObjectId)
         {
@@ -189,6 +206,87 @@ namespace CargoClash
             flashBlock = new MaterialPropertyBlock();
             flashBlock.SetColor("_BaseColor", Color.white);
             if (visual != null) visualRest = visual.localPosition;
+            if (lids != null)
+            {
+                lidRest = new Quaternion[lids.Length];
+                for (int i = 0; i < lids.Length; i++) lidRest[i] = lids[i] != null ? lids[i].localRotation : Quaternion.identity;
+            }
+            if (damageBodies != null && damageBodies.Length > 0)
+            {
+                Transform frame = damageBodies[0].transform;
+                frameOffset = transform.InverseTransformPoint(frame.position);
+                frameTurn = Quaternion.Inverse(transform.rotation) * frame.rotation;
+            }
+        }
+
+        // ---- Looking inside (F) ----
+
+        /// <summary>The way the crate's front faces, flat on the ground: its lid hinges at the back.</summary>
+        public Vector3 FrontDirection
+        {
+            get
+            {
+                if (lids == null || lids.Length == 0 || lids[damageStage] == null) return transform.forward;
+                Transform frame = damageBodies[damageStage].transform;
+                Vector3 back = lids[damageStage].position - frame.position;
+                back.y = 0f;
+                return back.sqrMagnitude > 0.0001f ? -back.normalized : transform.forward;
+            }
+        }
+
+        public bool IsUpright => Vector3.Angle(transform.up, Vector3.up) <= config.inspectMaxTilt;
+
+        /// <summary>Someone looking at this, with their clip under way (or, with `stepping`, still stepping up to it).</summary>
+        public PlayerAvatar Inspector(bool stepping = false)
+        {
+            foreach (PlayerAvatar avatar in PlayerAvatar.All)
+            {
+                if (!avatar.IsInspecting || avatar.InspectTarget.Value != NetworkObjectId) continue;
+                float time = avatar.InspectTime;
+                if (time < definition.inspect.seconds && (stepping || time >= 0f)) return avatar;
+            }
+            return null;
+        }
+
+        /// <summary>The goose crate can be opened where it stands: on its own, upright, and within reach.</summary>
+        public bool CanBeOpenedHere(Vector3 feet)
+        {
+            return definition.inspectOnGround && definition.Inspectable && State.Value == CargoState.Ground && IsUpright &&
+                Inspector(true) == null && IsWithin(feet, config.pickupRange + config.reachTolerance);
+        }
+
+        /// <summary>This object's pose that puts the case's own origin on a clip's marker.</summary>
+        private void PoseOnMarker(Vector3 markerPosition, Quaternion markerRotation, out Vector3 position, out Quaternion rotation)
+        {
+            rotation = markerRotation * Quaternion.Inverse(frameTurn);
+            position = markerPosition - rotation * frameOffset;
+        }
+
+        /// <summary>The lid follows the inspector's clip, and what they took out isn't in the case while they hold it.</summary>
+        private void ShowInspect(PlayerAvatar inspector)
+        {
+            bool show = inspector != null && lids != null && inspector.Visual != null && inspector.Visual.HasCargoMarkers;
+            if (!show)
+            {
+                if (!inspectShown) return;
+                inspectShown = false;
+                RestoreInspected(inspectStage);
+                return;
+            }
+            if (inspectShown && inspectStage != damageStage) RestoreInspected(inspectStage);
+            inspectShown = true;
+            inspectStage = damageStage;
+            Transform lid = lids[damageStage];
+            if (lid != null) lid.rotation = lid.parent.rotation * inspector.Visual.LidTurn;
+            GameObject slot = slots != null && damageStage < slots.Length ? slots[damageStage] : null;
+            bool inHands = definition.inspect.ItemOut(inspector.InspectTime);
+            if (slot != null && slot.activeSelf == inHands) slot.SetActive(!inHands);
+        }
+
+        private void RestoreInspected(int stage)
+        {
+            if (lids != null && stage < lids.Length && lids[stage] != null) lids[stage].localRotation = lidRest[stage];
+            if (slots != null && stage < slots.Length && slots[stage] != null && !slots[stage].activeSelf) slots[stage].SetActive(true);
         }
 
         public override void OnNetworkSpawn()
@@ -277,17 +375,47 @@ namespace CargoClash
         private void LateUpdate()
         {
             if (!IsSpawned) return;
+            PlayerAvatar inspector = Inspector();
+            ShowInspect(inspector);
+
             bool held = State.Value == CargoState.Carried && definition.requiredCarriers == 1;
             PlayerAvatar carrier = held ? FindAvatar(CarrierA.Value) : null;
             if (carrier == null)
             {
                 wasHeld = false;
+                followingMarker = false;
                 SetOnViewLayer(false);
                 return;
             }
             if (!wasHeld)
             {
                 wasHeld = true;
+                heldSince = Time.time;
+                CarryFrom = transform.position;
+                carryFromRotation = transform.rotation;
+            }
+
+            // Looking inside: the case goes where the carrier's clip puts it, down onto the ground and back up.
+            if (inspector == carrier && carrier.Visual != null && carrier.Visual.CaseMarker(out Vector3 markerPosition, out Quaternion markerRotation))
+            {
+                if (!followingMarker)
+                {
+                    followingMarker = true;
+                    markerSince = Time.time;
+                    markerFrom = transform.position;
+                    markerFromRotation = transform.rotation;
+                }
+                SetOnViewLayer(false);
+                PoseOnMarker(markerPosition, markerRotation, out Vector3 onMarker, out Quaternion onMarkerRotation);
+                float k = Mathf.SmoothStep(0f, 1f, (Time.time - markerSince) / MarkerBlendSeconds);
+                transform.SetPositionAndRotation(Vector3.Lerp(markerFrom, onMarker, k), Quaternion.Slerp(markerFromRotation, onMarkerRotation, k));
+                CarryBlend = 1f;
+                return;
+            }
+            if (followingMarker)
+            {
+                // Back from the show: into the hands from wherever the clip left it.
+                followingMarker = false;
                 heldSince = Time.time;
                 CarryFrom = transform.position;
                 carryFromRotation = transform.rotation;
@@ -303,6 +431,11 @@ namespace CargoClash
             {
                 hands.HoldPose(this, out position, out rotation);
                 pickUpSeconds = hands.PickUpSeconds;
+            }
+            else if (carrier.Visual.CaseMarker(out Vector3 carryPosition, out Quaternion carryRotation))
+            {
+                // Astra's cases: the carry clip puts the case between the hands.
+                PoseOnMarker(carryPosition, carryRotation, out position, out rotation);
             }
             else
             {
@@ -356,13 +489,21 @@ namespace CargoClash
         public Vector3 GrabPointWorld(PlayerAvatar avatar)
         {
             float sign = CarrierB.Value == avatar.NetworkObjectId ? 1f : -1f;
-            return transform.position + Vector3.right * (sign * (halfExtents.x + 0.55f));
+            float reach = definition.coCarryReach > 0f ? definition.coCarryReach : halfExtents.x + 0.55f;
+            return transform.position + Vector3.right * (sign * reach);
         }
 
         // ---- Host only ----
 
         private void TickServer(float deltaTime)
         {
+            // The crate stays where it is while someone opens it, so their hands meet its lid.
+            bool still = State.Value == CargoState.Ground && definition.inspectOnGround && Inspector(true) != null;
+            if (still != heldStill)
+            {
+                heldStill = still;
+                if (State.Value == CargoState.Ground) body.isKinematic = still;
+            }
             if (State.Value != CargoState.Carried) return;
 
             PlayerAvatar a = FindAvatar(CarrierA.Value);
@@ -448,9 +589,11 @@ namespace CargoClash
                 SetPhysicsActive(false);
                 if (definition.requiredCarriers > 1)
                 {
-                    // Stand it upright so both carriers have a clear side to hold.
+                    // Stand it upright so both carriers have a clear side to hold, lifted by its handles.
                     Vector3 position = transform.position;
-                    position.y = halfExtents.y + 0.02f;
+                    float ground = Physics.Raycast(position + Vector3.up * 0.5f, Vector3.down, out RaycastHit floor, 4f,
+                        GameLayers.LevelMask, QueryTriggerInteraction.Ignore) ? floor.point.y : 0f;
+                    position.y = ground + (definition.coCarryHeight > 0f ? definition.coCarryHeight : halfExtents.y + 0.02f);
                     transform.SetPositionAndRotation(position, Quaternion.identity);
                 }
             }

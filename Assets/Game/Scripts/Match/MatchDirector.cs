@@ -193,16 +193,29 @@ namespace CargoClash
             CargoRanOut.Value = false;
             halfDestroyed = 0;
             halfTotal = 0;
-            foreach (CargoDefinition definition in config.cargo)
+            // Kinds of the same size share its spots: taken in turn, spread evenly over them.
+            foreach (CargoSize size in new[] { CargoSize.Small, CargoSize.Medium, CargoSize.Large })
             {
-                Transform[] spots = layout.SpotsFor(definition.size);
-                int count = definition.fullCount * thirds / 3;
-                for (int i = 0; i < count; i++)
+                List<CargoDefinition> pieces = new List<CargoDefinition>();
+                CargoDefinition[] kinds = System.Array.FindAll(config.cargo, d => d.size == size);
+                for (int round = 0; ; round++)
                 {
-                    Transform spot = spots[(i * spots.Length / Mathf.Max(1, count)) % spots.Length];
-                    GameObject instance = Instantiate(definition.prefab, spot.position, spot.rotation);
+                    bool any = false;
+                    foreach (CargoDefinition definition in kinds)
+                    {
+                        if (round >= definition.fullCount * thirds / 3) continue;
+                        pieces.Add(definition);
+                        any = true;
+                    }
+                    if (!any) break;
+                }
+                Transform[] spots = layout.SpotsFor(size);
+                for (int i = 0; i < pieces.Count; i++)
+                {
+                    Transform spot = spots[(i * spots.Length / Mathf.Max(1, pieces.Count)) % spots.Length];
+                    GameObject instance = Instantiate(pieces[i].prefab, spot.position, spot.rotation);
                     instance.GetComponent<NetworkObject>().Spawn(true);
-                    halfTotal += definition.value;
+                    halfTotal += pieces[i].value;
                 }
             }
 

@@ -76,6 +76,8 @@ namespace CargoClash
         private Vector3 shotLookVelocity;
 
         private float viewBlend;
+        private float orbitBlend;
+        private float orbitYaw;
         private Vector3 lastPosition;
         private float walkPhase;
         private float walkAmount;
@@ -201,7 +203,7 @@ namespace CargoClash
                 float blend = Mathf.SmoothStep(0f, 1f, viewBlend);
 
                 FirstPersonPose(local, deltaTime, out Vector3 eyePosition, out Quaternion eyeRotation);
-                ShoulderPose(local, out Vector3 shoulderPosition, out Quaternion shoulderRotation);
+                ShoulderPose(local, deltaTime, out Vector3 shoulderPosition, out Quaternion shoulderRotation);
                 position = Vector3.Lerp(eyePosition, shoulderPosition, blend);
                 rotation = Quaternion.Slerp(eyeRotation, shoulderRotation, blend);
 
@@ -304,14 +306,29 @@ namespace CargoClash
             rollNow += rollVelocity * deltaTime;
         }
 
-        private void ShoulderPose(PlayerAvatar local, out Vector3 position, out Quaternion rotation)
+        /// <summary>
+        /// Behind the shoulder. While you look at cargo (F) it swings round to watch you from the front, nearer and lower,
+        /// and the mouse turns it round you; it goes round you rather than through you, and back when you're done.
+        /// </summary>
+        private void ShoulderPose(PlayerAvatar local, float deltaTime, out Vector3 position, out Quaternion rotation)
         {
-            rotation = Quaternion.Euler(local.LookPitch, local.LookYaw, 0f);
-            Vector3 pivot = local.transform.position + Vector3.up * shoulderHeight + rotation * Vector3.right * shoulderSide;
+            bool showing = local.Visual != null && local.Visual.ShowsInspect;
+            orbitBlend = Mathf.MoveTowards(orbitBlend, showing ? 1f : 0f, deltaTime / 0.5f);
+            if (showing) orbitYaw = config.inspectOrbitDegrees + local.InspectOrbitYaw;
+            float blend = Mathf.SmoothStep(0f, 1f, orbitBlend);
+
+            float yaw = Mathf.LerpAngle(local.LookYaw, local.transform.eulerAngles.y + orbitYaw, blend);
+            float pitch = Mathf.Lerp(local.LookPitch, Mathf.Clamp(local.LookPitch * 0.5f + 12f, 2f, 40f), blend);
+            float side = Mathf.Lerp(shoulderSide, 0f, blend);
+            float height = Mathf.Lerp(shoulderHeight, 1.15f, blend);
+            float far = Mathf.Lerp(shoulderDistance, config.inspectOrbitDistance, blend);
+
+            rotation = Quaternion.Euler(pitch, yaw, 0f);
+            Vector3 pivot = local.transform.position + Vector3.up * height + rotation * Vector3.right * side;
             Vector3 back = rotation * Vector3.back;
-            float distance = shoulderDistance;
+            float distance = far;
             // The camera comes in close rather than going through a wall or the ground.
-            if (Physics.SphereCast(pivot, 0.22f, back, out RaycastHit hit, shoulderDistance, GameLayers.LevelMask, QueryTriggerInteraction.Ignore))
+            if (Physics.SphereCast(pivot, 0.22f, back, out RaycastHit hit, far, GameLayers.LevelMask, QueryTriggerInteraction.Ignore))
                 distance = Mathf.Max(0.5f, hit.distance);
             position = pivot + back * distance;
         }

@@ -39,8 +39,33 @@ namespace CargoClash
         public Transform starsBone;
         public Renderer[] renderers;
 
+        [Header("Cargo")]
+        [Tooltip("Where the clips put the case's origin and its lid's hinge (cargo_actions.py). The real cargo follows them.")]
+        public Transform caseMarker;
+        public Transform lidMarker;
+        [Tooltip("What the hands take out of each kind of case, in CargoKind order.")]
+        public GameObject[] props;
+        [Tooltip("The notes pinched out of the bundle to throw.")]
+        public GameObject notes;
+        [Tooltip("The arms of the shirt alone, for the first-person inspect. Only on the medium body.")]
+        public SkinnedMeshRenderer firstPersonArms;
+
         private bool wearing;
         private bool wearsPorter;
+        private int propShown = -2;
+
+        /// <summary>Shows what the hands hold for this kind of cargo, or nothing for -1. The clip moves it, and shrinks it to nothing while it's in its case.</summary>
+        public void ShowProp(int kind)
+        {
+            if (kind == propShown || props == null) return;
+            propShown = kind;
+            for (int i = 0; i < props.Length; i++)
+            {
+                if (props[i] != null && props[i].activeSelf != (i == kind)) props[i].SetActive(i == kind);
+            }
+            bool cash = kind == (int)CargoKind.Cash;
+            if (notes != null && notes.activeSelf != cash) notes.SetActive(cash);
+        }
 
         /// <summary>Puts on the porters' clothes, or the wreckers'.</summary>
         public void Wear(bool asPorter)

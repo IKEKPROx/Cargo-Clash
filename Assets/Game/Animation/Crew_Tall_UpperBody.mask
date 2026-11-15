@@ -79,6 +79,28 @@ AvatarMask:
     m_Weight: 1
   - m_Path: Armature/Root/Hips/Spine/Chest/Neck/Head/Stars
     m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/Prop_Case
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/Prop_Case/Marker_Case
+    m_Weight: 0
+  - m_Path: Armature/Root/Hips/Spine/Chest/Prop_Case/Prop_Lid
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/Prop_Case/Prop_Lid/Marker_Lid
+    m_Weight: 0
+  - m_Path: Armature/Root/Hips/Spine/Chest/Prop_Item
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/Prop_Item/Prop_Art
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/Prop_Item/Prop_Cash
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/Prop_Item/Prop_Gold
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/Prop_Item/Prop_Tobacco
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/Prop_Notes
+    m_Weight: 1
+  - m_Path: Armature/Root/Hips/Spine/Chest/Prop_Notes/Prop_Notes
+    m_Weight: 1
   - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder
     m_Weight: 1
   - m_Path: Armature/Root/Hips/Spine/Chest/RightShoulder/RightUpperArm
