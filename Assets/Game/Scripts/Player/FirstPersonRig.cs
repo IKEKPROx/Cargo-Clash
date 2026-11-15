@@ -46,6 +46,8 @@ namespace CargoClash
             OnHandle,
             /// <summary>Flat against something, with `Handle` the way the back of the hand faces and the fingers pointing away from you.</summary>
             FlatOn,
+            /// <summary>Put exactly where the pose says, with no spring: the inspect has already worked out every joint.</summary>
+            Exact,
         }
 
         private struct ArmPose
@@ -69,6 +71,9 @@ namespace CargoClash
 
             public static ArmPose FlatAgainst(Vector3 wrist, Vector3 backOfHand, HandShape shape) =>
                 new ArmPose { Wrist = wrist, Aim = HandAim.FlatOn, Handle = backOfHand, Direction = Quaternion.identity, Shape = shape };
+
+            public static ArmPose Exact(Vector3 wrist, Quaternion direction, HandShape shape) =>
+                new ArmPose { Wrist = wrist, Aim = HandAim.Exact, Direction = direction, Shape = shape };
 
             public static ArmPose Lerp(ArmPose a, ArmPose b, float t)
             {
@@ -113,42 +118,86 @@ namespace CargoClash
         }
 
         /// <summary>
-        /// One moment of the flourish you get by pressing F. Angles are the tool's way up, with the grip straight
-        /// up and the business end pointing away from you at 0, 0, 0. Flip then spins it around the hand and Twist
-        /// turns it around the grip's own axis, which are separate so they can go past a whole turn.
+        /// How an arm's joints sit, in degrees. Twist turns the forearm from its middle position, where the thumb points
+        /// toward the shoulder's side of the arm (+ turns the palm down); Ulnar bends the hand toward the little finger,
+        /// and Flex toward the palm. Keeping these inside what a real arm does is what keeps the wrist from looking broken.
+        /// </summary>
+        private struct Joints
+        {
+            public Vector3 Wrist;
+            public float Twist;
+            public float Ulnar;
+            public float Flex;
+
+            public Joints(Vector3 wrist, float twist, float ulnar, float flex = 0f)
+            {
+                Wrist = wrist;
+                Twist = twist;
+                Ulnar = ulnar;
+                Flex = flex;
+            }
+
+            public static Joints Lerp(Joints a, Joints b, float t) => new Joints(Vector3.Lerp(a.Wrist, b.Wrist, t),
+                Mathf.Lerp(a.Twist, b.Twist, t), Mathf.Lerp(a.Ulnar, b.Ulnar, t), Mathf.Lerp(a.Flex, b.Flex, t));
+        }
+
+        /// <summary>The left hand during an inspect: Hold 1 is closed on its usual grip of the tool, 0 is wherever its joints put it.</summary>
+        private struct LeftHand
+        {
+            public float Hold;
+            public Joints Arm;
+            public HandShape Shape;
+        }
+
+        /// <summary>
+        /// One moment of the flourish you get by pressing F. It poses the right arm by its joints and the tool goes wherever
+        /// that hand puts it: Spin turns the tool round its handle in the fingers, and Slide lets it ride up through a loose
+        /// fist. Toss throws it clear of the hand, in the rig's space, and Roll turns it round its own length while it's up.
+        /// Hold 1 is the fist closed, 0 is the hand open. Spin and Roll can go past a whole turn.
         /// </summary>
         private struct InspectKey
         {
             public float Time;
-            public Vector3 Grip;
-            public Vector3 Angles;
-            public float Flip;
-            public float Twist;
+            public Joints Arm;
+            public float Spin;
+            public float Slide;
+            public Vector3 Toss;
+            public float Roll;
+            public float Hold;
+            public LeftHand Left;
             public Vector3 Torso;
-            public bool RightLetGo;
-            public bool LeftLetGo;
-            public Vector3 LeftWrist;
-            public HandShape LeftShape;
             public Motion Into;
             public string Sound;
 
-            public InspectKey(float time, Vector3 grip, Vector3 angles, float flip = 0f, float twist = 0f, Vector3 torso = default,
-                bool rightLetGo = false, bool leftLetGo = false, Vector3 leftWrist = default, HandShape leftShape = HandShape.Relaxed,
-                Motion into = Motion.Smooth, string sound = null)
+            public InspectKey(float time, Joints arm, LeftHand left, float spin, float slide = 0f, Vector3 toss = default, float roll = 0f,
+                float hold = 1f, Vector3 torso = default, Motion into = Motion.Smooth, string sound = null)
             {
                 Time = time;
-                Grip = grip;
-                Angles = angles;
-                Flip = flip;
-                Twist = twist;
+                Arm = arm;
+                Spin = spin;
+                Slide = slide;
+                Toss = toss;
+                Roll = roll;
+                Hold = hold;
+                Left = left;
                 Torso = torso;
-                RightLetGo = rightLetGo;
-                LeftLetGo = leftLetGo;
-                LeftWrist = leftWrist;
-                LeftShape = leftShape;
                 Into = into;
                 Sound = sound;
             }
+        }
+
+        /// <summary>Everything an inspect puts somewhere, for one moment of it.</summary>
+        private struct InspectPose
+        {
+            public Vector3 ToolPosition;
+            public Quaternion ToolRotation;
+            public Vector3 RightWrist;
+            public Quaternion RightHand;
+            public HandShape RightShape;
+            public Vector3 LeftWrist;
+            public Quaternion LeftHand;
+            public HandShape LeftShape;
+            public Vector3 Torso;
         }
 
         // These lengths and the tools' grips have to match Tools/blender/make_hands.py.
@@ -217,66 +266,29 @@ namespace CargoClash
             new ToolKey(1f, VacuumReadyGrip, VacuumReadyHandle, VacuumReadyStrike, Vector3.zero, Motion.Smooth),
         };
 
-        // The hammer goes round in the plane of the view, because end over end would bring its head into your face.
-        private static readonly InspectKey[] HammerInspect =
-        {
-            // Up in front of you, and a slow look at one side of the head.
-            new InspectKey(0f, new Vector3(0.2f, -0.32f, 0.62f), new Vector3(6f, 0f, 20f), twist: 30f),
-            new InspectKey(0.42f, new Vector3(0.14f, -0.25f, 0.62f), new Vector3(0f, 0f, 34f), twist: -45f, torso: new Vector3(-2f, 3f, 0f)),
-            // Turned round in the fingers to look at the other.
-            new InspectKey(0.98f, new Vector3(0.14f, -0.24f, 0.63f), new Vector3(-4f, 0f, 32f), twist: 135f, torso: new Vector3(-2f, -2f, 0f)),
-            // Let go with the left, and tip it back to throw it round.
-            new InspectKey(1.24f, new Vector3(0.22f, -0.3f, 0.62f), new Vector3(4f, 0f, 8f), flip: -42f, twist: 180f, torso: new Vector3(-3f, 5f, 0f),
-                leftLetGo: true, leftWrist: new Vector3(-0.32f, -0.54f, 0.36f), rightLetGo: true, sound: "swing"),
-            // Twice round the hand, the way M9 owners do.
-            new InspectKey(1.62f, new Vector3(0.2f, -0.22f, 0.63f), new Vector3(4f, 0f, 8f), flip: 318f, twist: 180f, torso: new Vector3(1f, 0f, 0f),
-                leftLetGo: true, leftWrist: new Vector3(-0.32f, -0.54f, 0.36f), rightLetGo: true, into: Motion.Linear, sound: "swing"),
-            new InspectKey(1.96f, new Vector3(0.21f, -0.24f, 0.63f), new Vector3(4f, 0f, 8f), flip: 700f, twist: 180f, torso: new Vector3(3f, -3f, 0f),
-                leftLetGo: true, leftWrist: new Vector3(-0.32f, -0.54f, 0.36f), into: Motion.Linear),
-            // Caught, with the weight of it pulling the hand down.
-            new InspectKey(2.1f, new Vector3(0.24f, -0.36f, 0.62f), new Vector3(10f, 0f, 10f), flip: 734f, twist: 180f, torso: new Vector3(5f, -3f, 0f),
-                leftLetGo: true, leftWrist: new Vector3(-0.32f, -0.54f, 0.36f), into: Motion.Decelerate, sound: "clunk"),
-            new InspectKey(2.34f, new Vector3(0.22f, -0.31f, 0.62f), new Vector3(6f, 0f, 14f), flip: 720f, twist: 180f,
-                leftLetGo: true, leftWrist: new Vector3(-0.3f, -0.5f, 0.38f)),
-            // Weighed in the other palm, twice.
-            new InspectKey(2.72f, new Vector3(0.2f, -0.28f, 0.62f), new Vector3(8f, 0f, 66f), flip: 720f, twist: 180f, torso: new Vector3(1f, 4f, 0f),
-                leftLetGo: true, leftWrist: new Vector3(-0.2f, -0.32f, 0.56f), leftShape: HandShape.Open, sound: "smash"),
-            new InspectKey(2.92f, new Vector3(0.21f, -0.22f, 0.62f), new Vector3(6f, 0f, 52f), flip: 720f, twist: 180f, torso: new Vector3(-1f, 3f, 0f),
-                leftLetGo: true, leftWrist: new Vector3(-0.2f, -0.29f, 0.56f), leftShape: HandShape.Open),
-            new InspectKey(3.08f, new Vector3(0.2f, -0.28f, 0.62f), new Vector3(8f, 0f, 66f), flip: 720f, twist: 180f, torso: new Vector3(1f, 4f, 0f),
-                leftLetGo: true, leftWrist: new Vector3(-0.2f, -0.32f, 0.56f), leftShape: HandShape.Open, into: Motion.Accelerate, sound: "smash"),
-            new InspectKey(3.5f, new Vector3(0.26f, -0.36f, 0.6f), new Vector3(22f, 0f, -28f), flip: 720f, twist: 180f),
-        };
+        // ---- The inspect (F) ----
+        // Both are one-handed, the way CS2 shows off a knife: the left hand slides off its grip at the start and back on at
+        // the end, below the bottom of the view. They were worked out in Blender with this same maths, checking every frame
+        // for a strained wrist and for the tool going into a hand or an arm. To move a pose, change its joints.
 
-        private static readonly InspectKey[] VacuumInspect =
-        {
-            // Brought up to look along one side.
-            new InspectKey(0f, new Vector3(0.22f, -0.4f, 0.52f), new Vector3(-3f, -4f, 0f)),
-            new InspectKey(0.46f, new Vector3(0.2f, -0.3f, 0.54f), new Vector3(-6f, -62f, 12f), torso: new Vector3(-2f, 4f, 0f),
-                leftLetGo: true, leftWrist: new Vector3(-0.3f, -0.52f, 0.38f)),
-            // And the other.
-            new InspectKey(1.02f, new Vector3(0.12f, -0.3f, 0.56f), new Vector3(-8f, 52f, -14f), torso: new Vector3(-2f, -4f, 0f),
-                leftLetGo: true, leftWrist: new Vector3(-0.3f, -0.52f, 0.38f)),
-            // Twirled on the hand like a pistol.
-            new InspectKey(1.26f, new Vector3(0.24f, -0.36f, 0.5f), new Vector3(-4f, 0f, 0f), flip: -34f, torso: new Vector3(-3f, 4f, 0f),
-                leftLetGo: true, leftWrist: new Vector3(-0.32f, -0.54f, 0.36f), rightLetGo: true, sound: "swing"),
-            new InspectKey(1.64f, new Vector3(0.23f, -0.32f, 0.52f), new Vector3(-4f, 0f, 0f), flip: 326f, torso: new Vector3(1f, 0f, 0f),
-                leftLetGo: true, leftWrist: new Vector3(-0.32f, -0.54f, 0.36f), rightLetGo: true, into: Motion.Linear, sound: "swing"),
-            new InspectKey(1.98f, new Vector3(0.23f, -0.33f, 0.52f), new Vector3(-4f, 0f, 0f), flip: 704f, torso: new Vector3(3f, -3f, 0f),
-                leftLetGo: true, leftWrist: new Vector3(-0.32f, -0.54f, 0.36f), into: Motion.Linear),
-            new InspectKey(2.12f, new Vector3(0.25f, -0.44f, 0.52f), new Vector3(4f, 0f, 2f), flip: 732f, torso: new Vector3(4f, -3f, 0f),
-                leftLetGo: true, leftWrist: new Vector3(-0.32f, -0.54f, 0.36f), into: Motion.Decelerate, sound: "clunk"),
-            new InspectKey(2.34f, new Vector3(0.24f, -0.4f, 0.5f), new Vector3(-2f, 0f, 0f), flip: 720f,
-                leftLetGo: true, leftWrist: new Vector3(-0.3f, -0.5f, 0.38f)),
-            // A look down the wrong end of it, and it blows in your face.
-            new InspectKey(2.78f, new Vector3(0.1f, -0.42f, 0.88f), new Vector3(-14f, 176f, 0f), flip: 720f, torso: new Vector3(3f, 0f, 0f),
-                leftLetGo: true, leftWrist: new Vector3(-0.3f, -0.5f, 0.4f)),
-            new InspectKey(3f, new Vector3(0.1f, -0.42f, 0.88f), new Vector3(-14f, 176f, 0f), flip: 720f, torso: new Vector3(3f, 0f, 0f),
-                leftLetGo: true, leftWrist: new Vector3(-0.3f, -0.5f, 0.4f), sound: "blast"),
-            new InspectKey(3.16f, new Vector3(0.12f, -0.46f, 0.82f), new Vector3(-30f, 176f, 0f), flip: 720f, torso: new Vector3(-6f, 0f, 0f),
-                leftLetGo: true, leftWrist: new Vector3(-0.3f, -0.5f, 0.4f), into: Motion.Decelerate),
-            new InspectKey(3.6f, VacuumReadyGrip, new Vector3(-3f, -4f, 0f), flip: 720f),
-        };
+        /// <summary>The hammer held up in front of you: the hand low in front of the chest, the forearm turned out a little.</summary>
+        private static readonly Vector3 HammerShowWrist = new Vector3(0.2f, -0.4f, 0.6f);
+
+        /// <summary>The spin in the fingers that shows the hammer side on, from that pose.</summary>
+        private const float HammerSideOn = 124.4f;
+
+        private static readonly Vector3 VacuumShowWrist = new Vector3(0.2f, -0.38f, 0.57f);
+
+        /// <summary>The middle of the vacuum, which it turns round when it's thrown up.</summary>
+        private static readonly Vector3 VacuumCentre = new Vector3(0f, 0.11f, 0.13f);
+
+        /// <summary>How much higher and farther off the thrown vacuum goes at the top, beyond sliding out of the fist.</summary>
+        private static readonly Vector3 Rise = new Vector3(0f, 0.07f, 0.07f);
+
+        private static readonly LeftHand LeftOnGrip = new LeftHand { Hold = 1f, Shape = HandShape.Grip };
+
+        /// <summary>Down by your side, out of the view.</summary>
+        private static readonly LeftHand LeftAway = new LeftHand { Arm = new Joints(new Vector3(-0.36f, -0.9f, 0.3f), 10f, 0f), Shape = HandShape.Relaxed };
 
         public static FirstPersonRig Instance { get; private set; }
 
@@ -335,10 +347,12 @@ namespace CargoClash
         private float swingWeight;
         private float suckWeight;
         private float inspectTime = -1f;
+        /// <summary>The moment of the inspect being shown. Once it ends or is cut short, it stays there while the inspect blends out.</summary>
+        private float inspectShownTime;
         private float inspectWeight;
         private int inspectSoundsPlayed;
-        private InspectKey inspectNow;
-        private float inspectRegrab;
+        private InspectKey[] hammerInspect;
+        private InspectKey[] vacuumInspect;
         private CargoItem lastCarried;
         private float tossUntil;
         private float pushUntil;
@@ -410,6 +424,9 @@ namespace CargoClash
             right.Parts = rightArm;
             left.Parts = leftArm;
             content.SetActive(false);
+            // Built here rather than up front because they start and end in the ready poses, which depend on the shoulders.
+            hammerInspect = BuildHammerInspect();
+            vacuumInspect = BuildVacuumInspect();
         }
 
         private void OnDestroy()
@@ -446,6 +463,7 @@ namespace CargoClash
                 toolInHand = tool;
                 toolPlaced = false;
                 inspectTime = -1f;
+                inspectWeight = 0f;
                 if (hammer.gameObject.activeSelf != (tool == Tool.Hammer)) hammer.gameObject.SetActive(tool == Tool.Hammer);
                 if (vacuum.gameObject.activeSelf != (tool == Tool.Vacuum)) vacuum.gameObject.SetActive(tool == Tool.Vacuum);
             }
@@ -568,12 +586,17 @@ namespace CargoClash
                 sharp = true;
             }
 
-            ApplyInspect(HammerInspect, ref grip, ref rotation, ref sharp);
+            InspectPose show = default;
+            if (inspectWeight > 0f)
+            {
+                show = ShowInspect(hammerInspect, new Vector3(0f, LeftGripAlongHandle, 0f), Vector3.zero, ref grip, ref rotation);
+                sharp = true;
+            }
             PlaceTool(hammer, grip, rotation, sharp, deltaTime);
             Vector3 handle = toolRotation * Vector3.up;
             rightPose = ArmPose.OnHandleAt(toolPosition, handle);
             leftPose = ArmPose.OnHandleAt(toolPosition + handle * LeftGripAlongHandle, handle);
-            InspectHands(ref rightPose, ref leftPose);
+            if (inspectWeight > 0f) InspectHands(show, ref rightPose, ref leftPose);
         }
 
         private void VacuumPoses(PlayerAvatar local, float stride, float walk, float deltaTime, out ArmPose rightPose, out ArmPose leftPose)
@@ -605,12 +628,17 @@ namespace CargoClash
                 torsoTarget = Vector3.Lerp(torsoTarget, blastTorso, swingWeight);
             }
 
-            ApplyInspect(VacuumInspect, ref grip, ref rotation, ref sharp);
+            InspectPose show = default;
+            if (inspectWeight > 0f)
+            {
+                show = ShowInspect(vacuumInspect, new Vector3(0f, 0f, VacuumForeGrip), VacuumCentre, ref grip, ref rotation);
+                sharp = true;
+            }
             PlaceTool(vacuum, grip, rotation, sharp, deltaTime);
             Vector3 handle = toolRotation * Vector3.up;
             rightPose = ArmPose.OnHandleAt(toolPosition, handle);
             leftPose = ArmPose.OnHandleAt(toolPosition + toolRotation * Vector3.forward * VacuumForeGrip, handle);
-            InspectHands(ref rightPose, ref leftPose);
+            if (inspectWeight > 0f) InspectHands(show, ref rightPose, ref leftPose);
         }
 
         private void PlaceTool(Transform tool, Vector3 grip, Quaternion rotation, bool sharp, float deltaTime)
@@ -671,6 +699,87 @@ namespace CargoClash
 
         // ---- F: looking at what's in your hands. Only you see this, as in CS2 ----
 
+        private InspectKey[] BuildHammerInspect()
+        {
+            Joints ready = ReadyJoints(HammerReadyGrip, HammerReadyRotation, out float readySpin);
+            LeftHand off = LeftOffHandle(HammerReadyGrip, HammerReadyRotation, new Vector3(0f, LeftGripAlongHandle, 0f), 0.14f);
+            Joints lifting = new Joints(new Vector3(0.33f, -0.45f, 0.62f), -105f, 40f, 6f);
+            Joints shown = new Joints(HammerShowWrist, -40f, 22f);
+            return new[]
+            {
+                new InspectKey(0f, ready, LeftOnGrip, readySpin),
+                // The left hand slides off the end of the handle as the right hand starts to lift.
+                new InspectKey(0.14f, lifting, off, 80f, torso: new Vector3(-1f, 1f, 0f)),
+                // Up in front of you, side on. The left hand drops away.
+                new InspectKey(0.44f, shown, LeftAway, HammerSideOn, torso: new Vector3(-3f, 3f, 0f)),
+                // Rolled in the fingers to look at one face, the forearm tipping it a little.
+                new InspectKey(0.88f, new Joints(new Vector3(0.18f, -0.39f, 0.61f), -30f, 20f), LeftAway, HammerSideOn + 70f, torso: new Vector3(-2f, -1f, 0f)),
+                // And round past side on, to the other face.
+                new InspectKey(1.28f, new Joints(new Vector3(0.21f, -0.41f, 0.6f), -47f, 23f), LeftAway, HammerSideOn - 55f, torso: new Vector3(-2f, 4f, 0f)),
+                // Cocked...
+                new InspectKey(1.44f, new Joints(new Vector3(0.2f, -0.43f, 0.6f), -40f, 27f), LeftAway, HammerSideOn - 40f,
+                    torso: new Vector3(-1f, 3f, 0f), sound: "swing"),
+                // ...and flicked, so it spins in a loose fist, riding up a little as it goes round and dropping back into the grip.
+                new InspectKey(1.7f, new Joints(new Vector3(0.2f, -0.41f, 0.62f), -38f, 18f), LeftAway, HammerSideOn + 230f, slide: 0.04f,
+                    torso: new Vector3(-3f, 1f, 0f), into: Motion.Linear),
+                new InspectKey(2f, shown, LeftAway, HammerSideOn + 540f, torso: new Vector3(1f, 2f, 0f), into: Motion.Decelerate, sound: "clunk"),
+                // Hefted once, the weight pulling the hand down.
+                new InspectKey(2.24f, new Joints(new Vector3(0.2f, -0.37f, 0.6f), -40f, 16f), LeftAway, HammerSideOn + 540f, torso: new Vector3(-2f, 2f, 0f)),
+                new InspectKey(2.44f, new Joints(new Vector3(0.2f, -0.45f, 0.6f), -40f, 27f), LeftAway, HammerSideOn + 540f,
+                    torso: new Vector3(3f, 2f, 0f), into: Motion.Accelerate, sound: "clunk"),
+                new InspectKey(2.7f, new Joints(new Vector3(0.21f, -0.41f, 0.6f), -42f, 21f), LeftAway, HammerSideOn + 540f, torso: new Vector3(0f, 2f, 0f)),
+                // Back down to the ready pose; the left hand comes up the handle from below and takes hold.
+                new InspectKey(3.08f, lifting, off, readySpin + 737f, torso: new Vector3(0f, 1f, 0f)),
+                new InspectKey(3.4f, ready, LeftOnGrip, readySpin + 720f),
+            };
+        }
+
+        private InspectKey[] BuildVacuumInspect()
+        {
+            Joints ready = ReadyJoints(VacuumReadyGrip, VacuumReadyRotation, out float readySpin);
+            LeftHand off = LeftOffHandle(VacuumReadyGrip, VacuumReadyRotation, new Vector3(0f, 0f, VacuumForeGrip), 0.14f);
+            Joints lifting = new Joints(new Vector3(0.33f, -0.42f, 0.5f), -50f, 36f, 5f);
+            Joints flicked = new Joints(new Vector3(0.2f, -0.41f, 0.57f), -15f, 19f);
+            Joints catching = new Joints(new Vector3(0.2f, -0.47f, 0.56f), -45f, 0f, -15f);
+            // Thrown straight up the pistol grip, so it slides out of the fist and back in without touching the fingers.
+            // Once it's clear of the fist, it carries on up and away from you rather than further up the grip, which leans back.
+            Vector3 up = JointHand(1f, flicked, false) * Vector3.up;
+            return new[]
+            {
+                new InspectKey(0f, ready, LeftOnGrip, readySpin),
+                new InspectKey(0.14f, lifting, off, 42f, torso: new Vector3(-1f, 1f, 0f)),
+                // Held up on end in front of you, turned to show its left side...
+                new InspectKey(0.42f, new Joints(VacuumShowWrist, 22f, 18f), LeftAway, 40f, torso: new Vector3(-3f, 2f, 0f)),
+                new InspectKey(0.84f, new Joints(new Vector3(0.15f, -0.36f, 0.58f), 48f, 15f), LeftAway, 40f, torso: new Vector3(-3f, -3f, 0f)),
+                // ...then rolled over the top.
+                new InspectKey(1.28f, new Joints(new Vector3(0.22f, -0.39f, 0.56f), -46f, 24f), LeftAway, 40f, torso: new Vector3(-2f, 5f, 0f)),
+                // Dipped, then thrown up: it slides out of the top of the fist, which only opens once it's clear, spins
+                // round its long axis, and drops back down into the fist the way it came out.
+                new InspectKey(1.42f, new Joints(new Vector3(0.2f, -0.42f, 0.57f), -18f, 22f), LeftAway, 40f, torso: new Vector3(0f, 2f, 0f)),
+                new InspectKey(1.52f, new Joints(new Vector3(0.2f, -0.39f, 0.57f), -15f, 18f), LeftAway, 40f, toss: up * 0.1f, roll: 10f,
+                    torso: new Vector3(-2f, 1f, 0f), into: Motion.Accelerate, sound: "swing"),
+                new InspectKey(1.58f, new Joints(new Vector3(0.2f, -0.4f, 0.57f), -15f, 18f), LeftAway, 40f, toss: up * 0.18f, roll: 60f,
+                    torso: new Vector3(-2f, 1f, 0f), into: Motion.Linear),
+                new InspectKey(1.62f, new Joints(new Vector3(0.2f, -0.43f, 0.57f), -22f, 14f, -4f), LeftAway, 40f, toss: up * 0.18f + Rise * 0.5f, roll: 120f, hold: 0f,
+                    torso: new Vector3(-2f, 1f, 0f), into: Motion.Linear),
+                new InspectKey(1.7f, catching, LeftAway, 40f, toss: up * 0.18f + Rise, roll: 220f, hold: 0f, torso: new Vector3(-3f, 0f, 0f), into: Motion.Decelerate),
+                new InspectKey(1.8f, catching, LeftAway, 40f, toss: up * 0.18f + Rise * 0.5f, roll: 345f, hold: 0f, torso: new Vector3(-2f, 0f, 0f), into: Motion.Linear),
+                new InspectKey(1.86f, new Joints(new Vector3(0.2f, -0.41f, 0.57f), -15f, 20f), LeftAway, 40f, toss: up * 0.17f, roll: 360f,
+                    torso: new Vector3(-1f, 1f, 0f), into: Motion.Decelerate),
+                new InspectKey(1.96f, new Joints(new Vector3(0.2f, -0.42f, 0.57f), -15f, 20f), LeftAway, 40f, roll: 360f,
+                    torso: new Vector3(1f, 2f, 0f), into: Motion.Accelerate, sound: "clunk"),
+                // Levelled at the sky ahead for a test puff, and the kick of it.
+                new InspectKey(2.26f, new Joints(new Vector3(0.22f, -0.38f, 0.58f), -25f, 32f), LeftAway, 40f, roll: 360f,
+                    torso: new Vector3(-1f, 1f, 0f), sound: "blast"),
+                new InspectKey(2.36f, new Joints(new Vector3(0.22f, -0.355f, 0.57f), -27f, 21f), LeftAway, 40f, roll: 360f,
+                    torso: new Vector3(-5f, 1f, 0f), into: Motion.Decelerate),
+                new InspectKey(2.64f, new Joints(VacuumShowWrist, -18f, 22f), LeftAway, 40f, roll: 360f, torso: new Vector3(-1f, 2f, 0f)),
+                // Back to the ready pose, the left hand coming up onto the front grip.
+                new InspectKey(3f, lifting, off, 42f, roll: 360f, torso: new Vector3(0f, 1f, 0f)),
+                new InspectKey(3.3f, ready, LeftOnGrip, readySpin, roll: 360f),
+            };
+        }
+
         private void UpdateInspect(PlayerAvatar local, bool swinging, float deltaTime)
         {
             // The click itself ends it. Waiting for the host would leave a client's flourish running into the swing.
@@ -679,28 +788,27 @@ namespace CargoClash
             if (inspectTime >= 0f)
             {
                 inspectTime += deltaTime;
-                InspectKey[] keys = toolInHand == Tool.Hammer ? HammerInspect : VacuumInspect;
+                InspectKey[] keys = toolInHand == Tool.Hammer ? hammerInspect : vacuumInspect;
                 if (inspectTime >= keys[keys.Length - 1].Time) inspectTime = -1f;
             }
             inspectWeight = Mathf.MoveTowards(inspectWeight, inspectTime >= 0f ? 1f : 0f, deltaTime * (inspectTime >= 0f ? 7f : stop ? 10f : 4f));
         }
 
-        private void ApplyInspect(InspectKey[] keys, ref Vector3 grip, ref Quaternion rotation, ref bool sharp)
+        /// <summary>Moves the tool toward where the inspect has it, by how far the inspect has blended in, and plays its sounds.</summary>
+        private InspectPose ShowInspect(InspectKey[] keys, Vector3 leftGrip, Vector3 centre, ref Vector3 grip, ref Quaternion rotation)
         {
-            if (inspectWeight <= 0f) return;
-            // Blending out after the end, it holds where it finished.
-            float time = inspectTime >= 0f ? inspectTime : keys[keys.Length - 1].Time;
-            inspectRegrab = SampleInspect(keys, time, toolInHand == Tool.Hammer ? Vector3.forward : Vector3.right, out inspectNow, out Quaternion shown);
+            // Blending out, after the end or cut short by a click, it holds where it got to rather than jumping to the end.
+            if (inspectTime >= 0f) inspectShownTime = inspectTime;
+            InspectPose show = SampleInspect(keys, inspectShownTime, leftGrip, centre);
             if (inspectTime >= 0f) PlayInspectSounds(keys);
-
-            grip = Vector3.Lerp(grip, inspectNow.Grip, inspectWeight);
-            rotation = Quaternion.Slerp(rotation, shown, inspectWeight);
-            torsoTarget = Vector3.Lerp(torsoTarget, inspectNow.Torso, inspectWeight);
-            sharp = inspectWeight >= 1f;
+            grip = Vector3.Lerp(grip, show.ToolPosition, inspectWeight);
+            rotation = Quaternion.Slerp(rotation, show.ToolRotation, inspectWeight);
+            torsoTarget = Vector3.Lerp(torsoTarget, show.Torso, inspectWeight);
+            return show;
         }
 
-        /// <summary>Returns how far the left hand has got going back to the handle, from 0 to 1, when the next key holds the tool again.</summary>
-        private static float SampleInspect(InspectKey[] keys, float time, Vector3 flipAxis, out InspectKey now, out Quaternion rotation)
+        /// <summary>One moment of an inspect: the right arm from its joints, the tool from that hand, and the left hand.</summary>
+        private InspectPose SampleInspect(InspectKey[] keys, float time, Vector3 leftGrip, Vector3 centre)
         {
             InspectKey from = keys[0];
             InspectKey to = keys[keys.Length - 1];
@@ -712,17 +820,43 @@ namespace CargoClash
                 break;
             }
             float t = Ease(Mathf.InverseLerp(from.Time, to.Time, time), to.Into);
-            now = from;
-            now.Grip = Vector3.Lerp(from.Grip, to.Grip, t);
-            now.Torso = Vector3.Lerp(from.Torso, to.Torso, t);
-            // A key that holds the tool again has no wrist of its own. Heading for its zero would bring the hand into your face.
-            bool regrab = from.LeftLetGo && !to.LeftLetGo;
-            now.LeftWrist = regrab ? from.LeftWrist : Vector3.Lerp(from.LeftWrist, to.LeftWrist, t);
-            Vector3 angles = Vector3.Lerp(from.Angles, to.Angles, t);
-            float flip = Mathf.Lerp(from.Flip, to.Flip, t);
-            float twist = Mathf.Lerp(from.Twist, to.Twist, t);
-            rotation = Quaternion.Euler(angles) * Quaternion.AngleAxis(flip, flipAxis) * Quaternion.AngleAxis(twist, Vector3.up);
-            return regrab ? t : 0f;
+            Joints arm = Joints.Lerp(from.Arm, to.Arm, t);
+            float spin = Mathf.Lerp(from.Spin, to.Spin, t);
+            float slide = Mathf.Lerp(from.Slide, to.Slide, t);
+            Vector3 toss = Vector3.Lerp(from.Toss, to.Toss, t);
+            float roll = Mathf.Lerp(from.Roll, to.Roll, t);
+            bool closed = Mathf.Lerp(from.Hold, to.Hold, t) > 0.5f;
+
+            InspectPose show = default;
+            show.Torso = Vector3.Lerp(from.Torso, to.Torso, t);
+            Quaternion hand = JointHand(1f, arm, false);
+            Quaternion rotation = hand * Quaternion.AngleAxis(spin, Vector3.up);
+            Vector3 origin = arm.Wrist + hand * GripOffset(1f) + rotation * Vector3.up * slide;
+            if (roll != 0f || toss != Vector3.zero)
+            {
+                // Thrown: it turns round its own length, through its middle.
+                Vector3 middle = origin + rotation * centre;
+                Quaternion turn = Quaternion.AngleAxis(roll, rotation * Vector3.forward);
+                origin = middle + turn * (origin - middle) + toss;
+                rotation = turn * rotation;
+            }
+            show.ToolPosition = origin;
+            show.ToolRotation = rotation;
+            show.RightWrist = arm.Wrist;
+            show.RightShape = closed ? HandShape.Grip : HandShape.Open;
+            show.RightHand = closed ? hand : JointHand(1f, arm, true);
+
+            // The left hand on its grip, wherever its joints put it, or on the way between the two. On the way, it heads
+            // for the free end's joints the whole time, so it goes straight there rather than swinging round.
+            Joints free = from.Left.Hold >= 1f ? to.Left.Arm : to.Left.Hold >= 1f ? from.Left.Arm : Joints.Lerp(from.Left.Arm, to.Left.Arm, t);
+            HandShape freeShape = from.Left.Hold < 1f ? from.Left.Shape : to.Left.Shape;
+            float hold = Mathf.Clamp01(Mathf.Lerp(from.Left.Hold, to.Left.Hold, t));
+            HandOnHandle(-1f, origin + rotation * leftGrip, rotation * Vector3.up, out Vector3 onWrist, out Quaternion onHand);
+            Quaternion freeHand = JointHand(-1f, free, freeShape != HandShape.Grip && freeShape != HandShape.Fist);
+            show.LeftWrist = Vector3.Lerp(free.Wrist, onWrist, hold);
+            show.LeftHand = Quaternion.Slerp(freeHand, onHand, hold);
+            show.LeftShape = hold > 0.6f ? HandShape.Grip : freeShape;
+            return show;
         }
 
         private void PlayInspectSounds(InspectKey[] keys)
@@ -733,27 +867,43 @@ namespace CargoClash
                 inspectSoundsPlayed++;
                 if (string.IsNullOrEmpty(sound)) continue;
                 GameAudio.Play(sound, sound == "blast" ? 0.35f : 0.3f);
-                if (sound == "blast")
-                {
-                    // Right in the face.
-                    FollowCamera.Flinch(Vector3.zero);
-                    FxBurst.PlayBlast(VacuumMouthWorld, -transform.forward);
-                }
+                // A test puff into the air ahead, away from you.
+                if (sound == "blast") FxBurst.PlayBlast(VacuumMouthWorld, vacuum.forward);
             }
         }
 
-        /// <summary>The right hand lets go to throw the tool round, and the left hand lets go to get out of the way.</summary>
-        private void InspectHands(ref ArmPose rightPose, ref ArmPose leftPose)
+        /// <summary>
+        /// The inspect's hands, blended in from wherever the hands would be otherwise. They're put exactly where the
+        /// inspect says, with no spring, because the joints are already worked out and a spring would let them lag off the tool.
+        /// </summary>
+        private void InspectHands(in InspectPose show, ref ArmPose rightPose, ref ArmPose leftPose)
         {
-            if (inspectWeight < 1f) return;
-            if (inspectNow.RightLetGo)
-                rightPose = ArmPose.Straight(toolPosition + new Vector3(0.02f, -0.03f, -0.12f), 0f, HandShape.Open);
-            if (inspectNow.LeftLetGo)
-            {
-                // Reaching back for the handle near the end. Taking hold of it happens at the next key, where the grip springs on.
-                Vector3 wrist = Vector3.Lerp(inspectNow.LeftWrist, leftPose.Wrist, inspectRegrab * 0.8f);
-                leftPose = ArmPose.Straight(wrist, inspectNow.LeftShape == HandShape.Open ? -150f : 30f, inspectNow.LeftShape);
-            }
+            float w = inspectWeight;
+            HandOnHandle(1f, rightPose.Wrist, rightPose.Handle, out Vector3 rightWrist, out Quaternion rightHand);
+            HandOnHandle(-1f, leftPose.Wrist, leftPose.Handle, out Vector3 leftWrist, out Quaternion leftHand);
+            rightPose = ArmPose.Exact(Vector3.Lerp(rightWrist, show.RightWrist, w), Quaternion.Slerp(rightHand, show.RightHand, w),
+                w > 0.5f ? show.RightShape : HandShape.Grip);
+            leftPose = ArmPose.Exact(Vector3.Lerp(leftWrist, show.LeftWrist, w), Quaternion.Slerp(leftHand, show.LeftHand, w),
+                w > 0.5f ? show.LeftShape : HandShape.Grip);
+        }
+
+        /// <summary>The right arm in a ready pose, as joints, worked out the way PlaceArm puts a hand on a handle.</summary>
+        private Joints ReadyJoints(Vector3 grip, Quaternion rotation, out float spin)
+        {
+            HandOnHandle(1f, grip, rotation * Vector3.up, out Vector3 wrist, out Quaternion hand);
+            Vector3 forward = Quaternion.Inverse(hand) * rotation * Vector3.forward;
+            spin = Mathf.Atan2(forward.x, forward.z) * Mathf.Rad2Deg;
+            return JointsOf(1f, wrist, hand);
+        }
+
+        /// <summary>The left hand as it holds a tool in its ready pose, slid `distance` down the handle and off the end of it.</summary>
+        private LeftHand LeftOffHandle(Vector3 grip, Quaternion rotation, Vector3 leftGrip, float distance)
+        {
+            Vector3 handle = rotation * Vector3.up;
+            HandOnHandle(-1f, grip + rotation * leftGrip, handle, out Vector3 wrist, out Quaternion hand);
+            Joints joints = JointsOf(-1f, wrist, hand);
+            joints.Wrist -= handle * distance;
+            return new LeftHand { Arm = joints, Shape = HandShape.Grip };
         }
 
         private static float Ease(float t, Motion motion)
@@ -873,10 +1023,60 @@ namespace CargoClash
 
         // ---- Turning a pose into an arm ----
 
+        private Vector3 Shoulder(float side) => new Vector3(shoulderRight.x * side, shoulderRight.y, shoulderRight.z);
+
+        private Vector3 Bend(float side) => new Vector3(elbowDirection.x * side, elbowDirection.y, elbowDirection.z);
+
+        private static Vector3 GripOffset(float side) => new Vector3(GripToHandle.x * side, GripToHandle.y, GripToHandle.z);
+
+        /// <summary>
+        /// A hand closed round a handle at `grip`. The handle is round, so the hand turns on it to line up with the
+        /// forearm, and the wrist sits behind the grip.
+        /// </summary>
+        private void HandOnHandle(float side, Vector3 grip, Vector3 handle, out Vector3 wrist, out Quaternion direction)
+        {
+            Vector3 along = (grip - FindElbow(Shoulder(side), grip, Bend(side))).normalized;
+            Vector3 across = Vector3.ProjectOnPlane(along, handle);
+            if (across.sqrMagnitude < 0.001f) across = Vector3.ProjectOnPlane(Vector3.forward, handle);
+            direction = Quaternion.LookRotation(across.normalized, handle);
+            wrist = grip - direction * GripOffset(side);
+        }
+
+        /// <summary>
+        /// The hand at the end of an arm whose joints sit like this, with the elbow hanging down and out as everywhere
+        /// else. Twist turns the thumb away from the shoulder's side of the forearm (+ is palm down, on either hand),
+        /// Ulnar bends the hand toward the little finger and Flex toward the palm. A closed hand comes out with the thumb
+        /// on +Y; a flat one is turned a quarter so its thumb lines up the same way.
+        /// </summary>
+        private Quaternion JointHand(float side, in Joints joints, bool flat)
+        {
+            Vector3 shoulder = Shoulder(side);
+            Vector3 elbow = FindElbow(shoulder, joints.Wrist, Bend(side));
+            Vector3 along = (joints.Wrist - elbow).normalized;
+            Vector3 thumb = Quaternion.AngleAxis(joints.Twist * side, along) * Vector3.ProjectOnPlane(shoulder - elbow, along);
+            Quaternion hand = Quaternion.LookRotation(along, thumb) * Quaternion.Euler(joints.Ulnar, -joints.Flex * side, 0f);
+            return flat ? hand * Quaternion.Euler(0f, 0f, -90f * side) : hand;
+        }
+
+        /// <summary>The joints that JointHand needs to give back exactly this closed hand at this wrist.</summary>
+        private Joints JointsOf(float side, Vector3 wrist, Quaternion hand)
+        {
+            Vector3 shoulder = Shoulder(side);
+            Vector3 elbow = FindElbow(shoulder, wrist, Bend(side));
+            Vector3 along = (wrist - elbow).normalized;
+            Quaternion middle = Quaternion.LookRotation(along, Vector3.ProjectOnPlane(shoulder - elbow, along));
+            // What's left is a turn round the forearm, then flexion, then deviation: pull the three angles back out.
+            Matrix4x4 m = Matrix4x4.Rotate(Quaternion.Inverse(middle) * hand);
+            float twist = Mathf.Atan2(m[1, 0], m[0, 0]) * Mathf.Rad2Deg * side;
+            float flex = -Mathf.Asin(Mathf.Clamp(-m[2, 0], -1f, 1f)) * Mathf.Rad2Deg * side;
+            float ulnar = Mathf.Atan2(m[2, 1], m[2, 2]) * Mathf.Rad2Deg;
+            return new Joints(wrist, twist, ulnar, flex);
+        }
+
         private void PlaceArm(Arm arm, in ArmPose pose, float stiffness, float deltaTime)
         {
-            Vector3 shoulder = new Vector3(shoulderRight.x * arm.Side, shoulderRight.y, shoulderRight.z);
-            Vector3 bend = new Vector3(elbowDirection.x * arm.Side, elbowDirection.y, elbowDirection.z);
+            Vector3 shoulder = Shoulder(arm.Side);
+            Vector3 bend = Bend(arm.Side);
 
             Vector3 wrist = pose.Wrist;
             Vector3 elbow = FindElbow(shoulder, wrist, bend);
@@ -885,11 +1085,7 @@ namespace CargoClash
             switch (pose.Aim)
             {
                 case HandAim.OnHandle:
-                    // The handle is round, so the hand can turn on it to line up with the forearm.
-                    Vector3 across = Vector3.ProjectOnPlane(along, pose.Handle);
-                    if (across.sqrMagnitude < 0.001f) across = Vector3.ProjectOnPlane(Vector3.forward, pose.Handle);
-                    direction = Quaternion.LookRotation(across.normalized, pose.Handle);
-                    wrist = pose.Wrist - direction * new Vector3(GripToHandle.x * arm.Side, GripToHandle.y, GripToHandle.z);
+                    HandOnHandle(arm.Side, pose.Wrist, pose.Handle, out wrist, out direction);
                     break;
                 case HandAim.FlatOn:
                     // Mostly straight ahead. Following the forearm, which comes up from below, stands the fingers on end.
@@ -904,7 +1100,9 @@ namespace CargoClash
                     break;
             }
 
-            arm.Attached = pose.Aim == HandAim.OnHandle ? Mathf.MoveTowards(arm.Attached, 1f, deltaTime / 0.14f) : 0f;
+            // An exact pose counts as already holding on, so a hand that ends an inspect on its handle stays locked to it.
+            if (pose.Aim == HandAim.Exact) arm.Attached = 1f;
+            else arm.Attached = pose.Aim == HandAim.OnHandle ? Mathf.MoveTowards(arm.Attached, 1f, deltaTime / 0.14f) : 0f;
             if (arm.Attached >= 1f)
             {
                 // Locked to the tool, or the fists would slide along its handle in a fast swing.

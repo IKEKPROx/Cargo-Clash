@@ -129,7 +129,12 @@ Animator 有两层：`Base` 管全身，`UpperBody` 只管上半身，这样搬�
 - 工具是双手握的刚体：动的是工具（`HammerKeys`、`BlastKeys`、`SlamKeys`），两只手锁在把手上。挥锤和喷气跟着角色动画的进度（`CharacterVisual.SwingCycle`），所以手、声音和特效是同一时刻。改 `Smash` 的长度要同时改 `GameConfig.smashSwingSeconds` 和 `smashFirstHitSeconds`，`Blast` 对应 `blastCycleSeconds` 和 `blastFirstSeconds`，`Slam` 对应 `slamSeconds` 和 `slamLandSeconds`。
 - 手里的货：手掌贴在两侧、手指朝前、拇指朝上（`HoldPoses`）。手的朝向不要跟着前臂，前臂从下面上来，手指会竖起来。拿货时手从下面迎上去，不要伸到地上，否则一条手臂会横穿画面。
 - 收集器做大了会挡视线。Astra 按挡不挡视线定好了大小，`FirstPersonRig` 里的 `VacuumForeGrip`、`VacuumMouth` 是她的握点和吸口。
-- 检视（F）是 `HammerInspect`、`VacuumInspect` 两张关键帧表，只在本地播放。`Flip` 和 `Twist` 可以超过一整圈。锤子在画面平面内转，翻跟头的话锤头会贴到镜头上。左手松开（`leftLetGo`）之后，握回工具的那个键不用写左手位置：手先停在原处，快到时伸回把手（`SampleInspect` 的返回值）。检查检视要看每一张连拍，有的问题只出现一帧。一按左键或右键检视就停，看的是本机的 `PlayerAvatar.WantsToUseTool`，不等主机确认，否则客户端要晚一个来回才停。
+- 检视（F）只在本地播放，关键帧在 `BuildHammerInspect`、`BuildVacuumInspect`。**它和挥锤相反：关键帧写的是右臂的关节，工具跟着手走。** 每个键给出手腕位置和三个角度（`Joints`）：前臂转了多少（`Twist`，拇指朝肩膀那一侧为 0，正数是手心朝下）、手往小指那边弯多少（`Ulnar`）、往手心那边弯多少（`Flex`）。`JointHand` 由它们算出手的朝向，工具挂在手上，`Spin` 是工具在手指里绕把手转，`Slide` 是在松开的拳头里往上滑，`Toss`、`Roll` 是抛起来和在空中绕自身转。这样手腕不会弯到人做不到的角度。以前的写法是先摆工具再把手贴上去，锤柄几乎顺着前臂时手腕要弯 60–70°，就是“手腕歪了”。
+  - 自然的范围（度）：`Twist` 约 -50 到 +60，`Ulnar` 约 -8 到 +25，`Flex` 约 ±30。手肘抬高时拇指自然朝下，所以举着锤子看要手肘朝下、手放低在胸前，锤子才立得起来。
+  - 第一个和最后一个键是平时的拿法（`ReadyJoints` 从 `HammerReady*`、`VacuumReady*` 算出来），所以开始和结束都接得上。左手开头顺着把手滑下去离开，结尾从下面滑回来握住（`LeftOffHandle`），都在画面下边缘外面。左手在手柄上和离开之间用 `LeftHand.Hold` 过渡。
+  - 手不能贴在锤面上：袖口很粗，手掌平贴时袖口会插进锤头，除非手腕往后弯 60° 左右。所以两种检视都是单手的。收集器抛起时，拳头先不张开，让握把顺着自己的方向从拳头里滑出去，滑出来才张手，落回来也一样。
+  - 这些姿势是在 Blender 里用同样的算法逐帧检查过的（手腕角度、工具插进手或手臂、两手相碰、离眼睛多近）。那套工具在仓库外的 `game design/过程文件/工具/检视预览/`，只在用户的 Mac 上，里面的关键帧是 C# 的一份副本，改了 C# 要跟着改。没有它也可以：改完用连拍（`-ccSwingBurst`）看每一张，有的问题只出现一帧。
+  - 一按左键或右键检视就停，看的是本机的 `PlayerAvatar.WantsToUseTool`，不等主机确认，否则客户端要晚一个来回才停。停下后停在被打断的那一刻淡出，不要跳到最后一个键。
 - 合搬时人站在箱子一端，走路时箱子总在身侧。看得到把手时手搭在上面，看不到时两只手朝箱子的方向伸，箱子在身后时手放到视野外（`CoCarryPoses`）。
 
 看手的动作要用连拍（`-ccSwingBurst`），单张截图看不出协不协调。自己的身体只投影子（`ShadowsOnly`），别人看到的还是 Animator 动作。
