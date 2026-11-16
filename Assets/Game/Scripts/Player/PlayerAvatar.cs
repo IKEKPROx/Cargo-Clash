@@ -119,6 +119,15 @@ namespace CargoClash
         public Vector3 EyePosition => transform.position + Vector3.up * config.eyeHeight;
         public Vector3 LookDirection => Quaternion.Euler(LookPitch, LookYaw, 0f) * Vector3.forward;
 
+        internal Bounds BodyBoundsAt(Vector3 feet)
+        {
+            Vector3 scale = transform.lossyScale;
+            float radius = controller.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
+            float height = Mathf.Max(controller.height * Mathf.Abs(scale.y), radius * 2f);
+            return new Bounds(feet + transform.TransformVector(controller.center),
+                              new Vector3(radius * 2f, height, radius * 2f));
+        }
+
         /// <summary>Remaining ram cooldown from 1 (just used) to 0 (ready), for the local HUD.</summary>
         public float RamCooldown01
         {

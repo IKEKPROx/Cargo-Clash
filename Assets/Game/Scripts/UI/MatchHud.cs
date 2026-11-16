@@ -606,14 +606,14 @@ namespace CargoClash
             if (ruins != null && !local.RuinClimbing.Value && !local.IsKnockedDown)
             {
                 int action = ruins.FindUse(local, local.LookDirection, grab == null);
-                string words = ruins.UsePrompt(local, action);
+                string useWords = ruins.UsePrompt(local, action);
                 bool wall = ruins.FindWall(local, local.LookDirection, !interrupter) >= 0;
-                if (words != null || wall)
+                if (useWords != null || wall)
                 {
-                    if (words != null) promptA.Show(GameText.KeyInteract, words);
+                    if (useWords != null) promptA.Show(GameText.KeyInteract, useWords);
                     else promptA.Show(interrupter ? GameText.KeyAttack : GameText.KeySecondary,
                                       interrupter ? GameText.RuinBreak : GameText.RuinRestore);
-                    if (words != null && wall)
+                    if (useWords != null && wall)
                         promptB.Show(interrupter ? GameText.KeyAttack : GameText.KeySecondary,
                                      interrupter ? GameText.RuinBreak : GameText.RuinRestore);
                     else promptB.Hide();

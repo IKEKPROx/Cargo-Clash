@@ -271,7 +271,7 @@ namespace CargoClash
                 return;
             }
             if (Now < current.FinishesAt) return;
-            if (!Occupied(Landing(current.End), player)) FinishTraverse(ref current, true);
+            if (!Occupied(Landing(player, current.End), player)) FinishTraverse(ref current, true);
             else if (Now >= current.FinishesAt + config.ruinLandingWaitSeconds) FinishTraverse(ref current, false);
         }
 
@@ -298,8 +298,12 @@ namespace CargoClash
                 Start = start, End = end, FinishesAt = Now + seconds };
         }
 
-        private static Bounds Landing(Vector3 point) =>
-            new Bounds(point + Vector3.up * .8f, new Vector3(1.1f, 1.6f, 1.1f));
+        private static Bounds Landing(PlayerAvatar player, Vector3 point)
+        {
+            Bounds bounds = player.BodyBoundsAt(point);
+            bounds.Expand(.1f);
+            return bounds;
+        }
 
         private bool ReadyToBoost(PlayerAvatar player) => player.IsSpawned && !player.KnockedOut.Value && !player.IsKnockedDown && !player.IsStaggered
             && player.CarriedCargo == null && !player.RuinClimbing.Value && Vector3.Distance(player.transform.position, data.boostStart) <= config.ruinUseRange;
@@ -315,7 +319,7 @@ namespace CargoClash
                 player.RuinBoostReadyUntil.Value = boostReadyUntil;
                 return;
             }
-            if (Occupied(Landing(data.boostExit), player)) return;
+            if (Occupied(Landing(player, data.boostExit), player)) return;
             boostTraverse = StartTraverse(player, boostHelper, data.boostStart, data.boostExit, config.ruinBoostSeconds);
             boostHelper.RuinBoostReadyUntil.Value = 0;
             boostHelper = null;
@@ -333,13 +337,13 @@ namespace CargoClash
             if (boostTraverse != null) return;
             PlayerAvatar teammate = TeammateBelow(helper);
             Vector3 landing = data.boostExit + Vector3.right * 1.15f;
-            if (teammate == null || Occupied(Landing(landing), teammate)) return;
+            if (teammate == null || Occupied(Landing(teammate, landing), teammate)) return;
             boostTraverse = StartTraverse(teammate, helper, data.boostStart, landing, config.ruinBoostSeconds);
         }
 
         private void UseLadder(PlayerAvatar player)
         {
-            if (ladderTraverse != null || Occupied(Landing(data.ladderExit), player)) return;
+            if (ladderTraverse != null || Occupied(Landing(player, data.ladderExit), player)) return;
             if (!LadderInstalled)
             {
                 if (!player.HasRuinVine.Value) return;
@@ -424,7 +428,7 @@ namespace CargoClash
             foreach (PlayerAvatar player in PlayerAvatar.All)
             {
                 if (player == ignored) continue;
-                if (area.Intersects(new Bounds(player.transform.position + Vector3.up * .8f, new Vector3(1f, 1.6f, 1f)))) return true;
+                if (area.Intersects(player.BodyBoundsAt(player.transform.position))) return true;
             }
             foreach (CargoItem cargo in CargoItem.All)
             {

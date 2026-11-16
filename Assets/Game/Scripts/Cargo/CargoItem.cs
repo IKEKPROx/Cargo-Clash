@@ -359,7 +359,8 @@ namespace CargoClash
         public Vector3 GrabPointWorld(PlayerAvatar avatar)
         {
             float sign = CarrierB.Value == avatar.NetworkObjectId ? 1f : -1f;
-            Vector3 axis = hasRuinResetPoint ? transform.right : Vector3.right;
+            // Every peer derives the grip axis from the loaded level. Reset points are host-only.
+            Vector3 axis = RuinCourtyard.Instance != null ? transform.right : Vector3.right;
             return transform.position + axis * (sign * (halfExtents.x + 0.55f));
         }
 
@@ -394,6 +395,13 @@ namespace CargoClash
 
         private void MoveWithCarriers(PlayerAvatar a, PlayerAvatar b, float deltaTime)
         {
+            // Support can disappear while the players stand still (for example a broken floor).
+            if (hasRuinResetPoint && !CarryGroupSupported(a, b))
+            {
+                ServerClearCarriers();
+                ServerBecomeGround(Vector3.zero);
+                return;
+            }
             Vector2 average = (a.ServerCoCarryInput + b.ServerCoCarryInput) * 0.5f;
             if (average.sqrMagnitude < 0.0025f) return;
 
@@ -411,18 +419,30 @@ namespace CargoClash
                 orientation, distance + 0.05f, GameLayers.LevelMask, QueryTriggerInteraction.Ignore);
             if (blocked) return;
             transform.position += step;
-            if (hasRuinResetPoint && !Physics.Raycast(transform.position, Vector3.down, halfExtents.y + .32f,
-                                                       GameLayers.LevelMask, QueryTriggerInteraction.Ignore))
+            if (hasRuinResetPoint && !CarryGroupSupported(a, b))
             {
                 ServerClearCarriers();
                 ServerBecomeGround(step / Mathf.Max(deltaTime, .001f));
             }
         }
 
+        private bool CarryGroupSupported(PlayerAvatar a, PlayerAvatar b) =>
+            HasCarryFloor(transform.position - Vector3.up * halfExtents.y)
+            && HasCarryFloor(GrabPointWorld(a) - Vector3.up * halfExtents.y)
+            && HasCarryFloor(GrabPointWorld(b) - Vector3.up * halfExtents.y);
+
+        private static bool HasCarryFloor(Vector3 feet) =>
+            Physics.Raycast(feet + Vector3.up * .2f, Vector3.down, .52f,
+                            GameLayers.LevelMask, QueryTriggerInteraction.Ignore);
+
         private bool BlockedCarrier(PlayerAvatar player, Vector3 step, float distance)
         {
             Vector3 grip = GrabPointWorld(player) - Vector3.up * halfExtents.y;
-            return Physics.CapsuleCast(grip + Vector3.up * .45f, grip + Vector3.up * 1.15f, .43f,
+            Bounds bounds = player.BodyBoundsAt(grip);
+            float radius = bounds.extents.x;
+            float offset = bounds.extents.y - radius;
+            return Physics.CapsuleCast(bounds.center - Vector3.up * offset,
+                                       bounds.center + Vector3.up * offset, radius,
                                        step / distance, distance + .04f, GameLayers.LevelMask, QueryTriggerInteraction.Ignore);
         }
 

@@ -162,8 +162,24 @@ namespace CargoClash
             navigation.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
             navigation.layerMask = GameLayers.LevelMask;
             Physics.SyncTransforms();
-            navigation.BuildNavMesh();
-            runtimeNavMesh = navigation.navMeshData;
+            // Bots move with the same CharacterController as players. The project's default
+            // .75 m navigation climb would otherwise route them up .74 m ruin foundations.
+            NavMeshBuildSettings settings = navigation.GetBuildSettings();
+            CharacterController body = config.avatarPrefab.GetComponent<CharacterController>();
+            settings.agentClimb = Mathf.Min(settings.agentClimb, body.stepOffset);
+            settings.agentRadius = Mathf.Max(settings.agentRadius, body.radius + body.skinWidth);
+            settings.agentHeight = Mathf.Max(settings.agentHeight, body.height + body.skinWidth * 2f);
+            var sources = new List<NavMeshBuildSource>();
+            var volume = new Bounds(navigation.center, navigation.size);
+            NavMeshBuilder.CollectSources(volume, GameLayers.LevelMask, navigation.useGeometry, 0, false,
+                new List<NavMeshBuildMarkup>(), false, sources);
+            // Keep operable geometry out of the bake; its obstacles carve the current state.
+            sources.RemoveAll(source => source.component != null &&
+                (source.component.GetComponent<NavMeshObstacle>() != null || source.component.GetComponent<NavMeshAgent>() != null));
+            runtimeNavMesh = NavMeshBuilder.BuildNavMeshData(settings, sources, volume, transform.position, transform.rotation);
+            if (runtimeNavMesh == null) throw new InvalidOperationException("Ruin Courtyard navigation build failed.");
+            navigation.navMeshData = runtimeNavMesh;
+            navigation.AddData();
             ShowState();
         }
 
