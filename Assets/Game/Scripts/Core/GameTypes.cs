@@ -22,7 +22,7 @@ namespace CargoClash
     /// a carton of cigarettes, a case of cash, a case of gold bars and the crate with the porcelain goose.
     /// A plank isn't cargo: on the river level it's carried like cargo from the huts to the catcher across the water.
     /// </summary>
-    public enum CargoKind : byte { Tobacco = 0, Cash = 1, Gold = 2, Art = 3, Plank = 4 }
+    public enum CargoKind : byte { Tobacco = 0, Cash = 1, Gold = 2, Art = 3, Plank = 4, Legacy = 255 }
 
     /// <summary>Lost: the river carried it off the field. Nobody scores it.</summary>
     public enum CargoState : byte { Ground = 0, Carried = 1, Rescued = 2, Destroyed = 3, Lost = 4 }

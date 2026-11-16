@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Cargo_Small
   m_EditorClassIdentifier: CargoClash::CargoClash.CargoDefinition
   size: 0
+  kind: 255
   prefab: {fileID: 3154896062229490624, guid: ceb46ce35b2164788b0f70f5aad9a51f, type: 3}
   value: 10
   smashSeconds: 2.5

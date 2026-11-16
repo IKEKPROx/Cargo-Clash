@@ -109,6 +109,7 @@ namespace CargoClash
                     case "-ccMode": mode = next; break;
                     case "-ccLevel": levelIndex = int.Parse(next); break;
                     case "-ccRiverTest": riverTest = true; break;
+                    case "-ccRuinTest": ruinTest = true; break;
                     case "-ccAddress": address = next; break;
                     case "-ccHalfSeconds": HalfSecondsOverride = float.Parse(next); break;
                     case "-ccSmashScale": SmashScaleOverride = float.Parse(next); break;
@@ -172,6 +173,7 @@ namespace CargoClash
             rooms.SelectedLevel = levelIndex;
             if (!string.IsNullOrEmpty(shotDirectory) && mode != "menu") StartCoroutine(TakeScreenshots());
             if (riverTest) StartCoroutine(TestTheRiver());
+            if (ruinTest) StartCoroutine(TestTheRuins());
             if (forceCoCarry) StartCoroutine(ForceCoCarry());
             if (uncapped) StartCoroutine(MeasureFrames());
             if (!string.IsNullOrEmpty(tourSpots)) StartCoroutine(TourTheLevel());

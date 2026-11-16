@@ -53,6 +53,8 @@ namespace CargoClash
             net.AddNetworkPrefab(config.directorPrefab);
             net.AddNetworkPrefab(config.rosterPrefab);
             foreach (CargoDefinition definition in config.cargo) net.AddNetworkPrefab(definition.prefab);
+            if (config.ruinCargo != null)
+                foreach (CargoDefinition definition in config.ruinCargo) net.AddNetworkPrefab(definition.prefab);
             if (config.plank != null && config.plank.prefab != null) net.AddNetworkPrefab(config.plank.prefab);
 
             net.OnServerStarted += HandleServerStarted;

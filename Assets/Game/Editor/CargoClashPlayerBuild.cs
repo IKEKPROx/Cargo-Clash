@@ -49,6 +49,10 @@ public static class CargoClashPlayerBuild
         string icns = Path.Combine(work, "AppIcon.icns");
         bool made = Run("iconutil", $"-c icns \"{iconset}\" -o \"{icns}\"");
         if (made) File.Copy(icns, target, true);
+        // File-provider folders can attach Finder metadata while the icon is replaced.
+        // Remove only signing-incompatible metadata; keep quarantine/provenance attributes.
+        Run("xattr", $"-rd com.apple.FinderInfo \"{Path.GetFullPath(appPath)}\"");
+        Run("xattr", $"-rd com.apple.ResourceFork \"{Path.GetFullPath(appPath)}\"");
         bool signed = Run("codesign", $"--force --deep --sign - \"{Path.GetFullPath(appPath)}\"");
         Directory.Delete(work, true);
         Debug.Log($"[Build] Mac icon {(made ? "in" : "FAILED")}, signed {(signed ? "again" : "FAILED")}.");

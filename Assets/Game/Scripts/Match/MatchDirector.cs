@@ -64,8 +64,15 @@ namespace CargoClash
         private readonly StringBuilder csv = new StringBuilder();
         private GameConfig config;
         private LevelLayout layout;
+        public readonly NetworkVariable<uint> RuinBits = new NetworkVariable<uint>();
+        internal NetworkList<RuinPatch> RuinPatches;
         private int halfDestroyed;
         private int halfLost;
+
+        private void Awake()
+        {
+            RuinPatches = new NetworkList<RuinPatch>();
+        }
         private int halfTotal;
         private double halfStartedAt;
 
@@ -190,6 +197,8 @@ namespace CargoClash
                 if (cargo.IsSpawned) cargo.NetworkObject.Despawn(true);
             }
             layout.ResetBed();
+            RuinCourtyard ruins = RuinCourtyard.Instance;
+            ruins?.ServerReset();
 
             int players = SessionRoster.Instance.Entries.Count;
             int thirds = players >= 5 ? 3 : players >= 3 ? 2 : 1;
@@ -198,7 +207,8 @@ namespace CargoClash
             halfDestroyed = 0;
             halfLost = 0;
             halfTotal = 0;
-            if (layout.PlacesEachKind) SpawnEachKind(thirds);
+            if (ruins != null) SpawnRuins();
+            else if (layout.PlacesEachKind) SpawnEachKind(thirds);
             else SpawnBySize(thirds);
 
             // The river level's planks and catcher start over too.
@@ -212,6 +222,22 @@ namespace CargoClash
                 int index = avatar.Team == Team.Orange ? orangeIndex++ : blueIndex++;
                 Transform spot = SpawnFor(avatar.Team, index, CollectorTeam.Value);
                 avatar.ServerResetForHalf(spot.position, spot.rotation);
+            }
+        }
+
+        private void SpawnRuins()
+        {
+            // Keep this level's authored 8 x 10, 5 x 30, 2 x 100 cargo and measured box sizes.
+            foreach (CargoDefinition definition in config.ruinCargo)
+            {
+                Transform[] spots = layout.SpotsFor(definition.size);
+                foreach (Transform spot in spots)
+                {
+                    GameObject instance = Instantiate(definition.prefab, spot.position, spot.rotation);
+                    instance.GetComponent<CargoItem>().SetRuinResetPoint(spot);
+                    instance.GetComponent<NetworkObject>().Spawn(true);
+                    halfTotal += definition.value;
+                }
             }
         }
 

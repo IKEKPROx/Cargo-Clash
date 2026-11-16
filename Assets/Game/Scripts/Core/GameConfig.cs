@@ -51,6 +51,23 @@ namespace CargoClash
         public float finalStretchSeconds = 15f;
         public float halfIntroSeconds = 4f;
 
+        [Header("Ruin Courtyard")]
+        public float ruinUseRange = 2.4f;
+        public float ruinDoorCooldown = .45f;
+        public float ruinRestoreSeconds = 1.2f;
+        public float ruinWallSwitchCooldown = 3f;
+        public float ruinThrowRange = 5f;
+        public float ruinPatchRadius = 1.4f;
+        public float ruinPatchSeconds = 6f;
+        public float ruinPatchSpeed = .7f;
+        public float ruinLadderSeconds = 16f;
+        public float ruinClimbSeconds = 1.6f;
+        public float ruinPickupSeconds = 12f;
+        public float ruinBoostSeconds = 2.5f;
+        public float ruinBoostReadySeconds = 5f;
+        public float ruinLandingWaitSeconds = 2f;
+        public float ruinPitReturnHeight = -2.4f;
+
         [Header("Helicopter")]
         [Tooltip("It starts flying in this long before it arrives over the truck.")]
         public float helicopterApproachSeconds = 12f;
@@ -209,6 +226,8 @@ namespace CargoClash
 
         [Header("Cargo")]
         public CargoDefinition[] cargo;
+        [Tooltip("The Ruin Courtyard keeps its authored three box sizes and values.")]
+        public CargoDefinition[] ruinCargo;
         [Tooltip("Cargo looks damaged once its durability falls to this.")]
         public float damagedBelow = 0.67f;
         [Tooltip("Cargo looks nearly destroyed once its durability falls to this.")]

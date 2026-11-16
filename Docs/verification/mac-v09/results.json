@@ -1,0 +1,56 @@
+{
+  "ruin-headless": {
+    "checks": 33,
+    "result": [
+      "[CCTEST] RESULT orange=310 blue=80 titles=5"
+    ],
+    "done": [
+      "[CCTEST] DONE errors=0 timedOut=False"
+    ]
+  },
+  "tutorial-headless": {
+    "checks": 1,
+    "result": [
+      "[CCTEST] RESULT orange=330 blue=535 titles=5"
+    ],
+    "done": [
+      "[CCTEST] DONE errors=0 timedOut=False"
+    ]
+  },
+  "river-headless": {
+    "checks": 1,
+    "result": [
+      "[CCTEST] RESULT orange=840 blue=1115 titles=3"
+    ],
+    "done": [
+      "[CCTEST] DONE errors=0 timedOut=False"
+    ]
+  },
+  "ruin-window-fixed": {
+    "checks": 1,
+    "result": [
+      "[CCTEST] RESULT orange=220 blue=270 titles=5"
+    ],
+    "done": [
+      "[CCTEST] DONE errors=0 timedOut=False"
+    ]
+  },
+  "ruin-host-verified": {
+    "checks": 33,
+    "result": [
+      "[CCTEST] RESULT orange=230 blue=380 titles=5"
+    ],
+    "done": [
+      "[CCTEST] DONE errors=0 timedOut=False"
+    ]
+  },
+  "ruin-client-verified": {
+    "checks": 5,
+    "result": [
+      "[CCTEST] RESULT orange=230 blue=380 titles=5"
+    ],
+    "done": [
+      "[CCTEST] DONE errors=0 timedOut=False"
+    ]
+  }
+}

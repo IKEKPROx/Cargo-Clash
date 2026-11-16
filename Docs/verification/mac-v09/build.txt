@@ -1,0 +1,3 @@
+Build Finished, Result: Success.
+[Build] StandaloneOSX Succeeded errors=0 warnings=4 size=644MB time=00:00:14.9201750
+[Build] Mac icon in, signed again.

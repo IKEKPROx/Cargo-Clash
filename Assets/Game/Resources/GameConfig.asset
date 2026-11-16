@@ -26,9 +26,9 @@ MonoBehaviour:
   - title: RIVER FLATS
     scene: LevelRiver
     picture: {fileID: 21300000, guid: caab7b6327add41e9949b2d59ffeb6f6, type: 3}
-  - title: ???
-    scene: 
-    picture: {fileID: 21300000, guid: 9335afe636bcf45d3a76ec341ba11f82, type: 3}
+  - title: RUIN COURTYARD
+    scene: LevelRuinCourtyard
+    picture: {fileID: 21300000, guid: 7b265054b996fafc7d12e8f4b376b79f, type: 3}
   - title: ???
     scene: 
     picture: {fileID: 21300000, guid: 79bdd48a6a6424424a487d698bc6f439, type: 3}
@@ -37,6 +37,21 @@ MonoBehaviour:
   halfSeconds: 60
   finalStretchSeconds: 15
   halfIntroSeconds: 4
+  ruinUseRange: 2.4
+  ruinDoorCooldown: 0.45
+  ruinRestoreSeconds: 1.2
+  ruinWallSwitchCooldown: 3
+  ruinThrowRange: 5
+  ruinPatchRadius: 1.4
+  ruinPatchSeconds: 6
+  ruinPatchSpeed: 0.7
+  ruinLadderSeconds: 16
+  ruinClimbSeconds: 1.6
+  ruinPickupSeconds: 12
+  ruinBoostSeconds: 2.5
+  ruinBoostReadySeconds: 5
+  ruinLandingWaitSeconds: 2
+  ruinPitReturnHeight: -2.4
   helicopterApproachSeconds: 12
   helicopterWarningSeconds: 10
   helicopterArrivalDelay: 1.2
@@ -126,6 +141,10 @@ MonoBehaviour:
   plankSeconds: 60
   plankInsertRange: 3.5
   plank: {fileID: 11400000, guid: 263f59f55dd4a483895c2b73d20b9862, type: 2}
+  ruinCargo:
+  - {fileID: 11400000, guid: 876bb7093f40c4959838604a550ac5f3, type: 2}
+  - {fileID: 11400000, guid: 7cc3b4df918164904b9b5fabdc34326b, type: 2}
+  - {fileID: 11400000, guid: cea4e5b047a4c4c26a2035932a2080ad, type: 2}
   cargo:
   - {fileID: 11400000, guid: aee7fbe6cc96b4f11ab08fbdc94cba88, type: 2}
   - {fileID: 11400000, guid: 40d1b45efb3054357bcf266e6fe3302d, type: 2}

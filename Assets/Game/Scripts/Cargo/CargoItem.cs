@@ -57,6 +57,9 @@ namespace CargoClash
         private readonly Dictionary<PlayerAvatar, float> recentSmashers = new Dictionary<PlayerAvatar, float>();
         private GameConfig config;
         private Rigidbody body;
+        private Vector3 ruinResetPosition;
+        private Quaternion ruinResetRotation;
+        private bool hasRuinResetPoint;
         private Collider[] colliders;
         private float shakeUntil;
         private float squash;
@@ -518,8 +521,11 @@ namespace CargoClash
         {
             float sign = CarrierB.Value == avatar.NetworkObjectId ? 1f : -1f;
             float reach = definition.coCarryReach > 0f ? definition.coCarryReach : halfExtents.x + 0.55f;
-            return transform.position + Vector3.right * (sign * reach);
+            Vector3 axis = RuinCourtyard.Instance != null ? transform.right : Vector3.right;
+            return transform.position + axis * (sign * reach);
         }
+
+        public float CoCarryLift => definition.coCarryHeight > 0f ? definition.coCarryHeight : halfExtents.y + .02f;
 
         // ---- Host only ----
 
@@ -531,6 +537,12 @@ namespace CargoClash
             {
                 heldStill = still;
                 if (State.Value == CargoState.Ground) body.isKinematic = still;
+            }
+            if (hasRuinResetPoint && State.Value == CargoState.Ground &&
+                RuinCourtyard.Instance != null && RuinCourtyard.Instance.TryPitReturn(transform.position, out _))
+            {
+                ServerResetFromRuinPit();
+                return;
             }
             if (State.Value != CargoState.Carried) return;
 
@@ -545,6 +557,7 @@ namespace CargoClash
             }
 
             if (definition.requiredCarriers > 1 && a != null && b != null) MoveWithCarriers(a, b, deltaTime);
+            if (State.Value != CargoState.Carried) return;
 
             MatchDirector director = MatchDirector.Instance;
             if (director != null && director.Phase.Value == MatchPhase.Playing) CheckDeposit(a, b);
@@ -556,27 +569,96 @@ namespace CargoClash
         /// </summary>
         private void MoveWithCarriers(PlayerAvatar a, PlayerAvatar b, float deltaTime)
         {
+            // Support can disappear while the players stand still (for example a broken floor).
+            if (hasRuinResetPoint && !CarryGroupSupported(a, b))
+            {
+                ServerClearCarriers();
+                ServerBecomeGround(Vector3.zero);
+                return;
+            }
             Vector2 average = (a.ServerCoCarryInput + b.ServerCoCarryInput) * 0.5f;
             if (average.sqrMagnitude < 0.0025f) return;
 
-            float speed = config.runSpeed * definition.carrySpeedMultiplier;
-            RiverLevel river = RiverLevel.Instance;
-            if (river != null) speed *= river.WadeMultiplier(transform.position);
-            Vector3 next = transform.position + new Vector3(average.x, 0f, average.y) * (speed * deltaTime);
-            float lift = definition.coCarryHeight > 0f ? definition.coCarryHeight : halfExtents.y + 0.02f;
-            if (GroundBelow(next, out float ground)) next.y = Mathf.MoveTowards(transform.position.y, ground + lift, 4f * deltaTime);
-
-            if (Physics.CheckBox(next + Vector3.up * 0.06f, halfExtents * 0.9f, Quaternion.identity, GameLayers.LevelMask, QueryTriggerInteraction.Ignore)) return;
-            Vector3 offset = next - transform.position;
-            foreach (PlayerAvatar carrier in new[] { a, b })
+            if (!hasRuinResetPoint)
             {
-                Vector3 feet = GrabPointWorld(carrier) + offset;
-                if (Physics.CheckSphere(feet + Vector3.up * 0.9f, 0.3f, 1 << GameLayers.PlayerBlock, QueryTriggerInteraction.Ignore)) return;
+                float speed = config.runSpeed * definition.carrySpeedMultiplier;
+                RiverLevel river = RiverLevel.Instance;
+                if (river != null) speed *= river.WadeMultiplier(transform.position);
+                Vector3 next = transform.position + new Vector3(average.x, 0f, average.y) * (speed * deltaTime);
+                float lift = definition.coCarryHeight > 0f ? definition.coCarryHeight : halfExtents.y + 0.02f;
+                if (GroundBelow(next, out float ground)) next.y = Mathf.MoveTowards(transform.position.y, ground + lift, 4f * deltaTime);
+
+                if (Physics.CheckBox(next + Vector3.up * 0.06f, halfExtents * 0.9f, Quaternion.identity, GameLayers.LevelMask, QueryTriggerInteraction.Ignore)) return;
+                Vector3 offset = next - transform.position;
+                foreach (PlayerAvatar carrier in new[] { a, b })
+                {
+                    Vector3 feet = GrabPointWorld(carrier) + offset;
+                    if (Physics.CheckSphere(feet + Vector3.up * 0.9f, 0.3f, 1 << GameLayers.PlayerBlock, QueryTriggerInteraction.Ignore)) return;
+                }
+                transform.position = next;
+                return;
             }
-            transform.position = next;
+            Vector3 step = new Vector3(average.x, 0f, average.y) * (config.runSpeed * definition.carrySpeedMultiplier * deltaTime);
+            float distance = step.magnitude;
+            Quaternion orientation = hasRuinResetPoint ? transform.rotation : Quaternion.identity;
+            if (hasRuinResetPoint && RuinCourtyard.Instance != null)
+            {
+                RuinCourtyard ruins = RuinCourtyard.Instance;
+                step *= Mathf.Min(ruins.SpeedAt(a.transform.position), ruins.SpeedAt(b.transform.position));
+                distance = step.magnitude;
+                if (BlockedCarrier(a, step, distance) || BlockedCarrier(b, step, distance)) return;
+            }
+            bool blocked = Physics.BoxCast(transform.position, halfExtents * 0.95f, step / distance, out _,
+                orientation, distance + 0.05f, GameLayers.LevelMask, QueryTriggerInteraction.Ignore);
+            if (blocked) return;
+            transform.position += step;
+            if (hasRuinResetPoint && !CarryGroupSupported(a, b))
+            {
+                ServerClearCarriers();
+                ServerBecomeGround(step / Mathf.Max(deltaTime, .001f));
+            }
         }
 
-        /// <summary>The level's surface under a point, looking down from a little above it.</summary>
+        private bool CarryGroupSupported(PlayerAvatar a, PlayerAvatar b) =>
+            HasCarryFloor(transform.position - Vector3.up * CoCarryLift)
+            && HasCarryFloor(GrabPointWorld(a) - Vector3.up * CoCarryLift)
+            && HasCarryFloor(GrabPointWorld(b) - Vector3.up * CoCarryLift);
+
+        private static bool HasCarryFloor(Vector3 feet) =>
+            Physics.Raycast(feet + Vector3.up * .2f, Vector3.down, .52f,
+                            GameLayers.LevelMask, QueryTriggerInteraction.Ignore);
+
+        private bool BlockedCarrier(PlayerAvatar player, Vector3 step, float distance)
+        {
+            Vector3 grip = GrabPointWorld(player) - Vector3.up * CoCarryLift;
+            Bounds bounds = player.BodyBoundsAt(grip);
+            float radius = bounds.extents.x;
+            float offset = bounds.extents.y - radius;
+            return Physics.CapsuleCast(bounds.center - Vector3.up * offset,
+                                       bounds.center + Vector3.up * offset, radius,
+                                       step / distance, distance + .04f, GameLayers.LevelMask, QueryTriggerInteraction.Ignore);
+        }
+
+        internal void SetRuinResetPoint(Transform spot)
+        {
+            hasRuinResetPoint = true;
+            ruinResetPosition = spot.position;
+            ruinResetRotation = spot.rotation;
+        }
+
+        internal void ServerResetFromRuinPit()
+        {
+            if (!IsServer || !hasRuinResetPoint || State.Value == CargoState.Rescued || State.Value == CargoState.Destroyed) return;
+            ServerClearCarriers();
+            State.Value = CargoState.Ground;
+            SetPhysicsActive(true);
+            transform.SetPositionAndRotation(ruinResetPosition, ruinResetRotation);
+            body.position = ruinResetPosition;
+            body.rotation = ruinResetRotation;
+            body.linearVelocity = body.angularVelocity = Vector3.zero;
+        }
+
+        /// <summary>The level surface below a point, shared with river co-carry.</summary>
         public static bool GroundBelow(Vector3 point, out float height)
         {
             bool found = Physics.Raycast(point + Vector3.up * 1.5f, Vector3.down, out RaycastHit hit, 6f, GameLayers.LevelMask, QueryTriggerInteraction.Ignore);
@@ -646,6 +728,7 @@ namespace CargoClash
             if (definition.requiredCarriers > 1)
             {
                 if (!HasFreeSlot) return false;
+                if (hasRuinResetPoint && !RuinCourtyard.CargoReach(avatar, this)) return false;
                 if (CarrierA.Value == NetIds.None) CarrierA.Value = id;
                 else CarrierB.Value = id;
             }
@@ -665,8 +748,8 @@ namespace CargoClash
                     Vector3 position = transform.position;
                     float ground = Physics.Raycast(position + Vector3.up * 0.5f, Vector3.down, out RaycastHit floor, 4f,
                         GameLayers.LevelMask, QueryTriggerInteraction.Ignore) ? floor.point.y : position.y - halfExtents.y;
-                    position.y = ground + (definition.coCarryHeight > 0f ? definition.coCarryHeight : halfExtents.y + 0.02f);
-                    transform.SetPositionAndRotation(position, Quaternion.identity);
+                    position.y = ground + CoCarryLift;
+                    transform.SetPositionAndRotation(position, hasRuinResetPoint ? ruinResetRotation : Quaternion.identity);
                 }
             }
             avatar.ServerSetCarry(this);

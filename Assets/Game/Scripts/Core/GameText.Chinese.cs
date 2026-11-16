@@ -10,6 +10,21 @@ namespace CargoClash
     {
         private static readonly Dictionary<string, string> Chinese = new Dictionary<string, string>
         {
+            // Ruin Courtyard.
+            ["OPEN GATE"] = "打开遗迹门",
+            ["CLOSE GATE"] = "关闭遗迹门",
+            ["GATE BLOCKED"] = "门口被挡住了",
+            ["TAKE VINE"] = "拾取藤蔓",
+            ["THROW VINE"] = "投掷藤蔓",
+            ["ATTACH VINE"] = "挂上藤蔓",
+            ["CLIMB"] = "攀爬",
+            ["TEAM BOOST"] = "合作托举",
+            ["BREAK WALL"] = "破坏墙体",
+            ["RESTORE WALL"] = "吸回复原",
+            ["PULL UP TEAMMATE"] = "拉队友上来",
+            ["READY TO BOOST"] = "准备托举",
+            ["RUIN COURTYARD"] = "藤坠石庭",
+
             // Rooms.
             ["The host left the game."] = "主机离开了游戏。",
             ["Could not join that room. Check the code and try again."] = "加入不了这个房间。检查一下房间码再试试。",

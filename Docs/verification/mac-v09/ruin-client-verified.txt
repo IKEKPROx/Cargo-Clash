@@ -1,0 +1,45 @@
+[CCTEST] START mode=client halfSeconds=60 localBot=True body=Medium
+[CCTEST] PHASE HalfIntro half=1 collectors=Orange orange=0 blue=0 avatars=6 cargo=15
+[CCTEST] CHECK ok: RUIN test runs in the ruin scene
+[CCTEST] PHASE Playing half=1 collectors=Orange orange=0 blue=0 avatars=6 cargo=15
+[CCTEST] CHECK ok: the crew picked here is the one in the match (picked Medium, playing Medium)
+[CCTEST] CHECK ok: RUIN client observes replicated gate and broken wall states
+[CCTEST] CHECK ok: RUIN client observes replicated vine pad and ladder states
+[CCTEST] CHECK ok: RUIN client observes two carriers on a 100 crate
+[CCTEST] KNOCKOUT Bot 3 on Bot 1 with=Slam
+[CCTEST] KNOCKOUT Bot 4 on Player 1 with=Ram
+[CCTEST] HELICOPTER FlyingIn
+[CCTEST] KNOCKOUT Bot 2 on Bot 4 with=Ram
+[CCTEST] KNOCKOUT Bot 1 on Bot 3 with=Ram
+[CCTEST] PHASE HalfOutro half=1 collectors=Orange orange=70 blue=200 avatars=6 cargo=14
+[CCTEST] HELICOPTER Lowering
+[CCTEST] HELICOPTER Clipping
+[CCTEST] HELICOPTER Lifting
+[CCTEST] HELICOPTER Leaving
+[CCTEST] PHASE HalfIntro half=2 collectors=Blue orange=70 blue=200 avatars=6 cargo=15
+[CCTEST] PHASE Playing half=2 collectors=Blue orange=70 blue=200 avatars=6 cargo=15
+[CCTEST] KNOCKOUT Player 1 on Player 2 with=Hammer
+[CCTEST] KNOCKOUT Bot 3 on Player 1 with=Ram
+[CCTEST] KNOCKOUT Player 1 on Bot 3 with=Ram
+[CCTEST] KNOCKOUT Bot 2 on Player 2 with=Slam
+[CCTEST] HELICOPTER FlyingIn
+[CCTEST] KNOCKOUT Bot 1 on Bot 3 with=Slam
+[CCTEST] KNOCKOUT Bot 4 on Player 1 with=Blast
+[CCTEST] KNOCKOUT Bot 4 on Bot 1 with=Blast
+[CCTEST] KNOCKOUT Bot 2 on Player 2 with=Slam
+[CCTEST] KNOCKOUT Bot 2 on Bot 4 with=Ram
+[CCTEST] PHASE HalfOutro half=2 collectors=Blue orange=230 blue=380 avatars=6 cargo=10
+[CCTEST] HELICOPTER Lowering
+[CCTEST] HELICOPTER Clipping
+[CCTEST] HELICOPTER Lifting
+[CCTEST] HELICOPTER Leaving
+[CCTEST] PHASE Results half=2 collectors=Blue orange=230 blue=380 avatars=6 cargo=10
+[CCTEST] RESULT orange=230 blue=380 titles=5
+[CCTEST] TITLE Mover Supreme -> Bot 3 (120)
+[CCTEST] TITLE Demolition Chief -> Player 2 (150)
+[CCTEST] TITLE Knockout King -> Bot 2 (4)
+[CCTEST] TITLE Butterfingers -> Player 2 (7)
+[CCTEST] TITLE Punching Bag -> Player 1 (3)
+[CCTEST] HELICOPTER Gone
+[CCTEST] STOPPED wasHost=False onPurpose=False message=The host left the game.
+[CCTEST] DONE errors=0 timedOut=False

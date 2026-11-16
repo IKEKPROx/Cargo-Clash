@@ -525,6 +525,15 @@ namespace CargoClash
                 return;
             }
 
+            if (local.RuinClimbing.Value)
+            {
+                promptA.Hide();
+                promptB.Hide();
+                crosshairRing.enabled = false;
+                targetBar.SetActive(false);
+                return;
+            }
+
             CargoItem carried = local.CarriedCargo;
             CargoItem target = null;
             if (carried != null)
@@ -617,6 +626,24 @@ namespace CargoClash
         {
             CargoItem grab = local.AimedGrab;
             CargoItem smash = local.AimedSmash;
+            RuinCourtyard ruins = RuinCourtyard.Instance;
+            if (ruins != null && !local.RuinClimbing.Value && !local.IsKnockedDown)
+            {
+                int action = ruins.FindUse(local, local.LookDirection, grab == null);
+                string useWords = ruins.UsePrompt(local, action);
+                bool wall = ruins.FindWall(local, local.LookDirection, !interrupter) >= 0;
+                if (useWords != null || wall)
+                {
+                    if (useWords != null) promptA.Show(GameText.KeyInteract, useWords);
+                    else promptA.Show(interrupter ? GameText.KeyAttack : GameText.KeySecondary,
+                                      interrupter ? GameText.RuinBreak : GameText.RuinRestore);
+                    if (useWords != null && wall)
+                        promptB.Show(interrupter ? GameText.KeyAttack : GameText.KeySecondary,
+                                     interrupter ? GameText.RuinBreak : GameText.RuinRestore);
+                    else promptB.Hide();
+                    return;
+                }
+            }
             if (local.Sucking.Value)
             {
                 promptA.Show(GameText.KeySecondary, GameText.PromptSucking);

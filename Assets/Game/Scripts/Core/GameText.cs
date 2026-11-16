@@ -18,6 +18,20 @@ namespace CargoClash
             return Chinese.TryGetValue(context == null ? english : english + "|" + context, out string chinese) ? chinese : english;
         }
 
+        public static string RuinOpenDoor => T("OPEN GATE");
+        public static string RuinCloseDoor => T("CLOSE GATE");
+        public static string RuinDoorBlocked => T("GATE BLOCKED");
+        public static string RuinTakeVine => T("TAKE VINE");
+        public static string RuinThrowVine => T("THROW VINE");
+        public static string RuinAttachVine => T("ATTACH VINE");
+        public static string RuinClimb => T("CLIMB");
+        public static string RuinBoost => T("TEAM BOOST");
+        public static string RuinBreak => T("BREAK WALL");
+        public static string RuinRestore => T("RESTORE WALL");
+        public static string RuinPullTeammate => T("PULL UP TEAMMATE");
+        public static string RuinBoostReady => T("READY TO BOOST");
+        public static string RuinTitle => T("RUIN COURTYARD");
+
         /// <summary>T with a format string, so each language can put the numbers where it wants them.</summary>
         public static string F(string english, params object[] values) => string.Format(T(english), values);
 

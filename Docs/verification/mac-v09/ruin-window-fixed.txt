@@ -1,0 +1,242 @@
+[CCTEST] START mode=practice halfSeconds=45 localBot=True body=Medium
+[CCTEST] CREW Player 1 body=Medium hat=6 glasses=1 health=100 speed=6.50 damage=1.00
+[CCTEST] CREW Bot 1 body=Medium hat=6 glasses=0 health=100 speed=6.50 damage=1.00
+[CCTEST] CREW Bot 2 body=Short hat=5 glasses=0 health=140 speed=5.59 damage=1.30
+[CCTEST] CREW Bot 3 body=Medium hat=5 glasses=1 health=100 speed=6.50 damage=1.00
+[CCTEST] CREW Bot 4 body=Short hat=0 glasses=3 health=140 speed=5.59 damage=1.30
+[CCTEST] CREW Bot 5 body=Tall hat=0 glasses=2 health=75 speed=7.41 damage=0.82
+[CCTEST] PHASE HalfIntro half=1 collectors=Orange orange=0 blue=0 avatars=6 cargo=15
+[CCTEST] FPS 482
+[CCTEST] PHASE Playing half=1 collectors=Orange orange=0 blue=0 avatars=6 cargo=15
+[CCTEST] CHECK ok: the crew picked here is the one in the match (picked Medium, playing Medium)
+[CCTEST] SHOT <PROJECT>/Builds/Verification/ruin-window-fixed/practice-ui-00.png
+[CCTEST] FPS 187
+[CCTEST] SHOT <PROJECT>/Builds/Verification/ruin-window-fixed/practice-ui-01.png
+[CCTEST] RESCUED Small carriers=Bot 1
+[CCTEST] SHOT <PROJECT>/Builds/Verification/ruin-window-fixed/practice-ui-02.png
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Bot 5 with=Ram health=49 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 5 dropped=False
+[CCTEST] HIT Bot 2 on Bot 3 with=Blast health=68 knockedDown=False knockedOut=False
+[CCTEST] FPS 197
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 1 with=Ram health=74 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 1 dropped=False
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Player 1 with=Ram health=80 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=True
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 3 with=Ram health=48 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=False
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 4 with=Ram health=120 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=False
+[CCTEST] HIT Player 1 on Bot 5 with=Blast health=24 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 4
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Player 1 with=Ram health=60 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=True
+[CCTEST] HIT Bot 4 on Bot 1 with=Ram health=48 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 1 dropped=True
+[CCTEST] FPS 224
+[CCTEST] SHOT <PROJECT>/Builds/Verification/ruin-window-fixed/practice-ui-03.png
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 4 with=Ram health=100 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=False
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 3 with=Ram health=28 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=False
+[CCTEST] HIT Player 1 on Bot 5 with=Blast health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Player 1 on Bot 5 with=Blast
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Player 1 with=Ram health=40 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=True
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 1 with=Ram health=22 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 1 dropped=True
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 3 with=Ram health=8 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=False
+[CCTEST] FPS 211
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 4 with=Ram health=80 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=False
+[CCTEST] RESCUED Medium carriers=Bot 2
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Player 1 with=Ram health=20 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=True
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 1 with=Ram health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 4 on Bot 1 with=Ram
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 3 with=Ram health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Player 1 on Bot 3 with=Ram
+[CCTEST] RESCUED Small carriers=Bot 2
+[CCTEST] FPS 201
+[CCTEST] FPS 208
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 2 with=Ram health=114 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=False
+[CCTEST] FPS 228
+[CCTEST] SHOT <PROJECT>/Builds/Verification/ruin-window-fixed/practice-ui-04.png
+[CCTEST] RAM Bot 5
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Bot 1 with=Ram health=80 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 1 dropped=False
+[CCTEST] HELICOPTER FlyingIn
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 4 with=Ram health=60 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=False
+[CCTEST] HIT Bot 1 on Bot 5 with=Blast health=50 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 5
+[CCTEST] HIT Bot 1 on Bot 5 with=Blast health=25 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 5 dropped=False
+[CCTEST] RAM Bot 3
+[CCTEST] FPS 222
+[CCTEST] HIT Bot 1 on Bot 3 with=Blast health=75 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 1 on Bot 3 with=Blast health=50 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=False
+[CCTEST] HIT Bot 5 on Bot 1 with=Hammer health=52 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 1 with=Ram health=26 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 1 dropped=True
+[CCTEST] HIT Bot 4 on Bot 2 with=Hammer health=70 knockedDown=False knockedOut=False
+[CCTEST] HIT Bot 5 on Bot 2 with=Hammer health=42 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=True
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 4 with=Blast health=35 knockedDown=False knockedOut=False
+[CCTEST] HIT Bot 2 on Bot 4 with=Blast health=3 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=False
+[CCTEST] FPS 259
+[CCTEST] HIT Bot 2 on Bot 3 with=Blast health=18 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 2 with=Ram health=16 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=False
+[CCTEST] RESCUED Medium carriers=Player 1
+[CCTEST] HALF 1 seconds=45 collectors=Orange rescued=80 destroyed=200 lost=0 untouched=150 total=430 orange=80 blue=200
+[CCTEST] PHASE HalfOutro half=1 collectors=Orange orange=80 blue=200 avatars=6 cargo=13
+[CCTEST] HELICOPTER Lowering
+[CCTEST] FPS 340
+[CCTEST] HELICOPTER Clipping
+[CCTEST] HELICOPTER Lifting
+[CCTEST] HELICOPTER Leaving
+[CCTEST] FPS 237
+[CCTEST] SHOT <PROJECT>/Builds/Verification/ruin-window-fixed/practice-ui-05.png
+[CCTEST] PHASE HalfIntro half=2 collectors=Blue orange=80 blue=200 avatars=6 cargo=15
+[CCTEST] FPS 224
+[CCTEST] PHASE Playing half=2 collectors=Blue orange=80 blue=200 avatars=6 cargo=15
+[CCTEST] RESCUED Small carriers=Bot 4
+[CCTEST] FPS 185
+[CCTEST] RAM Bot 3
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 5 with=Ram health=55 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 5 dropped=True
+[CCTEST] RAM Bot 5
+[CCTEST] HIT Bot 5 on Player 1 with=Ram health=84 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Bot 4 with=Ram health=114 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=False
+[CCTEST] FPS 223
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 5 with=Ram health=35 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 5 dropped=True
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 1 with=Ram health=74 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 1 dropped=False
+[CCTEST] HIT Bot 4 on Bot 2 with=Blast health=108 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 5
+[CCTEST] HIT Bot 5 on Player 1 with=Ram health=68 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Bot 4 with=Ram health=88 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=True
+[CCTEST] RAM Player 1
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 2 with=Ram health=82 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=False
+[CCTEST] FPS 251
+[CCTEST] HIT Player 1 on Bot 5 with=Ram health=15 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 5 dropped=True
+[CCTEST] SHOT <PROJECT>/Builds/Verification/ruin-window-fixed/practice-ui-06.png
+[CCTEST] RESCUED Medium carriers=Bot 3
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Bot 4 with=Ram health=62 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=True
+[CCTEST] RAM Bot 5
+[CCTEST] HIT Bot 5 on Player 1 with=Blast health=48 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 2 with=Ram health=56 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=False
+[CCTEST] HIT Bot 4 on Bot 1 with=Blast health=42 knockedDown=False knockedOut=False
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 5 with=Ram health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Player 1 on Bot 5 with=Ram
+[CCTEST] FPS 198
+[CCTEST] RESCUED Small carriers=Bot 3
+[CCTEST] HIT Bot 2 on Bot 4 with=Slam health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 2 on Bot 4 with=Slam
+[CCTEST] FPS 202
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 3 with=Ram health=80 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=False
+[CCTEST] RAM Bot 5
+[CCTEST] HIT Bot 5 on Player 1 with=Ram health=32 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] RESCUED Small carriers=Bot 4
+[CCTEST] HIT Player 1 on Bot 5 with=Hammer health=41 knockedDown=False knockedOut=False
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 5 with=Ram health=21 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 5 dropped=True
+[CCTEST] HIT Player 1 on Bot 3 with=Hammer health=46 knockedDown=False knockedOut=False
+[CCTEST] HIT Player 1 on Bot 3 with=Hammer health=12 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=True
+[CCTEST] FPS 236
+[CCTEST] RAM Bot 5
+[CCTEST] HIT Bot 5 on Player 1 with=Ram health=16 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 5 with=Ram health=1 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 5 dropped=True
+[CCTEST] HIT Bot 4 on Bot 1 with=Blast health=10 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 4 with=Ram health=120 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=True
+[CCTEST] RAM Bot 5
+[CCTEST] HIT Player 1 on Bot 3 with=Hammer health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Player 1 on Bot 3 with=Hammer
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 1 with=Ram health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 4 on Bot 1 with=Ram
+[CCTEST] HIT Bot 5 on Player 1 with=Blast health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 5 on Player 1 with=Blast
+[CCTEST] FPS 236
+[CCTEST] SHOT <PROJECT>/Builds/Verification/ruin-window-fixed/practice-ui-07.png
+[CCTEST] HELICOPTER FlyingIn
+[CCTEST] RESCUED Small carriers=Bot 4
+[CCTEST] FPS 200
+[CCTEST] FPS 216
+[CCTEST] RAM Bot 5
+[CCTEST] HIT Bot 5 on Bot 1 with=Ram health=84 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 1 dropped=False
+[CCTEST] HALF 2 seconds=45 collectors=Blue rescued=70 destroyed=140 lost=0 untouched=220 total=430 orange=220 blue=270
+[CCTEST] PHASE HalfOutro half=2 collectors=Blue orange=220 blue=270 avatars=6 cargo=12
+[CCTEST] HELICOPTER Lowering
+[CCTEST] HELICOPTER Clipping
+[CCTEST] FPS 284
+[CCTEST] HELICOPTER Lifting
+[CCTEST] HELICOPTER Leaving
+[CCTEST] FPS 238
+[CCTEST] SHOT <PROJECT>/Builds/Verification/ruin-window-fixed/practice-ui-08.png
+[CCTEST] PHASE Results half=2 collectors=Blue orange=220 blue=270 avatars=6 cargo=12
+[CCTEST] RESULT orange=220 blue=270 titles=5
+[CCTEST] TITLE Mover Supreme -> Bot 2 (40)
+[CCTEST] TITLE Demolition Chief -> Bot 2 (90)
+[CCTEST] TITLE Knockout King -> Player 1 (4)
+[CCTEST] TITLE Butterfingers -> Bot 5 (6)
+[CCTEST] TITLE Punching Bag -> Bot 1 (2)
+[CCTEST] HELICOPTER Gone
+[CCTEST] SHOT <PROJECT>/Builds/Verification/ruin-window-fixed/practice-ui-09.png
+[CCTEST] DONE errors=0 timedOut=False
+[CCTEST] STOPPED wasHost=True onPurpose=False message=

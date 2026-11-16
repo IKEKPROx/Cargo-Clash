@@ -118,6 +118,7 @@ namespace CargoClash
                 foreach (RosterEntry entry in Entries)
                     if (!entry.Ready) return false;
                 if (FillWithBots.Value) return true;
+                if (LevelScene == RuinCourtyard.SceneName) return orange > 0 && orange == blue;
                 return orange > 0 && blue > 0 && Mathf.Abs(orange - blue) <= 1;
             }
         }

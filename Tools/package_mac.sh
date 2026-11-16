@@ -17,12 +17,15 @@ if [[ ! -d "$app" ]]; then
     print -u2 "No Mac build in $app."
     exit 1
 fi
-codesign --verify --deep --strict "$app"
-
 staging="$(mktemp -d)"
 trap 'rm -rf "$staging"' EXIT
 mkdir -p "$staging/$name" "$output"
 ditto "$app" "$staging/$name/CargoClash.app"
+# File-provider folders can reattach Finder metadata after a successful build/sign.
+# Verify a clean temporary copy, preserving the signature and other source attributes.
+xattr -rd com.apple.FinderInfo "$staging/$name/CargoClash.app"
+xattr -rd com.apple.ResourceFork "$staging/$name/CargoClash.app"
+codesign --verify --deep --strict "$staging/$name/CargoClash.app"
 cp "$root/Tools/mac_readme.txt" "$staging/$name/README.txt"
 
 rm -f "$zip_path"
