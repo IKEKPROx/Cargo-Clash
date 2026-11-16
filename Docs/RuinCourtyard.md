@@ -1,8 +1,10 @@
-# 藤坠石庭 V07 接入
+# 藤坠石庭接入（V09 美术）
 
 接入基线为 Cargo-Clash main 的 `45d5afe`。项目使用 Unity **6000.6.1f1**。打开 `Assets/CargoRover/Scenes/CargoRover.unity` 并进入 Play Mode，从 **PLAY → PRACTICE WITH BOTS → RUIN COURTYARD** 进入。开房使用 **CREATE ROOM → RUIN COURTYARD**。真人房间需要双方人数相同，允许机器人补齐。
 
-新场景 `Assets/Game/Scenes/LevelRuinCourtyard.unity` 复用原 HUD、相机、货车和直升机。它通过 V07 资源生成 124 × 69 米地形、碰撞和机器人导航，每半场按布局放置 8 小、5 中、2 大共 15 箱。所有门和破坏点的状态由 `MatchDirector` 同步。每半场复位墙、门、藤蔓和货物。
+新场景 `Assets/Game/Scenes/LevelRuinCourtyard.unity` 复用原 HUD、相机、货车和直升机。它通过 V09 美术与原布局生成 124 × 69 米地形、碰撞和机器人导航，每半场按布局放置 8 小、5 中、2 大共 15 箱。所有门和破坏点的状态由 `MatchDirector` 同步。每半场复位墙、门、藤蔓和货物。
+
+V09 参照项目现有河流 V16 精修地表、枝叶、石材、坑壁和外围，使用共享 4K 图集与 140 组 LOD。美术在 `a7e154e` 的通道修正基础上接入，保留该提交的角色占位、合搬支撑、导航设置及 X=70.90 的藤梯落点。资源和导入器已随仓库提供，直接打开场景即可，**不要运行 Build Game Content**。详见 [V09 美术与验证说明](RuinCourtyardV09.md)。
 
 | 地图交互 | 操作 |
 | --- | --- |
@@ -22,4 +24,4 @@
 5. 打完两半并观看直升机结算，确认队伍交换位置、互动状态和 15 箱重置。机器人会走地面导航并可开门。主动投藤和合作托举目前由玩家操作。
 6. 返回教学关，核对原来的箱数缩放、开房和练习。
 
-自动测试可从现有客户端程序传 `-ccMode practice -ccLevel 4 -ccBotLocal -ccQuit` 跑新场景的对局流程。实际交互仍需两人实机检查。当前本地完成了 C# 语法与作用域、场景引用、资源 GUID、布局和 LFS 校验，以及原角色与交付 FBX 的尺寸、出生位和大箱出仓空间检查，详见 [2026-11-16 验证记录与比例图](verification/README.md)。Unity 编译、导航烘焙、Play Mode 与联机没有运行。
+自动测试可从现有客户端程序传 `-ccMode practice -ccLevel 4 -ccBotLocal -ccQuit` 跑新场景的对局流程。实际交互仍需两人实机检查。前一轮 C# 语法与作用域、场景引用、资源 GUID、布局、LFS 及原模型尺寸检查见 [2026-11-16 验证记录与比例图](verification/README.md)。V09 已完成 Unity 6000.6.1f1 Mac Player 构建，编译错误为 0；完整对局、两人联机和 Windows 帧率尚未验证，见 [V09 接入验证](verification/ruin-v09/README.md)。

@@ -1,0 +1,1764 @@
+{
+  "RuinCourtyard_Breakables": {
+    "meshes": 37,
+    "near_meshes": 37,
+    "near_triangles": 56988,
+    "total_triangles": 56988,
+    "entries": [
+      {
+        "name": "R3_Visual",
+        "vertices": 480,
+        "triangles": 940
+      },
+      {
+        "name": "R2_Visual",
+        "vertices": 480,
+        "triangles": 940
+      },
+      {
+        "name": "R4_Visual",
+        "vertices": 480,
+        "triangles": 940
+      },
+      {
+        "name": "R1_Visual",
+        "vertices": 480,
+        "triangles": 940
+      },
+      {
+        "name": "R9_Visual",
+        "vertices": 480,
+        "triangles": 940
+      },
+      {
+        "name": "R1_Intact_Visual",
+        "vertices": 1484,
+        "triangles": 2896
+      },
+      {
+        "name": "R12_Intact_Visual",
+        "vertices": 1484,
+        "triangles": 2896
+      },
+      {
+        "name": "R10_Visual",
+        "vertices": 480,
+        "triangles": 940
+      },
+      {
+        "name": "R2_Intact_Visual",
+        "vertices": 1484,
+        "triangles": 2896
+      },
+      {
+        "name": "R10_Intact_Visual",
+        "vertices": 2042,
+        "triangles": 3984
+      },
+      {
+        "name": "R3_Intact_Visual",
+        "vertices": 1484,
+        "triangles": 2896
+      },
+      {
+        "name": "R10_Broken_Visual",
+        "vertices": 960,
+        "triangles": 1880
+      },
+      {
+        "name": "R4_Intact_Visual",
+        "vertices": 1484,
+        "triangles": 2896
+      },
+      {
+        "name": "R9_Broken_Visual",
+        "vertices": 960,
+        "triangles": 1880
+      },
+      {
+        "name": "R11_Broken_Visual",
+        "vertices": 672,
+        "triangles": 1316
+      },
+      {
+        "name": "R5_Broken_Visual",
+        "vertices": 672,
+        "triangles": 1316
+      },
+      {
+        "name": "R2_Broken_Visual",
+        "vertices": 672,
+        "triangles": 1316
+      },
+      {
+        "name": "R9_Intact_Visual",
+        "vertices": 2042,
+        "triangles": 3984
+      },
+      {
+        "name": "R11_Intact_Visual",
+        "vertices": 1484,
+        "triangles": 2896
+      },
+      {
+        "name": "R5_Intact_Visual",
+        "vertices": 1484,
+        "triangles": 2896
+      },
+      {
+        "name": "R7_Broken_Visual",
+        "vertices": 384,
+        "triangles": 752
+      },
+      {
+        "name": "R7_Cracked_Visual",
+        "vertices": 434,
+        "triangles": 848
+      },
+      {
+        "name": "R8_Intact_Visual",
+        "vertices": 926,
+        "triangles": 1808
+      },
+      {
+        "name": "R4_Broken_Visual",
+        "vertices": 672,
+        "triangles": 1316
+      },
+      {
+        "name": "R6_Broken_Visual",
+        "vertices": 288,
+        "triangles": 564
+      },
+      {
+        "name": "R12_Broken_Visual",
+        "vertices": 672,
+        "triangles": 1316
+      },
+      {
+        "name": "R6_Intact_Visual",
+        "vertices": 750,
+        "triangles": 1464
+      },
+      {
+        "name": "R6_Visual",
+        "vertices": 96,
+        "triangles": 188
+      },
+      {
+        "name": "R11_Visual",
+        "vertices": 480,
+        "triangles": 940
+      },
+      {
+        "name": "R3_Broken_Visual",
+        "vertices": 672,
+        "triangles": 1316
+      },
+      {
+        "name": "R7_Visual",
+        "vertices": 380,
+        "triangles": 752
+      },
+      {
+        "name": "R12_Visual",
+        "vertices": 480,
+        "triangles": 940
+      },
+      {
+        "name": "R1_Broken_Visual",
+        "vertices": 672,
+        "triangles": 1316
+      },
+      {
+        "name": "R5_Visual",
+        "vertices": 96,
+        "triangles": 188
+      },
+      {
+        "name": "R8_Broken_Visual",
+        "vertices": 384,
+        "triangles": 752
+      },
+      {
+        "name": "R7_Intact_Visual",
+        "vertices": 384,
+        "triangles": 752
+      },
+      {
+        "name": "R8_Visual",
+        "vertices": 96,
+        "triangles": 188
+      }
+    ]
+  },
+  "RuinCourtyard_Environment": {
+    "meshes": 298,
+    "near_meshes": 158,
+    "near_triangles": 4048673,
+    "total_triangles": 4772919,
+    "entries": [
+      {
+        "name": "RuinChunk_02_02_Near",
+        "vertices": 99640,
+        "triangles": 147856
+      },
+      {
+        "name": "RuinChunk_00_04_Near",
+        "vertices": 61934,
+        "triangles": 81819
+      },
+      {
+        "name": "RuinChunk_03_00_Near",
+        "vertices": 103301,
+        "triangles": 138384
+      },
+      {
+        "name": "RuinChunk_03_02_Near",
+        "vertices": 19932,
+        "triangles": 29188
+      },
+      {
+        "name": "RuinChunk_05_-1_Near",
+        "vertices": 32901,
+        "triangles": 46428
+      },
+      {
+        "name": "RuinChunk_00_03_Near",
+        "vertices": 137538,
+        "triangles": 185029
+      },
+      {
+        "name": "RuinChunk_01_00_Near",
+        "vertices": 31430,
+        "triangles": 55792
+      },
+      {
+        "name": "RuinChunk_05_03_Near",
+        "vertices": 144343,
+        "triangles": 195311
+      },
+      {
+        "name": "RuinChunk_06_02_Near",
+        "vertices": 11360,
+        "triangles": 19190
+      },
+      {
+        "name": "RuinChunk_06_03_Near",
+        "vertices": 137991,
+        "triangles": 185704
+      },
+      {
+        "name": "RuinChunk_03_01_Near",
+        "vertices": 54729,
+        "triangles": 79555
+      },
+      {
+        "name": "RuinChunk_06_00_Near",
+        "vertices": 52949,
+        "triangles": 73854
+      },
+      {
+        "name": "RuinChunk_05_00_Near",
+        "vertices": 83513,
+        "triangles": 116926
+      },
+      {
+        "name": "RuinChunk_03_-1_Near",
+        "vertices": 5204,
+        "triangles": 9904
+      },
+      {
+        "name": "RuinChunk_04_-1_Near",
+        "vertices": 5371,
+        "triangles": 10378
+      },
+      {
+        "name": "RuinChunk_00_01_Near",
+        "vertices": 105770,
+        "triangles": 139976
+      },
+      {
+        "name": "RuinChunk_02_00_Near",
+        "vertices": 44730,
+        "triangles": 62212
+      },
+      {
+        "name": "RuinChunk_00_02_Near",
+        "vertices": 80478,
+        "triangles": 107963
+      },
+      {
+        "name": "RuinChunk_01_-1_Near",
+        "vertices": 2104,
+        "triangles": 4072
+      },
+      {
+        "name": "RuinChunk_07_00_Near",
+        "vertices": 37379,
+        "triangles": 51236
+      },
+      {
+        "name": "RuinChunk_07_03_Near",
+        "vertices": 7554,
+        "triangles": 11412
+      },
+      {
+        "name": "RuinChunk_01_02_Near",
+        "vertices": 51084,
+        "triangles": 71682
+      },
+      {
+        "name": "RuinChunk_01_01_Near",
+        "vertices": 19745,
+        "triangles": 33985
+      },
+      {
+        "name": "RuinChunk_06_-1_Near",
+        "vertices": 3376,
+        "triangles": 6548
+      },
+      {
+        "name": "RuinChunk_03_03_Near",
+        "vertices": 51705,
+        "triangles": 71891
+      },
+      {
+        "name": "RuinChunk_06_01_Near",
+        "vertices": 73943,
+        "triangles": 101446
+      },
+      {
+        "name": "RuinChunk_02_03_Near",
+        "vertices": 83404,
+        "triangles": 113917
+      },
+      {
+        "name": "RuinChunk_03_04_Near",
+        "vertices": 32149,
+        "triangles": 44189
+      },
+      {
+        "name": "RuinChunk_04_01_Near",
+        "vertices": 98933,
+        "triangles": 131166
+      },
+      {
+        "name": "RuinChunk_04_03_Near",
+        "vertices": 10275,
+        "triangles": 16249
+      },
+      {
+        "name": "RuinChunk_05_02_Near",
+        "vertices": 29609,
+        "triangles": 52292
+      },
+      {
+        "name": "RuinChunk_02_-1_Near",
+        "vertices": 32720,
+        "triangles": 46040
+      },
+      {
+        "name": "RuinChunk_07_01_Near",
+        "vertices": 39569,
+        "triangles": 54782
+      },
+      {
+        "name": "RuinChunk_07_02_Near",
+        "vertices": 109881,
+        "triangles": 148064
+      },
+      {
+        "name": "RuinChunk_04_00_Near",
+        "vertices": 80100,
+        "triangles": 106986
+      },
+      {
+        "name": "RuinChunk_01_03_Near",
+        "vertices": 134534,
+        "triangles": 176070
+      },
+      {
+        "name": "VinePickup_03_Visual",
+        "vertices": 4052,
+        "triangles": 8080
+      },
+      {
+        "name": "RuinChunk_07_-1_Near",
+        "vertices": 1774,
+        "triangles": 3428
+      },
+      {
+        "name": "RuinChunk_00_00_Near",
+        "vertices": 9274,
+        "triangles": 15572
+      },
+      {
+        "name": "RuinChunk_00_-1_Near",
+        "vertices": 3350,
+        "triangles": 6488
+      },
+      {
+        "name": "RuinChunk_01_04_Near",
+        "vertices": 32460,
+        "triangles": 42657
+      },
+      {
+        "name": "RuinChunk_04_04_Near",
+        "vertices": 4611,
+        "triangles": 8678
+      },
+      {
+        "name": "RuinChunk_05_04_Near",
+        "vertices": 63609,
+        "triangles": 84079
+      },
+      {
+        "name": "RuinChunk_04_02_Near",
+        "vertices": 48504,
+        "triangles": 72344
+      },
+      {
+        "name": "East pit floor",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "East rock stratum 1",
+        "vertices": 8,
+        "triangles": 8
+      },
+      {
+        "name": "RuinChunk_02_01_Near",
+        "vertices": 38832,
+        "triangles": 50475
+      },
+      {
+        "name": "VinePickup_02_Visual",
+        "vertices": 4052,
+        "triangles": 8080
+      },
+      {
+        "name": "East rock stratum 3",
+        "vertices": 8,
+        "triangles": 8
+      },
+      {
+        "name": "RuinChunk_06_04_Near",
+        "vertices": 30495,
+        "triangles": 40514
+      },
+      {
+        "name": "RuinChunk_02_04_Near",
+        "vertices": 93953,
+        "triangles": 123922
+      },
+      {
+        "name": "VinePickup_01_Visual",
+        "vertices": 4052,
+        "triangles": 8080
+      },
+      {
+        "name": "RuinChunk_07_04_Near",
+        "vertices": 62090,
+        "triangles": 82146
+      },
+      {
+        "name": "RuinChunk_02_-2_Near",
+        "vertices": 29544,
+        "triangles": 39886
+      },
+      {
+        "name": "RuinChunk_05_-2_Near",
+        "vertices": 29519,
+        "triangles": 39840
+      },
+      {
+        "name": "East rock stratum 4",
+        "vertices": 8,
+        "triangles": 8
+      },
+      {
+        "name": "East rock stratum 5",
+        "vertices": 8,
+        "triangles": 8
+      },
+      {
+        "name": "Ground_Surface / actual openings",
+        "vertices": 36,
+        "triangles": 42
+      },
+      {
+        "name": "East rock stratum 6",
+        "vertices": 8,
+        "triangles": 8
+      },
+      {
+        "name": "West rock stratum 6",
+        "vertices": 8,
+        "triangles": 8
+      },
+      {
+        "name": "East rock stratum 2",
+        "vertices": 8,
+        "triangles": 8
+      },
+      {
+        "name": "West pit floor",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "West rock stratum 1",
+        "vertices": 8,
+        "triangles": 8
+      },
+      {
+        "name": "West rock stratum 2",
+        "vertices": 8,
+        "triangles": 8
+      },
+      {
+        "name": "West rock stratum 3",
+        "vertices": 8,
+        "triangles": 8
+      },
+      {
+        "name": "West rock stratum 4",
+        "vertices": 8,
+        "triangles": 8
+      },
+      {
+        "name": "West rock stratum 5",
+        "vertices": 8,
+        "triangles": 8
+      },
+      {
+        "name": "RuinChunk_-1_00_Near",
+        "vertices": 28511,
+        "triangles": 37936
+      },
+      {
+        "name": "RuinChunk_-1_01_Near",
+        "vertices": 29411,
+        "triangles": 39104
+      },
+      {
+        "name": "RuinChunk_-1_02_Near",
+        "vertices": 28511,
+        "triangles": 37936
+      },
+      {
+        "name": "RuinChunk_-1_03_Near",
+        "vertices": 29411,
+        "triangles": 39104
+      },
+      {
+        "name": "RuinChunk_08_04_Near",
+        "vertices": 28511,
+        "triangles": 37936
+      },
+      {
+        "name": "RuinChunk_08_02_Near",
+        "vertices": 28511,
+        "triangles": 37936
+      },
+      {
+        "name": "RuinChunk_08_01_Near",
+        "vertices": 29411,
+        "triangles": 39102
+      },
+      {
+        "name": "RuinChunk_08_00_Near",
+        "vertices": 28511,
+        "triangles": 37936
+      },
+      {
+        "name": "RuinChunk_-1_-2_Near",
+        "vertices": 29411,
+        "triangles": 39104
+      },
+      {
+        "name": "RuinChunk_01_-2_Near",
+        "vertices": 29339,
+        "triangles": 39500
+      },
+      {
+        "name": "RuinChunk_06_-2_Near",
+        "vertices": 29303,
+        "triangles": 39432
+      },
+      {
+        "name": "RuinChunk_08_-2_Near",
+        "vertices": 28511,
+        "triangles": 37936
+      },
+      {
+        "name": "RuinChunk_05_01_Near",
+        "vertices": 9876,
+        "triangles": 14738
+      },
+      {
+        "name": "RuinChunk_08_03_Near",
+        "vertices": 925,
+        "triangles": 1198
+      },
+      {
+        "name": "RuinChunk_07_-2_Near",
+        "vertices": 1357,
+        "triangles": 2016
+      },
+      {
+        "name": "RuinChunk_04_-2_Near",
+        "vertices": 709,
+        "triangles": 1324
+      },
+      {
+        "name": "RuinChunk_03_-2_Near",
+        "vertices": 781,
+        "triangles": 1460
+      },
+      {
+        "name": "RuinChunk_00_-2_Near",
+        "vertices": 565,
+        "triangles": 1052
+      },
+      {
+        "name": "RuinChunk_-3_-3_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_-3_-2_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_-3_-1_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_-3_00_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_-3_01_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_-3_02_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_-3_03_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_-3_04_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_-3_05_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_-3_06_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_-2_-3_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_-2_-2_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_-2_-1_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_-2_00_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_-2_01_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_-2_02_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_-2_03_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_-2_04_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_-2_05_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_-2_06_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_-1_-3_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_-1_-1_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_-1_04_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_-1_05_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_-1_06_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_00_-3_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_00_05_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_00_06_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_01_-3_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_01_05_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_01_06_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_02_-3_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_02_05_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_02_06_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_03_-3_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_03_05_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_03_06_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_04_-3_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_04_05_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_04_06_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_05_-3_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_05_05_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_05_06_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_06_-3_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_06_05_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_06_06_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_07_-3_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_07_05_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_07_06_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_08_-3_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_08_-1_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_08_05_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_08_06_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_09_-3_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_09_-2_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_09_-1_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_09_00_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_09_01_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_09_02_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_09_03_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_09_04_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_09_05_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_09_06_Near",
+        "vertices": 25,
+        "triangles": 32
+      },
+      {
+        "name": "RuinChunk_10_-3_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_10_-2_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_10_-1_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_10_00_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_10_01_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_10_02_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_10_03_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_10_04_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_10_05_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_10_06_Near",
+        "vertices": 15,
+        "triangles": 16
+      },
+      {
+        "name": "RuinChunk_-3_-3_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_-3_-2_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_-3_-1_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_-3_00_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_-3_01_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_-3_02_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_-3_03_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_-3_04_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_-3_05_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_-3_06_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_-2_-3_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_-2_-2_Far",
+        "vertices": 7,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_-2_-1_Far",
+        "vertices": 7,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_-2_00_Far",
+        "vertices": 6,
+        "triangles": 4
+      },
+      {
+        "name": "RuinChunk_-2_01_Far",
+        "vertices": 7,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_-2_02_Far",
+        "vertices": 7,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_-2_03_Far",
+        "vertices": 6,
+        "triangles": 4
+      },
+      {
+        "name": "RuinChunk_-2_04_Far",
+        "vertices": 7,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_-2_05_Far",
+        "vertices": 7,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_-2_06_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_-1_-3_Far",
+        "vertices": 6,
+        "triangles": 4
+      },
+      {
+        "name": "RuinChunk_-1_-2_Far",
+        "vertices": 7930,
+        "triangles": 7038
+      },
+      {
+        "name": "RuinChunk_-1_-1_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_-1_00_Far",
+        "vertices": 7723,
+        "triangles": 6828
+      },
+      {
+        "name": "RuinChunk_-1_01_Far",
+        "vertices": 7917,
+        "triangles": 7038
+      },
+      {
+        "name": "RuinChunk_-1_02_Far",
+        "vertices": 7708,
+        "triangles": 6828
+      },
+      {
+        "name": "RuinChunk_-1_03_Far",
+        "vertices": 7923,
+        "triangles": 7038
+      },
+      {
+        "name": "RuinChunk_-1_04_Far",
+        "vertices": 6,
+        "triangles": 4
+      },
+      {
+        "name": "RuinChunk_-1_05_Far",
+        "vertices": 6,
+        "triangles": 4
+      },
+      {
+        "name": "RuinChunk_-1_06_Far",
+        "vertices": 7,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_00_-3_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_00_-2_Far",
+        "vertices": 132,
+        "triangles": 189
+      },
+      {
+        "name": "RuinChunk_00_-1_Far",
+        "vertices": 686,
+        "triangles": 1166
+      },
+      {
+        "name": "RuinChunk_00_00_Far",
+        "vertices": 2258,
+        "triangles": 2802
+      },
+      {
+        "name": "RuinChunk_00_01_Far",
+        "vertices": 29271,
+        "triangles": 25195
+      },
+      {
+        "name": "RuinChunk_00_02_Far",
+        "vertices": 22223,
+        "triangles": 19432
+      },
+      {
+        "name": "RuinChunk_00_03_Far",
+        "vertices": 37926,
+        "triangles": 33305
+      },
+      {
+        "name": "RuinChunk_00_04_Far",
+        "vertices": 16842,
+        "triangles": 14727
+      },
+      {
+        "name": "RuinChunk_00_05_Far",
+        "vertices": 7,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_00_06_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_01_-3_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_01_-2_Far",
+        "vertices": 7984,
+        "triangles": 7109
+      },
+      {
+        "name": "RuinChunk_01_-1_Far",
+        "vertices": 434,
+        "triangles": 732
+      },
+      {
+        "name": "RuinChunk_01_00_Far",
+        "vertices": 7357,
+        "triangles": 10041
+      },
+      {
+        "name": "RuinChunk_01_01_Far",
+        "vertices": 4865,
+        "triangles": 6117
+      },
+      {
+        "name": "RuinChunk_01_02_Far",
+        "vertices": 13896,
+        "triangles": 12901
+      },
+      {
+        "name": "RuinChunk_01_03_Far",
+        "vertices": 37379,
+        "triangles": 31692
+      },
+      {
+        "name": "RuinChunk_01_04_Far",
+        "vertices": 8876,
+        "triangles": 7677
+      },
+      {
+        "name": "RuinChunk_01_05_Far",
+        "vertices": 6,
+        "triangles": 4
+      },
+      {
+        "name": "RuinChunk_01_06_Far",
+        "vertices": 7,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_02_-3_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_02_-2_Far",
+        "vertices": 7897,
+        "triangles": 7179
+      },
+      {
+        "name": "RuinChunk_02_-1_Far",
+        "vertices": 8813,
+        "triangles": 8287
+      },
+      {
+        "name": "RuinChunk_02_00_Far",
+        "vertices": 12309,
+        "triangles": 11198
+      },
+      {
+        "name": "RuinChunk_02_01_Far",
+        "vertices": 10744,
+        "triangles": 9084
+      },
+      {
+        "name": "RuinChunk_02_02_Far",
+        "vertices": 26961,
+        "triangles": 26614
+      },
+      {
+        "name": "RuinChunk_02_03_Far",
+        "vertices": 23182,
+        "triangles": 20505
+      },
+      {
+        "name": "RuinChunk_02_04_Far",
+        "vertices": 25784,
+        "triangles": 22305
+      },
+      {
+        "name": "RuinChunk_02_05_Far",
+        "vertices": 7,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_02_06_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_03_-3_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_03_-2_Far",
+        "vertices": 180,
+        "triangles": 261
+      },
+      {
+        "name": "RuinChunk_03_-1_Far",
+        "vertices": 1130,
+        "triangles": 1781
+      },
+      {
+        "name": "RuinChunk_03_00_Far",
+        "vertices": 28465,
+        "triangles": 24909
+      },
+      {
+        "name": "RuinChunk_03_01_Far",
+        "vertices": 15423,
+        "triangles": 14318
+      },
+      {
+        "name": "RuinChunk_03_02_Far",
+        "vertices": 5623,
+        "triangles": 5253
+      },
+      {
+        "name": "RuinChunk_03_03_Far",
+        "vertices": 14262,
+        "triangles": 12940
+      },
+      {
+        "name": "RuinChunk_03_04_Far",
+        "vertices": 8679,
+        "triangles": 7954
+      },
+      {
+        "name": "RuinChunk_03_05_Far",
+        "vertices": 6,
+        "triangles": 4
+      },
+      {
+        "name": "RuinChunk_03_06_Far",
+        "vertices": 6,
+        "triangles": 4
+      },
+      {
+        "name": "RuinChunk_04_-3_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_04_-2_Far",
+        "vertices": 164,
+        "triangles": 238
+      },
+      {
+        "name": "RuinChunk_04_-1_Far",
+        "vertices": 1114,
+        "triangles": 1867
+      },
+      {
+        "name": "RuinChunk_04_00_Far",
+        "vertices": 22318,
+        "triangles": 19257
+      },
+      {
+        "name": "RuinChunk_04_01_Far",
+        "vertices": 27264,
+        "triangles": 23609
+      },
+      {
+        "name": "RuinChunk_04_02_Far",
+        "vertices": 13256,
+        "triangles": 13020
+      },
+      {
+        "name": "RuinChunk_04_03_Far",
+        "vertices": 2630,
+        "triangles": 2923
+      },
+      {
+        "name": "RuinChunk_04_04_Far",
+        "vertices": 1012,
+        "triangles": 1561
+      },
+      {
+        "name": "RuinChunk_04_05_Far",
+        "vertices": 7,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_04_06_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_05_-3_Far",
+        "vertices": 6,
+        "triangles": 4
+      },
+      {
+        "name": "RuinChunk_05_-2_Far",
+        "vertices": 7911,
+        "triangles": 7171
+      },
+      {
+        "name": "RuinChunk_05_-1_Far",
+        "vertices": 8881,
+        "triangles": 8357
+      },
+      {
+        "name": "RuinChunk_05_00_Far",
+        "vertices": 22624,
+        "triangles": 21045
+      },
+      {
+        "name": "RuinChunk_05_01_Far",
+        "vertices": 2669,
+        "triangles": 2652
+      },
+      {
+        "name": "RuinChunk_05_02_Far",
+        "vertices": 7382,
+        "triangles": 9412
+      },
+      {
+        "name": "RuinChunk_05_03_Far",
+        "vertices": 39790,
+        "triangles": 35155
+      },
+      {
+        "name": "RuinChunk_05_04_Far",
+        "vertices": 17271,
+        "triangles": 15134
+      },
+      {
+        "name": "RuinChunk_05_05_Far",
+        "vertices": 6,
+        "triangles": 4
+      },
+      {
+        "name": "RuinChunk_05_06_Far",
+        "vertices": 6,
+        "triangles": 4
+      },
+      {
+        "name": "RuinChunk_06_-3_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_06_-2_Far",
+        "vertices": 7969,
+        "triangles": 7097
+      },
+      {
+        "name": "RuinChunk_06_-1_Far",
+        "vertices": 691,
+        "triangles": 1178
+      },
+      {
+        "name": "RuinChunk_06_00_Far",
+        "vertices": 14696,
+        "triangles": 13292
+      },
+      {
+        "name": "RuinChunk_06_01_Far",
+        "vertices": 20470,
+        "triangles": 18260
+      },
+      {
+        "name": "RuinChunk_06_02_Far",
+        "vertices": 3031,
+        "triangles": 3454
+      },
+      {
+        "name": "RuinChunk_06_03_Far",
+        "vertices": 38125,
+        "triangles": 33426
+      },
+      {
+        "name": "RuinChunk_06_04_Far",
+        "vertices": 8274,
+        "triangles": 7292
+      },
+      {
+        "name": "RuinChunk_06_05_Far",
+        "vertices": 7,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_06_06_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_07_-3_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_07_-2_Far",
+        "vertices": 348,
+        "triangles": 362
+      },
+      {
+        "name": "RuinChunk_07_-1_Far",
+        "vertices": 365,
+        "triangles": 616
+      },
+      {
+        "name": "RuinChunk_07_00_Far",
+        "vertices": 10253,
+        "triangles": 9222
+      },
+      {
+        "name": "RuinChunk_07_01_Far",
+        "vertices": 10847,
+        "triangles": 9859
+      },
+      {
+        "name": "RuinChunk_07_02_Far",
+        "vertices": 30222,
+        "triangles": 26651
+      },
+      {
+        "name": "RuinChunk_07_03_Far",
+        "vertices": 1928,
+        "triangles": 2053
+      },
+      {
+        "name": "RuinChunk_07_04_Far",
+        "vertices": 16913,
+        "triangles": 14785
+      },
+      {
+        "name": "RuinChunk_07_05_Far",
+        "vertices": 6,
+        "triangles": 4
+      },
+      {
+        "name": "RuinChunk_07_06_Far",
+        "vertices": 7,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_08_-3_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_08_-2_Far",
+        "vertices": 7720,
+        "triangles": 6828
+      },
+      {
+        "name": "RuinChunk_08_-1_Far",
+        "vertices": 7,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_08_00_Far",
+        "vertices": 7707,
+        "triangles": 6828
+      },
+      {
+        "name": "RuinChunk_08_01_Far",
+        "vertices": 7912,
+        "triangles": 7038
+      },
+      {
+        "name": "RuinChunk_08_02_Far",
+        "vertices": 7722,
+        "triangles": 6828
+      },
+      {
+        "name": "RuinChunk_08_03_Far",
+        "vertices": 230,
+        "triangles": 215
+      },
+      {
+        "name": "RuinChunk_08_04_Far",
+        "vertices": 7708,
+        "triangles": 6828
+      },
+      {
+        "name": "RuinChunk_08_05_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_08_06_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_09_-3_Far",
+        "vertices": 6,
+        "triangles": 4
+      },
+      {
+        "name": "RuinChunk_09_-2_Far",
+        "vertices": 7,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_09_-1_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_09_00_Far",
+        "vertices": 6,
+        "triangles": 4
+      },
+      {
+        "name": "RuinChunk_09_01_Far",
+        "vertices": 7,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_09_02_Far",
+        "vertices": 6,
+        "triangles": 4
+      },
+      {
+        "name": "RuinChunk_09_03_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_09_04_Far",
+        "vertices": 7,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_09_05_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_09_06_Far",
+        "vertices": 6,
+        "triangles": 5
+      },
+      {
+        "name": "RuinChunk_10_-3_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_10_-2_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_10_-1_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_10_00_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_10_01_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_10_02_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_10_03_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_10_04_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_10_05_Far",
+        "vertices": 4,
+        "triangles": 2
+      },
+      {
+        "name": "RuinChunk_10_06_Far",
+        "vertices": 4,
+        "triangles": 2
+      }
+    ]
+  },
+  "RuinCourtyard_OperableDoors": {
+    "meshes": 8,
+    "near_meshes": 8,
+    "near_triangles": 12272,
+    "total_triangles": 12272,
+    "entries": [
+      {
+        "name": "B2_DoorLeaf_R_Visual",
+        "vertices": 1376,
+        "triangles": 2692
+      },
+      {
+        "name": "B1_DoorLeaf_L_Visual",
+        "vertices": 1376,
+        "triangles": 2692
+      },
+      {
+        "name": "B1_DoorLeaf_R_Visual",
+        "vertices": 1376,
+        "triangles": 2692
+      },
+      {
+        "name": "B2_DoorHinge_R_Visual",
+        "vertices": 192,
+        "triangles": 376
+      },
+      {
+        "name": "B2_DoorLeaf_L_Visual",
+        "vertices": 1376,
+        "triangles": 2692
+      },
+      {
+        "name": "B1_DoorHinge_R_Visual",
+        "vertices": 192,
+        "triangles": 376
+      },
+      {
+        "name": "B1_DoorHinge_L_Visual",
+        "vertices": 192,
+        "triangles": 376
+      },
+      {
+        "name": "B2_DoorHinge_L_Visual",
+        "vertices": 192,
+        "triangles": 376
+      }
+    ]
+  },
+  "RuinCourtyard_Vines": {
+    "meshes": 3,
+    "near_meshes": 3,
+    "near_triangles": 18996,
+    "total_triangles": 18996,
+    "entries": [
+      {
+        "name": "Vine_Coil_Visual",
+        "vertices": 4052,
+        "triangles": 8080
+      },
+      {
+        "name": "Vine_SlowPatch_Visual",
+        "vertices": 2736,
+        "triangles": 5408
+      },
+      {
+        "name": "Vine_Ladder_Visual",
+        "vertices": 2796,
+        "triangles": 5508
+      }
+    ]
+  }
+}

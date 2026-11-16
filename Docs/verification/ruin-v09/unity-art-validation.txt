@@ -1,0 +1,748 @@
+Unity 6000.6.1f1
+meshes=346
+LOD0 triangles (all states)=4136929
+LOD groups=140
+FBX scale matches original locator frame
+Existing RuinCourtyard axis correction works without script changes
+Large cargo centre preserved
+CollectorSpawn1 preserved
+CollectorSpawn2 preserved
+CollectorSpawn3 preserved
+InterrupterSpawn1 preserved
+InterrupterSpawn2 preserved
+InterrupterSpawn3 preserved
+R1 wall pivot preserved
+R2 wall pivot preserved
+R3 wall pivot preserved
+R4 wall pivot preserved
+R5 wall pivot preserved
+R6 wall pivot preserved
+R7 wall pivot preserved
+R8 wall pivot preserved
+R9 wall pivot preserved
+R10 wall pivot preserved
+R11 wall pivot preserved
+R12 wall pivot preserved
+B1_Doors threshold pivot preserved
+B1_DoorLeaf_L rotates as one mesh on its original hinge
+B1_DoorLeaf_R rotates as one mesh on its original hinge
+B2_Doors threshold pivot preserved
+B2_DoorLeaf_L rotates as one mesh on its original hinge
+B2_DoorLeaf_R rotates as one mesh on its original hinge
+Vine ladder rung markers preserved
+Vine pickup 0 preserved
+Vine pickup 1 preserved
+Vine pickup 2 preserved
+Existing RuinSurface loads the shared atlas in URP
+East pit floor imported with one readable submesh
+East pit floor has finite vertices
+East rock stratum 1 imported with one readable submesh
+East rock stratum 1 has finite vertices
+East rock stratum 2 imported with one readable submesh
+East rock stratum 2 has finite vertices
+East rock stratum 3 imported with one readable submesh
+East rock stratum 3 has finite vertices
+East rock stratum 4 imported with one readable submesh
+East rock stratum 4 has finite vertices
+East rock stratum 5 imported with one readable submesh
+East rock stratum 5 has finite vertices
+East rock stratum 6 imported with one readable submesh
+East rock stratum 6 has finite vertices
+West pit floor imported with one readable submesh
+West pit floor has finite vertices
+West rock stratum 1 imported with one readable submesh
+West rock stratum 1 has finite vertices
+West rock stratum 2 imported with one readable submesh
+West rock stratum 2 has finite vertices
+West rock stratum 3 imported with one readable submesh
+West rock stratum 3 has finite vertices
+West rock stratum 4 imported with one readable submesh
+West rock stratum 4 has finite vertices
+West rock stratum 5 imported with one readable submesh
+West rock stratum 5 has finite vertices
+West rock stratum 6 imported with one readable submesh
+West rock stratum 6 has finite vertices
+Ground_Surface / actual openings imported with one readable submesh
+Ground_Surface / actual openings has finite vertices
+RuinChunk_-1_-1_Far imported with one readable submesh
+RuinChunk_-1_-1_Far has finite vertices
+RuinChunk_-1_-1_Near imported with one readable submesh
+RuinChunk_-1_-1_Near has finite vertices
+RuinChunk_-1_-2_Far imported with one readable submesh
+RuinChunk_-1_-2_Far has finite vertices
+RuinChunk_-1_-2_Near imported with one readable submesh
+RuinChunk_-1_-2_Near has finite vertices
+RuinChunk_-1_-3_Far imported with one readable submesh
+RuinChunk_-1_-3_Far has finite vertices
+RuinChunk_-1_-3_Near imported with one readable submesh
+RuinChunk_-1_-3_Near has finite vertices
+RuinChunk_-1_00_Far imported with one readable submesh
+RuinChunk_-1_00_Far has finite vertices
+RuinChunk_-1_00_Near imported with one readable submesh
+RuinChunk_-1_00_Near has finite vertices
+RuinChunk_-1_01_Far imported with one readable submesh
+RuinChunk_-1_01_Far has finite vertices
+RuinChunk_-1_01_Near imported with one readable submesh
+RuinChunk_-1_01_Near has finite vertices
+RuinChunk_-1_02_Far imported with one readable submesh
+RuinChunk_-1_02_Far has finite vertices
+RuinChunk_-1_02_Near imported with one readable submesh
+RuinChunk_-1_02_Near has finite vertices
+RuinChunk_-1_03_Far imported with one readable submesh
+RuinChunk_-1_03_Far has finite vertices
+RuinChunk_-1_03_Near imported with one readable submesh
+RuinChunk_-1_03_Near has finite vertices
+RuinChunk_-1_04_Far imported with one readable submesh
+RuinChunk_-1_04_Far has finite vertices
+RuinChunk_-1_04_Near imported with one readable submesh
+RuinChunk_-1_04_Near has finite vertices
+RuinChunk_-1_05_Far imported with one readable submesh
+RuinChunk_-1_05_Far has finite vertices
+RuinChunk_-1_05_Near imported with one readable submesh
+RuinChunk_-1_05_Near has finite vertices
+RuinChunk_-1_06_Far imported with one readable submesh
+RuinChunk_-1_06_Far has finite vertices
+RuinChunk_-1_06_Near imported with one readable submesh
+RuinChunk_-1_06_Near has finite vertices
+RuinChunk_-2_-1_Far imported with one readable submesh
+RuinChunk_-2_-1_Far has finite vertices
+RuinChunk_-2_-1_Near imported with one readable submesh
+RuinChunk_-2_-1_Near has finite vertices
+RuinChunk_-2_-2_Far imported with one readable submesh
+RuinChunk_-2_-2_Far has finite vertices
+RuinChunk_-2_-2_Near imported with one readable submesh
+RuinChunk_-2_-2_Near has finite vertices
+RuinChunk_-2_-3_Far imported with one readable submesh
+RuinChunk_-2_-3_Far has finite vertices
+RuinChunk_-2_-3_Near imported with one readable submesh
+RuinChunk_-2_-3_Near has finite vertices
+RuinChunk_-2_00_Far imported with one readable submesh
+RuinChunk_-2_00_Far has finite vertices
+RuinChunk_-2_00_Near imported with one readable submesh
+RuinChunk_-2_00_Near has finite vertices
+RuinChunk_-2_01_Far imported with one readable submesh
+RuinChunk_-2_01_Far has finite vertices
+RuinChunk_-2_01_Near imported with one readable submesh
+RuinChunk_-2_01_Near has finite vertices
+RuinChunk_-2_02_Far imported with one readable submesh
+RuinChunk_-2_02_Far has finite vertices
+RuinChunk_-2_02_Near imported with one readable submesh
+RuinChunk_-2_02_Near has finite vertices
+RuinChunk_-2_03_Far imported with one readable submesh
+RuinChunk_-2_03_Far has finite vertices
+RuinChunk_-2_03_Near imported with one readable submesh
+RuinChunk_-2_03_Near has finite vertices
+RuinChunk_-2_04_Far imported with one readable submesh
+RuinChunk_-2_04_Far has finite vertices
+RuinChunk_-2_04_Near imported with one readable submesh
+RuinChunk_-2_04_Near has finite vertices
+RuinChunk_-2_05_Far imported with one readable submesh
+RuinChunk_-2_05_Far has finite vertices
+RuinChunk_-2_05_Near imported with one readable submesh
+RuinChunk_-2_05_Near has finite vertices
+RuinChunk_-2_06_Far imported with one readable submesh
+RuinChunk_-2_06_Far has finite vertices
+RuinChunk_-2_06_Near imported with one readable submesh
+RuinChunk_-2_06_Near has finite vertices
+RuinChunk_-3_-1_Far imported with one readable submesh
+RuinChunk_-3_-1_Far has finite vertices
+RuinChunk_-3_-1_Near imported with one readable submesh
+RuinChunk_-3_-1_Near has finite vertices
+RuinChunk_-3_-2_Far imported with one readable submesh
+RuinChunk_-3_-2_Far has finite vertices
+RuinChunk_-3_-2_Near imported with one readable submesh
+RuinChunk_-3_-2_Near has finite vertices
+RuinChunk_-3_-3_Far imported with one readable submesh
+RuinChunk_-3_-3_Far has finite vertices
+RuinChunk_-3_-3_Near imported with one readable submesh
+RuinChunk_-3_-3_Near has finite vertices
+RuinChunk_-3_00_Far imported with one readable submesh
+RuinChunk_-3_00_Far has finite vertices
+RuinChunk_-3_00_Near imported with one readable submesh
+RuinChunk_-3_00_Near has finite vertices
+RuinChunk_-3_01_Far imported with one readable submesh
+RuinChunk_-3_01_Far has finite vertices
+RuinChunk_-3_01_Near imported with one readable submesh
+RuinChunk_-3_01_Near has finite vertices
+RuinChunk_-3_02_Far imported with one readable submesh
+RuinChunk_-3_02_Far has finite vertices
+RuinChunk_-3_02_Near imported with one readable submesh
+RuinChunk_-3_02_Near has finite vertices
+RuinChunk_-3_03_Far imported with one readable submesh
+RuinChunk_-3_03_Far has finite vertices
+RuinChunk_-3_03_Near imported with one readable submesh
+RuinChunk_-3_03_Near has finite vertices
+RuinChunk_-3_04_Far imported with one readable submesh
+RuinChunk_-3_04_Far has finite vertices
+RuinChunk_-3_04_Near imported with one readable submesh
+RuinChunk_-3_04_Near has finite vertices
+RuinChunk_-3_05_Far imported with one readable submesh
+RuinChunk_-3_05_Far has finite vertices
+RuinChunk_-3_05_Near imported with one readable submesh
+RuinChunk_-3_05_Near has finite vertices
+RuinChunk_-3_06_Far imported with one readable submesh
+RuinChunk_-3_06_Far has finite vertices
+RuinChunk_-3_06_Near imported with one readable submesh
+RuinChunk_-3_06_Near has finite vertices
+RuinChunk_00_-1_Far imported with one readable submesh
+RuinChunk_00_-1_Far has finite vertices
+RuinChunk_00_-1_Near imported with one readable submesh
+RuinChunk_00_-1_Near has finite vertices
+RuinChunk_00_-2_Far imported with one readable submesh
+RuinChunk_00_-2_Far has finite vertices
+RuinChunk_00_-2_Near imported with one readable submesh
+RuinChunk_00_-2_Near has finite vertices
+RuinChunk_00_-3_Far imported with one readable submesh
+RuinChunk_00_-3_Far has finite vertices
+RuinChunk_00_-3_Near imported with one readable submesh
+RuinChunk_00_-3_Near has finite vertices
+RuinChunk_00_00_Far imported with one readable submesh
+RuinChunk_00_00_Far has finite vertices
+RuinChunk_00_00_Near imported with one readable submesh
+RuinChunk_00_00_Near has finite vertices
+RuinChunk_00_01_Far imported with one readable submesh
+RuinChunk_00_01_Far has finite vertices
+RuinChunk_00_01_Near imported with one readable submesh
+RuinChunk_00_01_Near has finite vertices
+RuinChunk_00_02_Far imported with one readable submesh
+RuinChunk_00_02_Far has finite vertices
+RuinChunk_00_02_Near imported with one readable submesh
+RuinChunk_00_02_Near has finite vertices
+RuinChunk_00_03_Far imported with one readable submesh
+RuinChunk_00_03_Far has finite vertices
+RuinChunk_00_03_Near imported with one readable submesh
+RuinChunk_00_03_Near has finite vertices
+RuinChunk_00_04_Far imported with one readable submesh
+RuinChunk_00_04_Far has finite vertices
+RuinChunk_00_04_Near imported with one readable submesh
+RuinChunk_00_04_Near has finite vertices
+RuinChunk_00_05_Far imported with one readable submesh
+RuinChunk_00_05_Far has finite vertices
+RuinChunk_00_05_Near imported with one readable submesh
+RuinChunk_00_05_Near has finite vertices
+RuinChunk_00_06_Far imported with one readable submesh
+RuinChunk_00_06_Far has finite vertices
+RuinChunk_00_06_Near imported with one readable submesh
+RuinChunk_00_06_Near has finite vertices
+RuinChunk_01_-1_Far imported with one readable submesh
+RuinChunk_01_-1_Far has finite vertices
+RuinChunk_01_-1_Near imported with one readable submesh
+RuinChunk_01_-1_Near has finite vertices
+RuinChunk_01_-2_Far imported with one readable submesh
+RuinChunk_01_-2_Far has finite vertices
+RuinChunk_01_-2_Near imported with one readable submesh
+RuinChunk_01_-2_Near has finite vertices
+RuinChunk_01_-3_Far imported with one readable submesh
+RuinChunk_01_-3_Far has finite vertices
+RuinChunk_01_-3_Near imported with one readable submesh
+RuinChunk_01_-3_Near has finite vertices
+RuinChunk_01_00_Far imported with one readable submesh
+RuinChunk_01_00_Far has finite vertices
+RuinChunk_01_00_Near imported with one readable submesh
+RuinChunk_01_00_Near has finite vertices
+RuinChunk_01_01_Far imported with one readable submesh
+RuinChunk_01_01_Far has finite vertices
+RuinChunk_01_01_Near imported with one readable submesh
+RuinChunk_01_01_Near has finite vertices
+RuinChunk_01_02_Far imported with one readable submesh
+RuinChunk_01_02_Far has finite vertices
+RuinChunk_01_02_Near imported with one readable submesh
+RuinChunk_01_02_Near has finite vertices
+RuinChunk_01_03_Far imported with one readable submesh
+RuinChunk_01_03_Far has finite vertices
+RuinChunk_01_03_Near imported with one readable submesh
+RuinChunk_01_03_Near has finite vertices
+RuinChunk_01_04_Far imported with one readable submesh
+RuinChunk_01_04_Far has finite vertices
+RuinChunk_01_04_Near imported with one readable submesh
+RuinChunk_01_04_Near has finite vertices
+RuinChunk_01_05_Far imported with one readable submesh
+RuinChunk_01_05_Far has finite vertices
+RuinChunk_01_05_Near imported with one readable submesh
+RuinChunk_01_05_Near has finite vertices
+RuinChunk_01_06_Far imported with one readable submesh
+RuinChunk_01_06_Far has finite vertices
+RuinChunk_01_06_Near imported with one readable submesh
+RuinChunk_01_06_Near has finite vertices
+RuinChunk_02_-1_Far imported with one readable submesh
+RuinChunk_02_-1_Far has finite vertices
+RuinChunk_02_-1_Near imported with one readable submesh
+RuinChunk_02_-1_Near has finite vertices
+RuinChunk_02_-2_Far imported with one readable submesh
+RuinChunk_02_-2_Far has finite vertices
+RuinChunk_02_-2_Near imported with one readable submesh
+RuinChunk_02_-2_Near has finite vertices
+RuinChunk_02_-3_Far imported with one readable submesh
+RuinChunk_02_-3_Far has finite vertices
+RuinChunk_02_-3_Near imported with one readable submesh
+RuinChunk_02_-3_Near has finite vertices
+RuinChunk_02_00_Far imported with one readable submesh
+RuinChunk_02_00_Far has finite vertices
+RuinChunk_02_00_Near imported with one readable submesh
+RuinChunk_02_00_Near has finite vertices
+RuinChunk_02_01_Far imported with one readable submesh
+RuinChunk_02_01_Far has finite vertices
+RuinChunk_02_01_Near imported with one readable submesh
+RuinChunk_02_01_Near has finite vertices
+RuinChunk_02_02_Far imported with one readable submesh
+RuinChunk_02_02_Far has finite vertices
+RuinChunk_02_02_Near imported with one readable submesh
+RuinChunk_02_02_Near has finite vertices
+RuinChunk_02_03_Far imported with one readable submesh
+RuinChunk_02_03_Far has finite vertices
+RuinChunk_02_03_Near imported with one readable submesh
+RuinChunk_02_03_Near has finite vertices
+RuinChunk_02_04_Far imported with one readable submesh
+RuinChunk_02_04_Far has finite vertices
+RuinChunk_02_04_Near imported with one readable submesh
+RuinChunk_02_04_Near has finite vertices
+RuinChunk_02_05_Far imported with one readable submesh
+RuinChunk_02_05_Far has finite vertices
+RuinChunk_02_05_Near imported with one readable submesh
+RuinChunk_02_05_Near has finite vertices
+RuinChunk_02_06_Far imported with one readable submesh
+RuinChunk_02_06_Far has finite vertices
+RuinChunk_02_06_Near imported with one readable submesh
+RuinChunk_02_06_Near has finite vertices
+RuinChunk_03_-1_Far imported with one readable submesh
+RuinChunk_03_-1_Far has finite vertices
+RuinChunk_03_-1_Near imported with one readable submesh
+RuinChunk_03_-1_Near has finite vertices
+RuinChunk_03_-2_Far imported with one readable submesh
+RuinChunk_03_-2_Far has finite vertices
+RuinChunk_03_-2_Near imported with one readable submesh
+RuinChunk_03_-2_Near has finite vertices
+RuinChunk_03_-3_Far imported with one readable submesh
+RuinChunk_03_-3_Far has finite vertices
+RuinChunk_03_-3_Near imported with one readable submesh
+RuinChunk_03_-3_Near has finite vertices
+RuinChunk_03_00_Far imported with one readable submesh
+RuinChunk_03_00_Far has finite vertices
+RuinChunk_03_00_Near imported with one readable submesh
+RuinChunk_03_00_Near has finite vertices
+RuinChunk_03_01_Far imported with one readable submesh
+RuinChunk_03_01_Far has finite vertices
+RuinChunk_03_01_Near imported with one readable submesh
+RuinChunk_03_01_Near has finite vertices
+RuinChunk_03_02_Far imported with one readable submesh
+RuinChunk_03_02_Far has finite vertices
+RuinChunk_03_02_Near imported with one readable submesh
+RuinChunk_03_02_Near has finite vertices
+RuinChunk_03_03_Far imported with one readable submesh
+RuinChunk_03_03_Far has finite vertices
+RuinChunk_03_03_Near imported with one readable submesh
+RuinChunk_03_03_Near has finite vertices
+RuinChunk_03_04_Far imported with one readable submesh
+RuinChunk_03_04_Far has finite vertices
+RuinChunk_03_04_Near imported with one readable submesh
+RuinChunk_03_04_Near has finite vertices
+RuinChunk_03_05_Far imported with one readable submesh
+RuinChunk_03_05_Far has finite vertices
+RuinChunk_03_05_Near imported with one readable submesh
+RuinChunk_03_05_Near has finite vertices
+RuinChunk_03_06_Far imported with one readable submesh
+RuinChunk_03_06_Far has finite vertices
+RuinChunk_03_06_Near imported with one readable submesh
+RuinChunk_03_06_Near has finite vertices
+RuinChunk_04_-1_Far imported with one readable submesh
+RuinChunk_04_-1_Far has finite vertices
+RuinChunk_04_-1_Near imported with one readable submesh
+RuinChunk_04_-1_Near has finite vertices
+RuinChunk_04_-2_Far imported with one readable submesh
+RuinChunk_04_-2_Far has finite vertices
+RuinChunk_04_-2_Near imported with one readable submesh
+RuinChunk_04_-2_Near has finite vertices
+RuinChunk_04_-3_Far imported with one readable submesh
+RuinChunk_04_-3_Far has finite vertices
+RuinChunk_04_-3_Near imported with one readable submesh
+RuinChunk_04_-3_Near has finite vertices
+RuinChunk_04_00_Far imported with one readable submesh
+RuinChunk_04_00_Far has finite vertices
+RuinChunk_04_00_Near imported with one readable submesh
+RuinChunk_04_00_Near has finite vertices
+RuinChunk_04_01_Far imported with one readable submesh
+RuinChunk_04_01_Far has finite vertices
+RuinChunk_04_01_Near imported with one readable submesh
+RuinChunk_04_01_Near has finite vertices
+RuinChunk_04_02_Far imported with one readable submesh
+RuinChunk_04_02_Far has finite vertices
+RuinChunk_04_02_Near imported with one readable submesh
+RuinChunk_04_02_Near has finite vertices
+RuinChunk_04_03_Far imported with one readable submesh
+RuinChunk_04_03_Far has finite vertices
+RuinChunk_04_03_Near imported with one readable submesh
+RuinChunk_04_03_Near has finite vertices
+RuinChunk_04_04_Far imported with one readable submesh
+RuinChunk_04_04_Far has finite vertices
+RuinChunk_04_04_Near imported with one readable submesh
+RuinChunk_04_04_Near has finite vertices
+RuinChunk_04_05_Far imported with one readable submesh
+RuinChunk_04_05_Far has finite vertices
+RuinChunk_04_05_Near imported with one readable submesh
+RuinChunk_04_05_Near has finite vertices
+RuinChunk_04_06_Far imported with one readable submesh
+RuinChunk_04_06_Far has finite vertices
+RuinChunk_04_06_Near imported with one readable submesh
+RuinChunk_04_06_Near has finite vertices
+RuinChunk_05_-1_Far imported with one readable submesh
+RuinChunk_05_-1_Far has finite vertices
+RuinChunk_05_-1_Near imported with one readable submesh
+RuinChunk_05_-1_Near has finite vertices
+RuinChunk_05_-2_Far imported with one readable submesh
+RuinChunk_05_-2_Far has finite vertices
+RuinChunk_05_-2_Near imported with one readable submesh
+RuinChunk_05_-2_Near has finite vertices
+RuinChunk_05_-3_Far imported with one readable submesh
+RuinChunk_05_-3_Far has finite vertices
+RuinChunk_05_-3_Near imported with one readable submesh
+RuinChunk_05_-3_Near has finite vertices
+RuinChunk_05_00_Far imported with one readable submesh
+RuinChunk_05_00_Far has finite vertices
+RuinChunk_05_00_Near imported with one readable submesh
+RuinChunk_05_00_Near has finite vertices
+RuinChunk_05_01_Far imported with one readable submesh
+RuinChunk_05_01_Far has finite vertices
+RuinChunk_05_01_Near imported with one readable submesh
+RuinChunk_05_01_Near has finite vertices
+RuinChunk_05_02_Far imported with one readable submesh
+RuinChunk_05_02_Far has finite vertices
+RuinChunk_05_02_Near imported with one readable submesh
+RuinChunk_05_02_Near has finite vertices
+RuinChunk_05_03_Far imported with one readable submesh
+RuinChunk_05_03_Far has finite vertices
+RuinChunk_05_03_Near imported with one readable submesh
+RuinChunk_05_03_Near has finite vertices
+RuinChunk_05_04_Far imported with one readable submesh
+RuinChunk_05_04_Far has finite vertices
+RuinChunk_05_04_Near imported with one readable submesh
+RuinChunk_05_04_Near has finite vertices
+RuinChunk_05_05_Far imported with one readable submesh
+RuinChunk_05_05_Far has finite vertices
+RuinChunk_05_05_Near imported with one readable submesh
+RuinChunk_05_05_Near has finite vertices
+RuinChunk_05_06_Far imported with one readable submesh
+RuinChunk_05_06_Far has finite vertices
+RuinChunk_05_06_Near imported with one readable submesh
+RuinChunk_05_06_Near has finite vertices
+RuinChunk_06_-1_Far imported with one readable submesh
+RuinChunk_06_-1_Far has finite vertices
+RuinChunk_06_-1_Near imported with one readable submesh
+RuinChunk_06_-1_Near has finite vertices
+RuinChunk_06_-2_Far imported with one readable submesh
+RuinChunk_06_-2_Far has finite vertices
+RuinChunk_06_-2_Near imported with one readable submesh
+RuinChunk_06_-2_Near has finite vertices
+RuinChunk_06_-3_Far imported with one readable submesh
+RuinChunk_06_-3_Far has finite vertices
+RuinChunk_06_-3_Near imported with one readable submesh
+RuinChunk_06_-3_Near has finite vertices
+RuinChunk_06_00_Far imported with one readable submesh
+RuinChunk_06_00_Far has finite vertices
+RuinChunk_06_00_Near imported with one readable submesh
+RuinChunk_06_00_Near has finite vertices
+RuinChunk_06_01_Far imported with one readable submesh
+RuinChunk_06_01_Far has finite vertices
+RuinChunk_06_01_Near imported with one readable submesh
+RuinChunk_06_01_Near has finite vertices
+RuinChunk_06_02_Far imported with one readable submesh
+RuinChunk_06_02_Far has finite vertices
+RuinChunk_06_02_Near imported with one readable submesh
+RuinChunk_06_02_Near has finite vertices
+RuinChunk_06_03_Far imported with one readable submesh
+RuinChunk_06_03_Far has finite vertices
+RuinChunk_06_03_Near imported with one readable submesh
+RuinChunk_06_03_Near has finite vertices
+RuinChunk_06_04_Far imported with one readable submesh
+RuinChunk_06_04_Far has finite vertices
+RuinChunk_06_04_Near imported with one readable submesh
+RuinChunk_06_04_Near has finite vertices
+RuinChunk_06_05_Far imported with one readable submesh
+RuinChunk_06_05_Far has finite vertices
+RuinChunk_06_05_Near imported with one readable submesh
+RuinChunk_06_05_Near has finite vertices
+RuinChunk_06_06_Far imported with one readable submesh
+RuinChunk_06_06_Far has finite vertices
+RuinChunk_06_06_Near imported with one readable submesh
+RuinChunk_06_06_Near has finite vertices
+RuinChunk_07_-1_Far imported with one readable submesh
+RuinChunk_07_-1_Far has finite vertices
+RuinChunk_07_-1_Near imported with one readable submesh
+RuinChunk_07_-1_Near has finite vertices
+RuinChunk_07_-2_Far imported with one readable submesh
+RuinChunk_07_-2_Far has finite vertices
+RuinChunk_07_-2_Near imported with one readable submesh
+RuinChunk_07_-2_Near has finite vertices
+RuinChunk_07_-3_Far imported with one readable submesh
+RuinChunk_07_-3_Far has finite vertices
+RuinChunk_07_-3_Near imported with one readable submesh
+RuinChunk_07_-3_Near has finite vertices
+RuinChunk_07_00_Far imported with one readable submesh
+RuinChunk_07_00_Far has finite vertices
+RuinChunk_07_00_Near imported with one readable submesh
+RuinChunk_07_00_Near has finite vertices
+RuinChunk_07_01_Far imported with one readable submesh
+RuinChunk_07_01_Far has finite vertices
+RuinChunk_07_01_Near imported with one readable submesh
+RuinChunk_07_01_Near has finite vertices
+RuinChunk_07_02_Far imported with one readable submesh
+RuinChunk_07_02_Far has finite vertices
+RuinChunk_07_02_Near imported with one readable submesh
+RuinChunk_07_02_Near has finite vertices
+RuinChunk_07_03_Far imported with one readable submesh
+RuinChunk_07_03_Far has finite vertices
+RuinChunk_07_03_Near imported with one readable submesh
+RuinChunk_07_03_Near has finite vertices
+RuinChunk_07_04_Far imported with one readable submesh
+RuinChunk_07_04_Far has finite vertices
+RuinChunk_07_04_Near imported with one readable submesh
+RuinChunk_07_04_Near has finite vertices
+RuinChunk_07_05_Far imported with one readable submesh
+RuinChunk_07_05_Far has finite vertices
+RuinChunk_07_05_Near imported with one readable submesh
+RuinChunk_07_05_Near has finite vertices
+RuinChunk_07_06_Far imported with one readable submesh
+RuinChunk_07_06_Far has finite vertices
+RuinChunk_07_06_Near imported with one readable submesh
+RuinChunk_07_06_Near has finite vertices
+RuinChunk_08_-1_Far imported with one readable submesh
+RuinChunk_08_-1_Far has finite vertices
+RuinChunk_08_-1_Near imported with one readable submesh
+RuinChunk_08_-1_Near has finite vertices
+RuinChunk_08_-2_Far imported with one readable submesh
+RuinChunk_08_-2_Far has finite vertices
+RuinChunk_08_-2_Near imported with one readable submesh
+RuinChunk_08_-2_Near has finite vertices
+RuinChunk_08_-3_Far imported with one readable submesh
+RuinChunk_08_-3_Far has finite vertices
+RuinChunk_08_-3_Near imported with one readable submesh
+RuinChunk_08_-3_Near has finite vertices
+RuinChunk_08_00_Far imported with one readable submesh
+RuinChunk_08_00_Far has finite vertices
+RuinChunk_08_00_Near imported with one readable submesh
+RuinChunk_08_00_Near has finite vertices
+RuinChunk_08_01_Far imported with one readable submesh
+RuinChunk_08_01_Far has finite vertices
+RuinChunk_08_01_Near imported with one readable submesh
+RuinChunk_08_01_Near has finite vertices
+RuinChunk_08_02_Far imported with one readable submesh
+RuinChunk_08_02_Far has finite vertices
+RuinChunk_08_02_Near imported with one readable submesh
+RuinChunk_08_02_Near has finite vertices
+RuinChunk_08_03_Far imported with one readable submesh
+RuinChunk_08_03_Far has finite vertices
+RuinChunk_08_03_Near imported with one readable submesh
+RuinChunk_08_03_Near has finite vertices
+RuinChunk_08_04_Far imported with one readable submesh
+RuinChunk_08_04_Far has finite vertices
+RuinChunk_08_04_Near imported with one readable submesh
+RuinChunk_08_04_Near has finite vertices
+RuinChunk_08_05_Far imported with one readable submesh
+RuinChunk_08_05_Far has finite vertices
+RuinChunk_08_05_Near imported with one readable submesh
+RuinChunk_08_05_Near has finite vertices
+RuinChunk_08_06_Far imported with one readable submesh
+RuinChunk_08_06_Far has finite vertices
+RuinChunk_08_06_Near imported with one readable submesh
+RuinChunk_08_06_Near has finite vertices
+RuinChunk_09_-1_Far imported with one readable submesh
+RuinChunk_09_-1_Far has finite vertices
+RuinChunk_09_-1_Near imported with one readable submesh
+RuinChunk_09_-1_Near has finite vertices
+RuinChunk_09_-2_Far imported with one readable submesh
+RuinChunk_09_-2_Far has finite vertices
+RuinChunk_09_-2_Near imported with one readable submesh
+RuinChunk_09_-2_Near has finite vertices
+RuinChunk_09_-3_Far imported with one readable submesh
+RuinChunk_09_-3_Far has finite vertices
+RuinChunk_09_-3_Near imported with one readable submesh
+RuinChunk_09_-3_Near has finite vertices
+RuinChunk_09_00_Far imported with one readable submesh
+RuinChunk_09_00_Far has finite vertices
+RuinChunk_09_00_Near imported with one readable submesh
+RuinChunk_09_00_Near has finite vertices
+RuinChunk_09_01_Far imported with one readable submesh
+RuinChunk_09_01_Far has finite vertices
+RuinChunk_09_01_Near imported with one readable submesh
+RuinChunk_09_01_Near has finite vertices
+RuinChunk_09_02_Far imported with one readable submesh
+RuinChunk_09_02_Far has finite vertices
+RuinChunk_09_02_Near imported with one readable submesh
+RuinChunk_09_02_Near has finite vertices
+RuinChunk_09_03_Far imported with one readable submesh
+RuinChunk_09_03_Far has finite vertices
+RuinChunk_09_03_Near imported with one readable submesh
+RuinChunk_09_03_Near has finite vertices
+RuinChunk_09_04_Far imported with one readable submesh
+RuinChunk_09_04_Far has finite vertices
+RuinChunk_09_04_Near imported with one readable submesh
+RuinChunk_09_04_Near has finite vertices
+RuinChunk_09_05_Far imported with one readable submesh
+RuinChunk_09_05_Far has finite vertices
+RuinChunk_09_05_Near imported with one readable submesh
+RuinChunk_09_05_Near has finite vertices
+RuinChunk_09_06_Far imported with one readable submesh
+RuinChunk_09_06_Far has finite vertices
+RuinChunk_09_06_Near imported with one readable submesh
+RuinChunk_09_06_Near has finite vertices
+RuinChunk_10_-1_Far imported with one readable submesh
+RuinChunk_10_-1_Far has finite vertices
+RuinChunk_10_-1_Near imported with one readable submesh
+RuinChunk_10_-1_Near has finite vertices
+RuinChunk_10_-2_Far imported with one readable submesh
+RuinChunk_10_-2_Far has finite vertices
+RuinChunk_10_-2_Near imported with one readable submesh
+RuinChunk_10_-2_Near has finite vertices
+RuinChunk_10_-3_Far imported with one readable submesh
+RuinChunk_10_-3_Far has finite vertices
+RuinChunk_10_-3_Near imported with one readable submesh
+RuinChunk_10_-3_Near has finite vertices
+RuinChunk_10_00_Far imported with one readable submesh
+RuinChunk_10_00_Far has finite vertices
+RuinChunk_10_00_Near imported with one readable submesh
+RuinChunk_10_00_Near has finite vertices
+RuinChunk_10_01_Far imported with one readable submesh
+RuinChunk_10_01_Far has finite vertices
+RuinChunk_10_01_Near imported with one readable submesh
+RuinChunk_10_01_Near has finite vertices
+RuinChunk_10_02_Far imported with one readable submesh
+RuinChunk_10_02_Far has finite vertices
+RuinChunk_10_02_Near imported with one readable submesh
+RuinChunk_10_02_Near has finite vertices
+RuinChunk_10_03_Far imported with one readable submesh
+RuinChunk_10_03_Far has finite vertices
+RuinChunk_10_03_Near imported with one readable submesh
+RuinChunk_10_03_Near has finite vertices
+RuinChunk_10_04_Far imported with one readable submesh
+RuinChunk_10_04_Far has finite vertices
+RuinChunk_10_04_Near imported with one readable submesh
+RuinChunk_10_04_Near has finite vertices
+RuinChunk_10_05_Far imported with one readable submesh
+RuinChunk_10_05_Far has finite vertices
+RuinChunk_10_05_Near imported with one readable submesh
+RuinChunk_10_05_Near has finite vertices
+RuinChunk_10_06_Far imported with one readable submesh
+RuinChunk_10_06_Far has finite vertices
+RuinChunk_10_06_Near imported with one readable submesh
+RuinChunk_10_06_Near has finite vertices
+VinePickup_01_Visual imported with one readable submesh
+VinePickup_01_Visual has finite vertices
+VinePickup_02_Visual imported with one readable submesh
+VinePickup_02_Visual has finite vertices
+VinePickup_03_Visual imported with one readable submesh
+VinePickup_03_Visual has finite vertices
+R1_Broken_Visual imported with one readable submesh
+R1_Broken_Visual has finite vertices
+R1_Intact_Visual imported with one readable submesh
+R1_Intact_Visual has finite vertices
+R1_Visual imported with one readable submesh
+R1_Visual has finite vertices
+R2_Broken_Visual imported with one readable submesh
+R2_Broken_Visual has finite vertices
+R2_Intact_Visual imported with one readable submesh
+R2_Intact_Visual has finite vertices
+R2_Visual imported with one readable submesh
+R2_Visual has finite vertices
+R3_Broken_Visual imported with one readable submesh
+R3_Broken_Visual has finite vertices
+R3_Intact_Visual imported with one readable submesh
+R3_Intact_Visual has finite vertices
+R3_Visual imported with one readable submesh
+R3_Visual has finite vertices
+R4_Broken_Visual imported with one readable submesh
+R4_Broken_Visual has finite vertices
+R4_Intact_Visual imported with one readable submesh
+R4_Intact_Visual has finite vertices
+R4_Visual imported with one readable submesh
+R4_Visual has finite vertices
+R5_Broken_Visual imported with one readable submesh
+R5_Broken_Visual has finite vertices
+R5_Intact_Visual imported with one readable submesh
+R5_Intact_Visual has finite vertices
+R5_Visual imported with one readable submesh
+R5_Visual has finite vertices
+R6_Broken_Visual imported with one readable submesh
+R6_Broken_Visual has finite vertices
+R6_Intact_Visual imported with one readable submesh
+R6_Intact_Visual has finite vertices
+R6_Visual imported with one readable submesh
+R6_Visual has finite vertices
+R7_Broken_Visual imported with one readable submesh
+R7_Broken_Visual has finite vertices
+R7_Cracked_Visual imported with one readable submesh
+R7_Cracked_Visual has finite vertices
+R7_Intact_Visual imported with one readable submesh
+R7_Intact_Visual has finite vertices
+R7_Visual imported with one readable submesh
+R7_Visual has finite vertices
+R8_Broken_Visual imported with one readable submesh
+R8_Broken_Visual has finite vertices
+R8_Intact_Visual imported with one readable submesh
+R8_Intact_Visual has finite vertices
+R8_Visual imported with one readable submesh
+R8_Visual has finite vertices
+R9_Broken_Visual imported with one readable submesh
+R9_Broken_Visual has finite vertices
+R9_Intact_Visual imported with one readable submesh
+R9_Intact_Visual has finite vertices
+R9_Visual imported with one readable submesh
+R9_Visual has finite vertices
+R10_Broken_Visual imported with one readable submesh
+R10_Broken_Visual has finite vertices
+R10_Intact_Visual imported with one readable submesh
+R10_Intact_Visual has finite vertices
+R10_Visual imported with one readable submesh
+R10_Visual has finite vertices
+R11_Broken_Visual imported with one readable submesh
+R11_Broken_Visual has finite vertices
+R11_Intact_Visual imported with one readable submesh
+R11_Intact_Visual has finite vertices
+R11_Visual imported with one readable submesh
+R11_Visual has finite vertices
+R12_Broken_Visual imported with one readable submesh
+R12_Broken_Visual has finite vertices
+R12_Intact_Visual imported with one readable submesh
+R12_Intact_Visual has finite vertices
+R12_Visual imported with one readable submesh
+R12_Visual has finite vertices
+B1_DoorHinge_L_Visual imported with one readable submesh
+B1_DoorHinge_L_Visual has finite vertices
+B1_DoorLeaf_L_Visual imported with one readable submesh
+B1_DoorLeaf_L_Visual has finite vertices
+B1_DoorHinge_R_Visual imported with one readable submesh
+B1_DoorHinge_R_Visual has finite vertices
+B1_DoorLeaf_R_Visual imported with one readable submesh
+B1_DoorLeaf_R_Visual has finite vertices
+B2_DoorHinge_L_Visual imported with one readable submesh
+B2_DoorHinge_L_Visual has finite vertices
+B2_DoorLeaf_L_Visual imported with one readable submesh
+B2_DoorLeaf_L_Visual has finite vertices
+B2_DoorHinge_R_Visual imported with one readable submesh
+B2_DoorHinge_R_Visual has finite vertices
+B2_DoorLeaf_R_Visual imported with one readable submesh
+B2_DoorLeaf_R_Visual has finite vertices
+Vine_Coil_Visual imported with one readable submesh
+Vine_Coil_Visual has finite vertices
+Vine_Ladder_Visual imported with one readable submesh
+Vine_Ladder_Visual has finite vertices
+Vine_SlowPatch_Visual imported with one readable submesh
+Vine_SlowPatch_Visual has finite vertices
+Spatial chunks have two working LOD levels
+Renderer count stays below 600 including both LODs and all break states
+LOD0 geometry stays below 6500000 triangles including all break states
+Environment geometry remains inside its authored bounds
+Ground and models share one combined atlas material
+Collision source available: East pit floor
+Collision source available: East rock stratum 1
+Collision source available: East rock stratum 2
+Collision source available: East rock stratum 3
+Collision source available: East rock stratum 4
+Collision source available: East rock stratum 5
+Collision source available: East rock stratum 6
+Collision source available: West pit floor
+Collision source available: West rock stratum 1
+Collision source available: West rock stratum 2
+Collision source available: West rock stratum 3
+Collision source available: West rock stratum 4
+Collision source available: West rock stratum 5
+Collision source available: West rock stratum 6
+Collision source available: Ground_Surface / actual openings

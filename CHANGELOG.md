@@ -6,6 +6,14 @@
 - 玩法规则：`Docs/设计文档_v0.6.0.md`
 - 在这个仓库里干活要遵守的规则和测试方法：`AGENTS.md`
 
+## 2026-11-16：藤坠石庭 V09 场景精修
+
+参照现有雨天河流 V16，细化庭院地表与路线、树木枝叶、石材风化、墙脚植被、坑壁岩层及公路外围；四个游戏模型配套共享 4K 图集、URP shader 和 140 组 LOD。模型、导入器、接入说明和验证资料随本节所在提交提供，详见 [V09 美术说明](Docs/RuinCourtyardV09.md)。
+
+**怎么试：** `git lfs pull` 后用 Unity 6000.6.1f1 打开开始场景，选择 PLAY → PRACTICE WITH BOTS → RUIN COURTYARD。不要运行 Build Game Content。
+
+**基线与保留：** 接在 `a7e154e` 之后，保留该提交的全部关卡代码、合搬通道和占位修正、导航参数与藤梯落点；美术原接口验证基线为 `1c6bda3`。没有更改 Unity 或包版本。检查结果和待检查项目见 [本次接入验证](Docs/verification/ruin-v09/README.md)。
+
 ## 2026-11-16：藤坠石庭交互关卡与角色比例检查
 
 分支 `codex/ruin-courtyard-interactions`，接入提交 `1c6bda3`。新增独立的 RUIN COURTYARD 关卡：124 × 69 米、15 箱、两座可开门的 100 物资货仓、12 处可破坏/吸回复原点、投藤减速、藤梯、双人托举和落坑复位。复用原角色、货车、直升机、HUD 与比赛流程。
