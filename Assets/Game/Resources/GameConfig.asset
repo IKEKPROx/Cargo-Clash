@@ -51,7 +51,9 @@ MonoBehaviour:
   ruinBoostSeconds: 2.5
   ruinBoostReadySeconds: 5
   ruinLandingWaitSeconds: 2
-  ruinPitReturnHeight: -2.4
+  ruinPitReturnHeight: -6
+  ruinDepotHeight: 3.8
+  ruinDropCreditSeconds: 15
   helicopterApproachSeconds: 12
   helicopterWarningSeconds: 10
   helicopterArrivalDelay: 1.2
@@ -142,9 +144,10 @@ MonoBehaviour:
   plankInsertRange: 3.5
   plank: {fileID: 11400000, guid: 263f59f55dd4a483895c2b73d20b9862, type: 2}
   ruinCargo:
-  - {fileID: 11400000, guid: 876bb7093f40c4959838604a550ac5f3, type: 2}
-  - {fileID: 11400000, guid: 7cc3b4df918164904b9b5fabdc34326b, type: 2}
-  - {fileID: 11400000, guid: cea4e5b047a4c4c26a2035932a2080ad, type: 2}
+  - {fileID: 11400000, guid: 6f10ef5326b952618ce73b31b462c003, type: 2}
+  - {fileID: 11400000, guid: 9f3e43105df459fdb70a042af85ac0f7, type: 2}
+  - {fileID: 11400000, guid: 6588188c5bd35080a409d01da43643a5, type: 2}
+  - {fileID: 11400000, guid: 14db6b43b56054d19d701a8f2b006ba2, type: 2}
   cargo:
   - {fileID: 11400000, guid: aee7fbe6cc96b4f11ab08fbdc94cba88, type: 2}
   - {fileID: 11400000, guid: 40d1b45efb3054357bcf266e6fe3302d, type: 2}

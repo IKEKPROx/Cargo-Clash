@@ -37,9 +37,11 @@ public static class RuinMacIntegration
         if (!EditorSceneManager.SaveScene(target)) throw new InvalidOperationException("Could not save ruin HUD upgrade.");
 
         GameConfig config = GameConfig.Get();
-        if (config.ruinCargo == null || config.ruinCargo.Length != 3 ||
-            !config.ruinCargo.Select(d => d.value).SequenceEqual(new[] { 10, 30, 100 }))
-            throw new InvalidOperationException("Ruin cargo must retain its 10/30/100 definitions.");
+        if (config.ruinCargo == null || config.ruinCargo.Length != 4 ||
+            config.ruinCargo.Count(d => d.size == CargoSize.Small && d.value == 10) != 2 ||
+            config.ruinCargo.Count(d => d.size == CargoSize.Medium && d.value == 30) != 1 ||
+            config.ruinCargo.Count(d => d.size == CargoSize.Large && d.value == 100) != 1)
+            throw new InvalidOperationException("Ruin cargo must use four Astra kinds across the 10/30/100 tiers.");
         foreach (string scene in new[] { "Level01", "LevelRiver", RuinCourtyard.SceneName })
             if (!EditorBuildSettings.scenes.Any(s => s.enabled && s.path.EndsWith("/"+scene+".unity", StringComparison.Ordinal)))
                 throw new InvalidOperationException("Missing playable scene: " + scene);

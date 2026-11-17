@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8370719cbcf3f4649a006f12761d6bb4, type: 3}
+  m_Name: Ruin_Cargo_Tobacco
+  m_EditorClassIdentifier: CargoClash::CargoClash.CargoDefinition
+  size: 0
+  kind: 0
+  prefab: {fileID: 3121034468818865842, guid: 74fec9a3c7b554bb94760deaaa0a0cfa, type: 3}
+  value: 10
+  smashSeconds: 2
+  carrySpeedMultiplier: 0.9
+  requiredCarriers: 1
+  fullCount: 4
+  coCarryHeight: 0
+  coCarryReach: 0
+  inspectState: InspectTobacco
+  inspectOnGround: 0
+  inspectDistance: 0.7056
+  inspect:
+    seconds: 5.3333
+    drop: 0.0667
+    land: 0.2667
+    out: 0.3333
+    start: 0.6
+    back: 5.1
+    shut: 5.1
+    lift: 5.0667
+    caught: 5.3333
+    lidOpen: -1
+    notes: -1
+    puff: 3.0667
+    flick: 4.2667
+  piecesPrefab: {fileID: 5530919609868585881, guid: 880f8a98626904460927646312e0c429, type: 3}
+  chipColor: {r: 0.95, g: 0.9, b: 0.76, a: 1}
+  breakSound: crack

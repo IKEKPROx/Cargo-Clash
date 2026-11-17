@@ -152,13 +152,15 @@ namespace CargoClash
             BuildWalls(wallModel.transform);
             BuildDoors(doorModel.transform);
             BuildVines(environment.transform, rotated);
+            BuildPitStairs();
             ConfigureLayout();
+            BuildSpawnMarkers();
 
             navigation = gameObject.AddComponent<NavMeshSurface>();
             navigation.navMeshData = null;
             navigation.collectObjects = CollectObjects.Volume;
-            navigation.center = new Vector3(data.size.x*.5f, 1f, data.size.y*.5f);
-            navigation.size = new Vector3(data.size.x, 4f, data.size.y);
+            navigation.center = new Vector3(data.size.x*.5f, 0f, data.size.y*.5f);
+            navigation.size = new Vector3(data.size.x, 10f, data.size.y);
             navigation.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
             navigation.layerMask = GameLayers.LevelMask;
             Physics.SyncTransforms();
@@ -222,6 +224,7 @@ namespace CargoClash
             if (runtimeNavMesh != null) Destroy(runtimeNavMesh);
             foreach (Mesh mesh in collisionMeshes) Destroy(mesh);
             foreach (Material material in renderMaterials.Values) Destroy(material);
+            DisposeDepot();
         }
 
         private BoxCollider AddBox(string name, Bounds bounds)
@@ -357,11 +360,7 @@ namespace CargoClash
             level.smallSpots = MakeSpots(transform, data.smallSpots);
             level.mediumSpots = MakeSpots(transform, data.mediumSpots);
             level.largeSpots = MakeSpots(transform, data.largeSpots);
-            level.truckZone.position = data.truckZone;
-            level.truckZone.rotation = Quaternion.identity;
-            level.truckZoneHalfSize = data.truckZoneHalfSize;
-            Transform zoneFloor = level.truckZone.Find("ZoneFloor");
-            if (zoneFloor != null) zoneFloor.localScale = new Vector3(data.truckZoneHalfSize.x*2, .01f, data.truckZoneHalfSize.y*2);
+            ConfigureDepot(level);
             level.bedHalfSize = data.bedHalfSize;
             level.mapArea = new Rect(0, 0, data.size.x, data.size.y);
             level.mapPicture = Load<Texture2D>("RuinMinimap");

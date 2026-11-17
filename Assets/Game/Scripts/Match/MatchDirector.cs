@@ -227,14 +227,19 @@ namespace CargoClash
 
         private void SpawnRuins()
         {
-            // Keep this level's authored 8 x 10, 5 x 30, 2 x 100 cargo and measured box sizes.
-            foreach (CargoDefinition definition in config.ruinCargo)
+            // Kinds of one size share the authored slots. Tobacco/cash alternate across eight 10-value spots.
+            foreach (CargoSize size in new[] { CargoSize.Small, CargoSize.Medium, CargoSize.Large })
             {
-                Transform[] spots = layout.SpotsFor(definition.size);
-                foreach (Transform spot in spots)
+                CargoDefinition[] kinds = System.Array.FindAll(config.ruinCargo, definition => definition.size == size);
+                Transform[] spots = layout.SpotsFor(size);
+                if (kinds.Length == 0 || spots == null) continue;
+                for (int i = 0; i < spots.Length; i++)
                 {
-                    GameObject instance = Instantiate(definition.prefab, spot.position, spot.rotation);
-                    instance.GetComponent<CargoItem>().SetRuinResetPoint(spot);
+                    CargoDefinition definition = kinds[i % kinds.Length];
+                    Transform spot = spots[i];
+                    Vector3 position = CargoItem.RuinSpawnPosition(definition, spot);
+                    GameObject instance = Instantiate(definition.prefab, position, spot.rotation);
+                    instance.GetComponent<CargoItem>().SetRuinResetPoint(position, spot.rotation);
                     instance.GetComponent<NetworkObject>().Spawn(true);
                     halfTotal += definition.value;
                 }

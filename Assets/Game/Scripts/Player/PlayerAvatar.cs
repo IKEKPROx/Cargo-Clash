@@ -687,7 +687,9 @@ namespace CargoClash
             Vector3 grab = carried.GrabPointWorld(this);
             if (RuinCourtyard.Instance != null)
             {
-                float feet = grab.y - carried.CoCarryLift;
+                // The two handles can straddle several risers; each carrier stands on their own tread.
+                Vector3 probe = new Vector3(grab.x, transform.position.y, grab.z);
+                float feet = CargoItem.TryRuinCarryFloor(probe, out float ground) ? ground : transform.position.y;
                 transform.position = new Vector3(grab.x, feet, grab.z);
             }
             else

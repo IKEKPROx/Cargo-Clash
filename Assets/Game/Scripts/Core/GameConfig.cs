@@ -66,7 +66,9 @@ namespace CargoClash
         public float ruinBoostSeconds = 2.5f;
         public float ruinBoostReadySeconds = 5f;
         public float ruinLandingWaitSeconds = 2f;
-        public float ruinPitReturnHeight = -2.4f;
+        public float ruinPitReturnHeight = -6f;
+        public float ruinDepotHeight = 3.8f;
+        public float ruinDropCreditSeconds = 15f;
 
         [Header("Helicopter")]
         [Tooltip("It starts flying in this long before it arrives over the truck.")]
@@ -226,7 +228,7 @@ namespace CargoClash
 
         [Header("Cargo")]
         public CargoDefinition[] cargo;
-        [Tooltip("The Ruin Courtyard keeps its authored three box sizes and values.")]
+        [Tooltip("Ruin-only Astra cargo definitions. Kinds sharing a size share its authored 10/30/100 spawn slots.")]
         public CargoDefinition[] ruinCargo;
         [Tooltip("Cargo looks damaged once its durability falls to this.")]
         public float damagedBelow = 0.67f;

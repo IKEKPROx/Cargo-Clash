@@ -24,6 +24,10 @@ namespace CargoClash
             ["PULL UP TEAMMATE"] = "拉队友上来",
             ["READY TO BOOST"] = "准备托举",
             ["RUIN COURTYARD"] = "藤坠石庭",
+            ["COLLECTOR BASE"] = "搬运方出生区",
+            ["INTERRUPTER BASE"] = "阻拦方出生区",
+            ["3 CREW / CARRY TO TRUCK"] = "三人集合 · 运货回车",
+            ["3 CREW / BLOCK THE CARGO"] = "三人集合 · 拦人砸货",
 
             // Rooms.
             ["The host left the game."] = "主机离开了游戏。",

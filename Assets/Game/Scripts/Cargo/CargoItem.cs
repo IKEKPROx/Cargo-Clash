@@ -60,6 +60,8 @@ namespace CargoClash
         private Vector3 ruinResetPosition;
         private Quaternion ruinResetRotation;
         private bool hasRuinResetPoint;
+        private readonly List<PlayerAvatar> ruinDropCredit = new List<PlayerAvatar>();
+        private float ruinDropUntil;
         private Collider[] colliders;
         private float shakeUntil;
         private float squash;
@@ -544,6 +546,18 @@ namespace CargoClash
                 ServerResetFromRuinPit();
                 return;
             }
+            if (hasRuinResetPoint && State.Value == CargoState.Ground && !IsPlank &&
+                MatchDirector.Instance != null && MatchDirector.Instance.Phase.Value == MatchPhase.Playing &&
+                Time.time <= ruinDropUntil && ruinDropCredit.Count > 0 &&
+                LevelLayout.Instance.InTruckZone(transform.position))
+            {
+                ruinDropCredit.RemoveAll(player => player == null || !player.IsSpawned || player.Side != Side.Collector);
+                if (ruinDropCredit.Count > 0)
+                {
+                    RescueToBed(ruinDropCredit);
+                    return;
+                }
+            }
             if (State.Value != CargoState.Carried) return;
 
             PlayerAvatar a = FindAvatar(CarrierA.Value);
@@ -600,19 +614,38 @@ namespace CargoClash
             }
             Vector3 step = new Vector3(average.x, 0f, average.y) * (config.runSpeed * definition.carrySpeedMultiplier * deltaTime);
             float distance = step.magnitude;
-            Quaternion orientation = hasRuinResetPoint ? transform.rotation : Quaternion.identity;
-            if (hasRuinResetPoint && RuinCourtyard.Instance != null)
+            if (RuinCourtyard.Instance != null)
             {
                 RuinCourtyard ruins = RuinCourtyard.Instance;
                 step *= Mathf.Min(ruins.SpeedAt(a.transform.position), ruins.SpeedAt(b.transform.position));
                 distance = step.magnitude;
-                if (BlockedCarrier(a, step, distance) || BlockedCarrier(b, step, distance)) return;
             }
-            bool blocked = Physics.BoxCast(transform.position, halfExtents * 0.95f, step / distance, out _,
-                orientation, distance + 0.05f, GameLayers.LevelMask, QueryTriggerInteraction.Ignore);
+            if (distance < .0001f) return;
+
+            Vector3 ruinNext = transform.position + step;
+            bool centreSupported = TryRuinCarryFloor(ruinNext - Vector3.up * CoCarryLift, out float centreFloor);
+            Vector3 gripA = GrabPointWorld(a) + step;
+            Vector3 gripB = GrabPointWorld(b) + step;
+            gripA.y = a.transform.position.y;
+            gripB.y = b.transform.position.y;
+            bool aSupported = TryRuinCarryFloor(gripA, out float aFloor);
+            bool bSupported = TryRuinCarryFloor(gripB, out float bFloor);
+            if (centreSupported) ruinNext.y = centreFloor + CoCarryLift;
+
+            if (BlockedCarrier(a, step, distance, aSupported ? aFloor : a.transform.position.y) ||
+                BlockedCarrier(b, step, distance, bSupported ? bFloor : b.transform.position.y)) return;
+
+            // Sweep at the higher end of this one-step transition, then check the actual destination.
+            // The box keeps its authored handle height; only each person's feet follow their own tread.
+            Vector3 from = transform.position;
+            from.y = Mathf.Max(from.y, ruinNext.y);
+            bool blocked = Physics.BoxCast(from, halfExtents * .95f, step / distance, out _,
+                transform.rotation, distance + .05f, GameLayers.LevelMask, QueryTriggerInteraction.Ignore) ||
+                Physics.CheckBox(ruinNext, halfExtents * .95f, transform.rotation,
+                    GameLayers.LevelMask, QueryTriggerInteraction.Ignore);
             if (blocked) return;
-            transform.position += step;
-            if (hasRuinResetPoint && !CarryGroupSupported(a, b))
+            transform.position = ruinNext;
+            if (!centreSupported || !aSupported || !bSupported)
             {
                 ServerClearCarriers();
                 ServerBecomeGround(step / Mathf.Max(deltaTime, .001f));
@@ -621,35 +654,75 @@ namespace CargoClash
 
         private bool CarryGroupSupported(PlayerAvatar a, PlayerAvatar b) =>
             HasCarryFloor(transform.position - Vector3.up * CoCarryLift)
-            && HasCarryFloor(GrabPointWorld(a) - Vector3.up * CoCarryLift)
-            && HasCarryFloor(GrabPointWorld(b) - Vector3.up * CoCarryLift);
+            && HasCarryFloor(new Vector3(GrabPointWorld(a).x, a.transform.position.y, GrabPointWorld(a).z))
+            && HasCarryFloor(new Vector3(GrabPointWorld(b).x, b.transform.position.y, GrabPointWorld(b).z));
 
-        private static bool HasCarryFloor(Vector3 feet) =>
-            Physics.Raycast(feet + Vector3.up * .2f, Vector3.down, .52f,
-                            GameLayers.LevelMask, QueryTriggerInteraction.Ignore);
+        private const float RuinCarryStepUp = .3f;
+        private const float RuinCarryStepDown = .35f;
 
-        private bool BlockedCarrier(PlayerAvatar player, Vector3 step, float distance)
+        private static bool HasCarryFloor(Vector3 feet) => TryRuinCarryFloor(feet, out _);
+
+        /// <summary>A nearby tread only: a pit bottom or a tall wall cannot become a carrying step.</summary>
+        internal static bool TryRuinCarryFloor(Vector3 feet, out float height)
         {
-            Vector3 grip = GrabPointWorld(player) - Vector3.up * CoCarryLift;
-            Bounds bounds = player.BodyBoundsAt(grip);
-            float radius = bounds.extents.x;
-            float offset = bounds.extents.y - radius;
-            return Physics.CapsuleCast(bounds.center - Vector3.up * offset,
-                                       bounds.center + Vector3.up * offset, radius,
-                                       step / distance, distance + .04f, GameLayers.LevelMask, QueryTriggerInteraction.Ignore);
+            const float tolerance = .015f;
+            if (Physics.Raycast(feet + Vector3.up * (RuinCarryStepUp + tolerance), Vector3.down,
+                out RaycastHit floor, RuinCarryStepUp + RuinCarryStepDown + tolerance * 2f,
+                GameLayers.LevelMask, QueryTriggerInteraction.Ignore) && floor.normal.y >= .65f &&
+                floor.point.y <= feet.y + RuinCarryStepUp + tolerance &&
+                floor.point.y >= feet.y - RuinCarryStepDown - tolerance)
+            {
+                height = floor.point.y;
+                return true;
+            }
+            height = feet.y;
+            return false;
         }
 
-        internal void SetRuinResetPoint(Transform spot)
+        private bool BlockedCarrier(PlayerAvatar player, Vector3 step, float distance, float nextFloor)
+        {
+            Vector3 grip = GrabPointWorld(player);
+            grip.y = player.transform.position.y;
+            if (TryRuinCarryFloor(grip, out float currentFloor)) grip.y = currentFloor;
+            Bounds bounds = player.BodyBoundsAt(grip);
+            float radius = Mathf.Max(.05f, bounds.extents.x - .025f);
+            float offset = Mathf.Max(0f, bounds.extents.y - bounds.extents.x);
+            // A capsule's leading edge meets a riser before its centre reaches the next tread.
+            // Raise this horizontal sweep by at most one legal step, while retaining the full head/body clearance.
+            Vector3 bottom = bounds.center - Vector3.up * offset + Vector3.up * RuinCarryStepUp;
+            Vector3 top = bounds.center + Vector3.up * offset + Vector3.up * RuinCarryStepUp;
+            if (Physics.CapsuleCast(bottom, top, radius, step / distance, distance + .025f,
+                GameLayers.LevelMask, QueryTriggerInteraction.Ignore)) return true;
+            Vector3 landingOffset = step + Vector3.up * (nextFloor - grip.y);
+            return Physics.CheckCapsule(bottom + landingOffset, top + landingOffset, radius,
+                GameLayers.LevelMask, QueryTriggerInteraction.Ignore);
+        }
+
+        /// <summary>Places the actual prefab bottom on the authored ground/platform below a cargo marker.</summary>
+        public static Vector3 RuinSpawnPosition(CargoDefinition definition, Transform spot)
+        {
+            BoxCollider box = definition.prefab.GetComponent<BoxCollider>();
+            if (box == null) throw new System.InvalidOperationException("Ruin cargo needs a root BoxCollider: " + definition.name);
+            if (!Physics.Raycast(spot.position + Vector3.up * .5f, Vector3.down, out RaycastHit floor, 6f,
+                GameLayers.LevelMask, QueryTriggerInteraction.Ignore))
+                throw new System.InvalidOperationException("No floor under ruin cargo marker: " + spot.name);
+            float bottom = (box.center.y - box.size.y * .5f) * definition.prefab.transform.localScale.y;
+            return new Vector3(spot.position.x, floor.point.y - bottom + .02f, spot.position.z);
+        }
+
+        internal void SetRuinResetPoint(Vector3 position, Quaternion rotation)
         {
             hasRuinResetPoint = true;
-            ruinResetPosition = spot.position;
-            ruinResetRotation = spot.rotation;
+            ruinResetPosition = position;
+            ruinResetRotation = rotation;
         }
 
         internal void ServerResetFromRuinPit()
         {
             if (!IsServer || !hasRuinResetPoint || State.Value == CargoState.Rescued || State.Value == CargoState.Destroyed) return;
             ServerClearCarriers();
+            ruinDropCredit.Clear();
+            ruinDropUntil = 0;
             State.Value = CargoState.Ground;
             SetPhysicsActive(true);
             transform.SetPositionAndRotation(ruinResetPosition, ruinResetRotation);
@@ -678,10 +751,30 @@ namespace CargoClash
             if (a != null && a.Side == Side.Collector) credit.Add(a);
             if (b != null && b.Side == Side.Collector) credit.Add(b);
 
+            RescueToBed(credit);
+        }
+
+        private void RescueToBed(List<PlayerAvatar> credit)
+        {
+            if (!IsServer || IsResolved) return;
             ServerClearCarriers();
             State.Value = CargoState.Rescued;
+            SetPhysicsActive(false);
             MatchDirector.Instance.ServerOnRescued(this, credit);
+            ruinDropCredit.Clear();
+            ruinDropUntil = 0;
+            LevelLayout layout = LevelLayout.Instance;
             StartCoroutine(FlyToBed(layout.NextBedPoint(), layout.BedRotation));
+        }
+
+        private void RememberRuinRelease(PlayerAvatar first, PlayerAvatar second = null)
+        {
+            if (!hasRuinResetPoint) return;
+            ruinDropCredit.Clear();
+            foreach (PlayerAvatar player in new[] { first, second })
+                if (player != null && player.IsSpawned && player.Side == Side.Collector && !ruinDropCredit.Contains(player))
+                    ruinDropCredit.Add(player);
+            ruinDropUntil = Time.time + config.ruinDropCreditSeconds;
         }
 
         /// <summary>It lands square with the bed, so it sits inside it however the truck came to rest.</summary>
@@ -753,6 +846,8 @@ namespace CargoClash
                 }
             }
             avatar.ServerSetCarry(this);
+            ruinDropCredit.Clear();
+            ruinDropUntil = 0;
             return true;
         }
 
@@ -765,6 +860,7 @@ namespace CargoClash
             avatar.ServerClearCarry();
             if (CarrierA.Value == NetIds.None && CarrierB.Value == NetIds.None)
             {
+                RememberRuinRelease(avatar);
                 ServerPlaceClearOfWalls(avatar);
                 ServerBecomeGround(avatar.transform.forward * 2.5f + Vector3.up * 2f);
             }
@@ -795,6 +891,7 @@ namespace CargoClash
         public void ServerDropAll(Vector3 direction)
         {
             if (State.Value != CargoState.Carried) return;
+            RememberRuinRelease(FindAvatar(CarrierA.Value), FindAvatar(CarrierB.Value));
             ServerPlaceClearOfWalls(FindAvatar(CarrierA.Value));
             ServerClearCarriers();
             ServerBecomeGround(direction * 4.5f + Vector3.up * 4.5f);

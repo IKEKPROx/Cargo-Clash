@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8370719cbcf3f4649a006f12761d6bb4, type: 3}
+  m_Name: Ruin_Cargo_Art
+  m_EditorClassIdentifier: CargoClash::CargoClash.CargoDefinition
+  size: 2
+  kind: 3
+  prefab: {fileID: 5082123514727823777, guid: a033725cb6115b48ae78c3c32b614897, type: 3}
+  value: 100
+  smashSeconds: 16
+  carrySpeedMultiplier: 0.5
+  requiredCarriers: 2
+  fullCount: 2
+  coCarryHeight: 0.7758888
+  coCarryReach: 0.89955854
+  inspectState: InspectArt
+  inspectOnGround: 1
+  inspectDistance: 0.7056
+  inspect:
+    seconds: 5.82
+    drop: -1
+    land: -1
+    out: 1.2
+    start: 1.56
+    back: 4.92
+    shut: 5.6533
+    lift: -1
+    caught: -1
+    lidOpen: 0.9
+    notes: -1
+    puff: -1
+    flick: -1
+  piecesPrefab: {fileID: 6368495454791173871, guid: b9bc1f5e3ed6e4a3caa85b54307fb58a, type: 3}
+  chipColor: {r: 0.21, g: 0.5, b: 0.51, a: 1}
+  breakSound: crack

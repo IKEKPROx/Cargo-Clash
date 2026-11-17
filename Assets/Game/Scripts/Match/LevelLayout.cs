@@ -58,6 +58,7 @@ namespace CargoClash
 
         public bool InTruckZone(Vector3 worldPosition)
         {
+            if (RuinCourtyard.Instance != null) return RuinCourtyard.Instance.ContainsDeliveryPoint(worldPosition);
             Vector3 local = truckZone.InverseTransformPoint(worldPosition);
             return Mathf.Abs(local.x) <= truckZoneHalfSize.x && Mathf.Abs(local.z) <= truckZoneHalfSize.y;
         }

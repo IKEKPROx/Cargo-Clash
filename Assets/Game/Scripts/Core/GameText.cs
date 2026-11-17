@@ -31,6 +31,10 @@ namespace CargoClash
         public static string RuinPullTeammate => T("PULL UP TEAMMATE");
         public static string RuinBoostReady => T("READY TO BOOST");
         public static string RuinTitle => T("RUIN COURTYARD");
+        public const string RuinCollectorBaseEnglish = "COLLECTOR BASE";
+        public const string RuinInterrupterBaseEnglish = "INTERRUPTER BASE";
+        public const string RuinCollectorAssemblyEnglish = "3 CREW / CARRY TO TRUCK";
+        public const string RuinInterrupterAssemblyEnglish = "3 CREW / BLOCK THE CARGO";
 
         /// <summary>T with a format string, so each language can put the numbers where it wants them.</summary>
         public static string F(string english, params object[] values) => string.Format(T(english), values);
