@@ -1,0 +1,440 @@
+{
+  "date": "2026-11-17",
+  "unity": "6000.6.1f1",
+  "platform": "macOS ARM64 Mono",
+  "checks": {
+    "ruin-v10-host": {
+      "ok": 96,
+      "failed": 0,
+      "done": [
+        "[CCTEST] DONE errors=0 timedOut=False"
+      ],
+      "result": [
+        "[CCTEST] RESULT orange=240 blue=350 titles=5"
+      ]
+    },
+    "ruin-v10-client": {
+      "ok": 35,
+      "failed": 0,
+      "done": [
+        "[CCTEST] DONE errors=0 timedOut=False"
+      ],
+      "result": [
+        "[CCTEST] RESULT orange=240 blue=350 titles=5"
+      ]
+    },
+    "tutorial-v10": {
+      "ok": 1,
+      "failed": 0,
+      "done": [
+        "[CCTEST] DONE errors=0 timedOut=False"
+      ],
+      "result": [
+        "[CCTEST] RESULT orange=180 blue=515 titles=5"
+      ]
+    },
+    "river-v10": {
+      "ok": 1,
+      "failed": 0,
+      "done": [
+        "[CCTEST] DONE errors=0 timedOut=False"
+      ],
+      "result": [
+        "[CCTEST] RESULT orange=620 blue=640 titles=5"
+      ]
+    }
+  },
+  "art": {
+    "source": {
+      "repository": "https://github.com/IKEKPROx/Cargo-Clash",
+      "artBranch": "codex/ruin-courtyard-interactions",
+      "artCommit": "3624008",
+      "macBaselineCommit": "1b12041"
+    },
+    "generator": "/Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Tools/blender/revise_ruin_v10.py",
+    "environmentValidation": {
+      "before": {
+        "near": 140,
+        "far": 140,
+        "vertices": 3731293,
+        "faces": 2840798
+      },
+      "after": {
+        "near": 140,
+        "far": 140,
+        "vertices": 3643261,
+        "faces": 2745762
+      },
+      "allFinite": true,
+      "pivots": [
+        {
+          "id": "R2",
+          "position": [
+            76.0,
+            26.0,
+            0.0
+          ],
+          "pass": true
+        },
+        {
+          "id": "R3",
+          "position": [
+            46.0,
+            22.0,
+            0.0
+          ],
+          "pass": true
+        },
+        {
+          "id": "R4",
+          "position": [
+            82.0,
+            22.0,
+            0.0
+          ],
+          "pass": true
+        },
+        {
+          "id": "R6",
+          "position": [
+            76.0,
+            47.0,
+            0.0
+          ],
+          "pass": true
+        },
+        {
+          "id": "R7",
+          "position": [
+            72.99999237060547,
+            29.0,
+            0.0
+          ],
+          "pass": true
+        },
+        {
+          "id": "R8",
+          "position": [
+            51.0,
+            48.99999237060547,
+            0.0
+          ],
+          "pass": true
+        },
+        {
+          "id": "R11",
+          "position": [
+            51.5,
+            24.0,
+            0.0
+          ],
+          "pass": true
+        },
+        {
+          "id": "R12",
+          "position": [
+            86.0,
+            31.0,
+            0.0
+          ],
+          "pass": true
+        }
+      ],
+      "oldBuildingStoneIslands": {
+        "U2": 0,
+        "U4": 0,
+        "U6": 0,
+        "U7": 0,
+        "U8": 0,
+        "U9": 0,
+        "U13": 0,
+        "U14": 0,
+        "U15": 0,
+        "U16": 0,
+        "U20": 0,
+        "U21": 0,
+        "U23": 0
+      },
+      "maxPreservedDifference": 0.0005817711353302002,
+      "passed": true,
+      "checkCount": 858
+    },
+    "breakablesAndMarkersValidation": {
+      "fixedSteps": [
+        {
+          "name": "R7 fixed stone step 1",
+          "pass": true,
+          "rect": {
+            "x": 71.25,
+            "y": 27.0,
+            "z": 71.65,
+            "w": 28.1
+          }
+        },
+        {
+          "name": "R7 fixed stone step 2",
+          "pass": true,
+          "rect": {
+            "x": 71.65,
+            "y": 27.0,
+            "z": 72.05,
+            "w": 28.1
+          }
+        },
+        {
+          "name": "R7 fixed stone step 3",
+          "pass": true,
+          "rect": {
+            "x": 72.05,
+            "y": 27.0,
+            "z": 74.0,
+            "w": 28.1
+          }
+        },
+        {
+          "name": "R7 fixed stone step 4",
+          "pass": true,
+          "rect": {
+            "x": 72.05,
+            "y": 29.9,
+            "z": 74.0,
+            "w": 31.2
+          }
+        }
+      ],
+      "cargoMarkers": [
+        {
+          "name": "LargeSpot1",
+          "pass": true,
+          "location": [
+            44.5,
+            36.5,
+            0.5439897179603577
+          ]
+        },
+        {
+          "name": "LargeSpot2",
+          "pass": true,
+          "location": [
+            82.0,
+            37.5,
+            0.5439894199371338
+          ]
+        },
+        {
+          "name": "MediumSpot1",
+          "pass": true,
+          "location": [
+            19.0,
+            41.0,
+            0.45998844504356384
+          ]
+        },
+        {
+          "name": "MediumSpot2",
+          "pass": true,
+          "location": [
+            71.0,
+            30.0,
+            0.45999154448509216
+          ]
+        },
+        {
+          "name": "MediumSpot3",
+          "pass": true,
+          "location": [
+            102.5,
+            37.0,
+            0.4599895775318146
+          ]
+        },
+        {
+          "name": "MediumSpot4",
+          "pass": true,
+          "location": [
+            62.0,
+            40.20000076293945,
+            2.959988594055176
+          ]
+        },
+        {
+          "name": "MediumSpot5",
+          "pass": true,
+          "location": [
+            65.19999694824219,
+            42.0,
+            2.9599881172180176
+          ]
+        },
+        {
+          "name": "SmallSpot1",
+          "pass": true,
+          "location": [
+            51.0,
+            9.0,
+            0.299997478723526
+          ]
+        },
+        {
+          "name": "SmallSpot2",
+          "pass": true,
+          "location": [
+            46.5,
+            12.800000190734863,
+            0.29999640583992004
+          ]
+        },
+        {
+          "name": "SmallSpot3",
+          "pass": true,
+          "location": [
+            43.0,
+            16.5,
+            0.2999953627586365
+          ]
+        },
+        {
+          "name": "SmallSpot4",
+          "pass": true,
+          "location": [
+            36.0,
+            22.299999237060547,
+            0.29999372363090515
+          ]
+        },
+        {
+          "name": "SmallSpot5",
+          "pass": true,
+          "location": [
+            74.0,
+            9.0,
+            0.299997478723526
+          ]
+        },
+        {
+          "name": "SmallSpot6",
+          "pass": true,
+          "location": [
+            79.0,
+            12.300000190734863,
+            0.299996554851532
+          ]
+        },
+        {
+          "name": "SmallSpot7",
+          "pass": true,
+          "location": [
+            85.0,
+            16.700000762939453,
+            0.2999953031539917
+          ]
+        },
+        {
+          "name": "SmallSpot8",
+          "pass": true,
+          "location": [
+            96.0,
+            21.200000762939453,
+            0.29999402165412903
+          ]
+        }
+      ],
+      "passed": true,
+      "breakableMeshCheckCount": 37
+    },
+    "validationEnvironment": "Blender 5.3 FBX reimport; Unity gameplay testing performed separately by integration owner",
+    "finalResourceHashes": {
+      "RuinCourtyard_Environment.fbx": "b7ff1e6d4858e44b628ab6dcfaf082a6aee02c5b0cc250ef637c954979a16435",
+      "RuinCourtyard_Breakables.fbx": "45d536f2cf68deec81da7beca091174a39a6c47393ec63fd5f324411102dee1d",
+      "RuinMinimap.png": "4e4a7195b4a1b707ce0dc1c80d1747961868996d34fb82aaa579c1b2d0b61db7"
+    },
+    "finalExportNote": "Final export preserves the same original mesh names. Environment vertices, UVs and normals are identical to the validated export except MediumSpot2 empty locator shifted1m west; marker shift validated independently.",
+    "passed": true,
+    "layoutSummary": {
+      "baselineCommit": "1b12041",
+      "removedBuildingGroups": [
+        "U13",
+        "U14",
+        "U15",
+        "U16",
+        "U20",
+        "U21",
+        "U23",
+        "U6",
+        "U7",
+        "U8",
+        "U9"
+      ],
+      "retainedBuildingGroups": 14,
+      "buildingMoves": {
+        "U2": [
+          18.15,
+          4.7
+        ],
+        "U4": [
+          -15.525,
+          9.425
+        ]
+      },
+      "wallTargets": {
+        "R2": [
+          76,
+          26
+        ],
+        "R3": [
+          46,
+          22
+        ],
+        "R4": [
+          82,
+          22
+        ],
+        "R6": [
+          76,
+          47
+        ],
+        "R7": [
+          73,
+          29
+        ],
+        "R8": [
+          51,
+          49
+        ],
+        "R11": [
+          51.5,
+          24
+        ],
+        "R12": [
+          86,
+          31
+        ]
+      },
+      "cargoMarkerAdjustments": {
+        "MediumSpot2": {
+          "positionUnity": [
+            71,
+            0.46,
+            30
+          ],
+          "reason": "Clear the relocated R7 north fixed support."
+        }
+      },
+      "layoutBlockerCount": 144
+    },
+    "fullReport": "Builds/Verification/ruin-v10-art-validation.json (local, ignored by Git)"
+  },
+  "assets": {
+    "Assets/Game/Resources/RuinCourtyard/RuinCourtyard_Environment.fbx": "b7ff1e6d4858e44b628ab6dcfaf082a6aee02c5b0cc250ef637c954979a16435",
+    "Assets/Game/Resources/RuinCourtyard/RuinCourtyard_Breakables.fbx": "45d536f2cf68deec81da7beca091174a39a6c47393ec63fd5f324411102dee1d",
+    "Assets/Game/Resources/RuinCourtyard/RuinCourtyard_PitStairs.fbx": "70afa4d7d53de82935949a5e6fb5e25cd5d6799e4f8fbf121f5e2524d75077e5",
+    "Assets/Game/Resources/RuinCourtyard/RuinLayout.json": "badfe42665416513202a5c34dfeaab690edb6b94d0643d29fb2d61eeddb93ce3"
+  },
+  "implementationCommit": "3279e90",
+  "delivery": {
+    "zip": "CargoClash_Mac_RuinV10_2026-11-17.zip",
+    "sha256": "1677bf75d1335a49c5e474d3f802a50646ffe4923bb97ca2afa8a644221de18d",
+    "unpackedSignatureVerified": true,
+    "architecture": "ARM64"
+  }
+}

@@ -1,0 +1,7 @@
+[RuinCargoValidation] Ruin_Cargo_Tobacco hash=2503961922
+[RuinCargoValidation] Ruin_Cargo_Cash hash=2055624002
+[RuinCargoValidation] Ruin_Cargo_Gold hash=3531347142
+[RuinCargoValidation] Ruin_Cargo_Art hash=2539279056
+[RuinCargoValidation] Current Astra geometry, inspect definitions, 10/30/100 tiers and unique registered network identities checked.
+[Build] StandaloneOSX Succeeded errors=0 warnings=4 size=631MB time=00:00:15.0390970
+[Build] Mac icon in, signed again.

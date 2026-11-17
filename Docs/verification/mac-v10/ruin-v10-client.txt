@@ -1,0 +1,83 @@
+[CCTEST] START mode=client halfSeconds=120 localBot=True body=Medium
+[CCTEST] PHASE HalfIntro half=1 collectors=Orange orange=0 blue=0 avatars=6 cargo=15
+[CCTEST] CHECK ok: RUIN test runs in the ruin scene
+[CCTEST] CHECK ok: RUIN spawns exactly 15 boxes
+[CCTEST] CHECK ok: RUIN value 10 has 8 boxes
+[CCTEST] CHECK ok: RUIN value 30 has 5 boxes
+[CCTEST] CHECK ok: RUIN value 100 has 2 boxes
+[CCTEST] CHECK ok: RUIN total available score is 430
+[CCTEST] CHECK ok: RUIN uses four isolated Astra definitions
+[CCTEST] CHECK ok: RUIN Tobacco variant keeps current GitHub geometry and its own definition
+[CCTEST] CHECK ok: RUIN Tobacco has 4 correctly defined network instances
+[CCTEST] CHECK ok: RUIN Cash variant keeps current GitHub geometry and its own definition
+[CCTEST] CHECK ok: RUIN Cash has 4 correctly defined network instances
+[CCTEST] CHECK ok: RUIN Gold variant keeps current GitHub geometry and its own definition
+[CCTEST] CHECK ok: RUIN Gold has 5 correctly defined network instances
+[CCTEST] CHECK ok: RUIN Art variant keeps current GitHub geometry and its own definition
+[CCTEST] CHECK ok: RUIN Art has 2 correctly defined network instances
+[CCTEST] CHECK ok: RUIN SmallSpot1 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN SmallSpot2 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN SmallSpot3 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN SmallSpot4 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN SmallSpot5 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN SmallSpot6 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN SmallSpot7 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN SmallSpot8 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN MediumSpot1 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN MediumSpot2 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN MediumSpot3 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN MediumSpot4 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN MediumSpot5 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN LargeSpot1 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN LargeSpot2 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN both equal teams have marked spawn slots and non-blocking bilingual assembly signs
+[CCTEST] PHASE Playing half=1 collectors=Orange orange=0 blue=0 avatars=6 cargo=15
+[CCTEST] CHECK ok: the crew picked here is the one in the match (picked Medium, playing Medium)
+[CCTEST] KNOCKOUT Bot 4 on Player 1 with=Slam
+[CCTEST] KNOCKOUT Bot 3 on Bot 1 with=Ram
+[CCTEST] HELICOPTER FlyingIn
+[CCTEST] CHECK ok: RUIN client observes replicated gate and broken wall states
+[CCTEST] CHECK ok: RUIN client observes replicated vine pad and ladder states
+[CCTEST] CHECK ok: RUIN client observes two carriers on a 100 crate
+[CCTEST] PHASE HalfOutro half=1 collectors=Orange orange=20 blue=300 avatars=6 cargo=7
+[CCTEST] HELICOPTER Lowering
+[CCTEST] HELICOPTER Clipping
+[CCTEST] HELICOPTER Lifting
+[CCTEST] HELICOPTER Leaving
+[CCTEST] PHASE HalfIntro half=2 collectors=Blue orange=20 blue=300 avatars=6 cargo=15
+[CCTEST] PHASE Playing half=2 collectors=Blue orange=20 blue=300 avatars=6 cargo=15
+[CCTEST] KNOCKOUT Player 1 on Player 2 with=Hammer
+[CCTEST] KNOCKOUT Bot 4 on Player 1 with=Ram
+[CCTEST] KNOCKOUT Bot 2 on Bot 3 with=Hammer
+[CCTEST] KNOCKOUT Player 1 on Player 2 with=Hammer
+[CCTEST] KNOCKOUT Player 1 on Bot 4 with=Ram
+[CCTEST] KNOCKOUT Bot 4 on Bot 2 with=Ram
+[CCTEST] KNOCKOUT Bot 1 on Bot 3 with=Ram
+[CCTEST] KNOCKOUT Bot 3 on Player 1 with=Blast
+[CCTEST] KNOCKOUT Bot 1 on Player 2 with=Hammer
+[CCTEST] KNOCKOUT Bot 2 on Bot 3 with=Hammer
+[CCTEST] KNOCKOUT Bot 4 on Bot 1 with=Blast
+[CCTEST] KNOCKOUT Bot 2 on Player 2 with=Ram
+[CCTEST] KNOCKOUT Bot 2 on Bot 4 with=Hammer
+[CCTEST] KNOCKOUT Player 2 on Bot 2 with=Ram
+[CCTEST] KNOCKOUT Player 2 on Player 1 with=Ram
+[CCTEST] KNOCKOUT Bot 2 on Player 2 with=Ram
+[CCTEST] KNOCKOUT Bot 4 on Bot 1 with=Ram
+[CCTEST] HELICOPTER FlyingIn
+[CCTEST] KNOCKOUT Player 1 on Bot 3 with=Slam
+[CCTEST] KNOCKOUT Player 1 on Bot 4 with=Hammer
+[CCTEST] PHASE HalfOutro half=2 collectors=Blue orange=240 blue=350 avatars=6 cargo=6
+[CCTEST] HELICOPTER Lowering
+[CCTEST] HELICOPTER Clipping
+[CCTEST] HELICOPTER Lifting
+[CCTEST] HELICOPTER Leaving
+[CCTEST] HELICOPTER Gone
+[CCTEST] PHASE Results half=2 collectors=Blue orange=240 blue=350 avatars=6 cargo=6
+[CCTEST] RESULT orange=240 blue=350 titles=5
+[CCTEST] TITLE Mover Supreme -> Bot 3 (40)
+[CCTEST] TITLE Demolition Chief -> Bot 3 (150)
+[CCTEST] TITLE Knockout King -> Player 1 (5)
+[CCTEST] TITLE Butterfingers -> Player 2 (15)
+[CCTEST] TITLE Punching Bag -> Player 2 (5)
+[CCTEST] STOPPED wasHost=False onPurpose=False message=The host left the game.
+[CCTEST] DONE errors=0 timedOut=False

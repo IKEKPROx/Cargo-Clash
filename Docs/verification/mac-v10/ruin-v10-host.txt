@@ -1,0 +1,465 @@
+[CCTEST] START mode=host halfSeconds=120 localBot=True body=Medium
+[CCTEST] CREW Player 1 body=Medium hat=6 glasses=1 health=100 speed=6.50 damage=1.00
+[CCTEST] CREW Player 2 body=Medium hat=6 glasses=1 health=100 speed=6.50 damage=1.00
+[CCTEST] CREW Bot 1 body=Medium hat=4 glasses=0 health=100 speed=6.50 damage=1.00
+[CCTEST] CREW Bot 2 body=Short hat=4 glasses=2 health=140 speed=5.59 damage=1.30
+[CCTEST] CREW Bot 3 body=Medium hat=2 glasses=0 health=100 speed=6.50 damage=1.00
+[CCTEST] CREW Bot 4 body=Short hat=2 glasses=0 health=140 speed=5.59 damage=1.30
+[CCTEST] PHASE HalfIntro half=1 collectors=Orange orange=0 blue=0 avatars=6 cargo=15
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-00.png
+[CCTEST] CHECK ok: RUIN test runs in the ruin scene
+[CCTEST] CHECK ok: RUIN spawns exactly 15 boxes
+[CCTEST] CHECK ok: RUIN value 10 has 8 boxes
+[CCTEST] CHECK ok: RUIN value 30 has 5 boxes
+[CCTEST] CHECK ok: RUIN value 100 has 2 boxes
+[CCTEST] CHECK ok: RUIN total available score is 430
+[CCTEST] CHECK ok: RUIN uses four isolated Astra definitions
+[CCTEST] CHECK ok: RUIN Tobacco variant keeps current GitHub geometry and its own definition
+[CCTEST] CHECK ok: RUIN Tobacco has 4 correctly defined network instances
+[CCTEST] CHECK ok: RUIN Cash variant keeps current GitHub geometry and its own definition
+[CCTEST] CHECK ok: RUIN Cash has 4 correctly defined network instances
+[CCTEST] CHECK ok: RUIN Gold variant keeps current GitHub geometry and its own definition
+[CCTEST] CHECK ok: RUIN Gold has 5 correctly defined network instances
+[CCTEST] CHECK ok: RUIN Art variant keeps current GitHub geometry and its own definition
+[CCTEST] CHECK ok: RUIN Art has 2 correctly defined network instances
+[CCTEST] CHECK ok: RUIN SmallSpot1 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN SmallSpot2 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN SmallSpot3 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN SmallSpot4 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN SmallSpot5 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN SmallSpot6 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN SmallSpot7 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN SmallSpot8 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN MediumSpot1 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN MediumSpot2 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN MediumSpot3 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN MediumSpot4 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN MediumSpot5 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN LargeSpot1 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN LargeSpot2 sits on its floor using the actual prefab dimensions
+[CCTEST] CHECK ok: RUIN both equal teams have marked spawn slots and non-blocking bilingual assembly signs
+[CCTEST] CHECK ok: RUIN has host-owned actors on both sides
+[CCTEST] CHECK ok: RUIN ground collider supports both teams' spawn points
+[CCTEST] CHECK ok: RUIN pit has an actual ground opening
+[CCTEST] CHECK ok: RUIN navigation does not bridge a pit
+[CCTEST] CHECK ok: RUIN pit has an actual ground opening
+[CCTEST] CHECK ok: RUIN navigation does not bridge a pit
+[CCTEST] PHASE Playing half=1 collectors=Orange orange=0 blue=0 avatars=6 cargo=15
+[CCTEST] CHECK ok: the crew picked here is the one in the match (picked Medium, playing Medium)
+[CCTEST] CHECK ok: RUIN gate closes from outside its sweep
+[CCTEST] CHECK ok: RUIN gate reopens
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-01.png
+[CCTEST] CHECK ok: RUIN occupied gate refuses to close
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-02.png
+[CCTEST] CHECK ok: RUIN hammer aims at R1
+[CCTEST] CHECK ok: RUIN hammer breaks R1
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-03.png
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-04.png
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-05.png
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-06.png
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-07.png
+[CCTEST] CHECK ok: RUIN collector restores broken R1
+[CCTEST] CHECK ok: RUIN vine coil can be collected
+[CCTEST] CHECK ok: RUIN throw creates one pad and consumes the vine
+[CCTEST] CHECK ok: RUIN vine pad applies its configured slowdown
+[CCTEST] CHECK ok: RUIN vine pad expires
+[CCTEST] CHECK ok: RUIN ladder consumes a vine and begins climbing
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-08.png
+[CCTEST] CHECK ok: RUIN ladder arrives at the inward safe landing
+[CCTEST] CHECK ok: RUIN two teammates can boost one onto the terrace
+[CCTEST] CHECK ok: RUIN upper teammate can pull the helper up
+[CCTEST] CHECK ok: RUIN every pit has an authored stair escape route
+[CCTEST] CHECK ok: RUIN pit 1 floor is above the failsafe threshold
+[CCTEST] CHECK ok: RUIN cargo remains accessible on pit 1 floor
+[CCTEST] CHECK ok: RUIN player stays on pit 1 floor
+[CCTEST] CHECK ok: RUIN player can recover a 10 box from pit 1 floor
+[CCTEST] CHECK ok: RUIN pit 1 walk uses the owned CharacterController
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-09.png
+[CCTEST] CHECK ok: RUIN player physically walks every step out of pit 1
+[CCTEST] CHECK ok: RUIN player carries the 10 box up pit 1 stairs to ground level
+[CCTEST] CHECK ok: RUIN cargo recovers to its actual spawn only below pit 1 failsafe
+[CCTEST] CHECK ok: RUIN player recovers from below pit 1 failsafe
+[CCTEST] CHECK ok: RUIN pit 2 floor is above the failsafe threshold
+[CCTEST] CHECK ok: RUIN cargo remains accessible on pit 2 floor
+[CCTEST] CHECK ok: RUIN player stays on pit 2 floor
+[CCTEST] CHECK ok: RUIN player can recover a 10 box from pit 2 floor
+[CCTEST] CHECK ok: RUIN pit 2 walk uses the owned CharacterController
+[CCTEST] CHECK ok: RUIN player physically walks every step out of pit 2
+[CCTEST] CHECK ok: RUIN player carries the 10 box up pit 2 stairs to ground level
+[CCTEST] CHECK ok: RUIN cargo recovers to its actual spawn only below pit 2 failsafe
+[CCTEST] CHECK ok: RUIN player recovers from below pit 2 failsafe
+[CCTEST] CHECK ok: RUIN pit recovery and stair traversal do not change scores
+[CCTEST] CHECK ok: RUIN Art crate uses Astra's authored carry reach and lift
+[CCTEST] CHECK ok: RUIN Astra Art 100 crate accepts two carriers
+[CCTEST] CHECK ok: RUIN co-carry feet and grips follow the actual cargo axis, lift and reach
+[CCTEST] CHECK ok: RUIN co-carry releases when one carrier loses pit-edge support while idle
+[CCTEST] CHECK ok: RUIN pit 1 co-carry setup has a floor at each grip
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-10.png
+[CCTEST] CHECK ok: RUIN two players pick up the 100 box at pit 1 bottom
+[CCTEST] CHECK ok: RUIN two players physically co-carry the 100 box up pit 1 stairs
+[CCTEST] CHECK ok: RUIN pit 2 co-carry setup has a floor at each grip
+[CCTEST] CHECK ok: RUIN two players pick up the 100 box at pit 2 bottom
+[CCTEST] CHECK ok: RUIN two players physically co-carry the 100 box up pit 2 stairs
+[CCTEST] CHECK ok: RUIN carrying both cargo sizes out of pits does not award delivery points
+[CCTEST] CHECK ok: RUIN delivery volume follows the actual truck bed center and yaw
+[CCTEST] CHECK ok: RUIN truck bed delivery edge 0/-1 has matching carried/thrown boundaries
+[CCTEST] CHECK ok: RUIN truck bed delivery edge 0/1 has matching carried/thrown boundaries
+[CCTEST] CHECK ok: RUIN truck bed delivery edge 1/-1 has matching carried/thrown boundaries
+[CCTEST] CHECK ok: RUIN truck bed delivery edge 1/1 has matching carried/thrown boundaries
+[CCTEST] CHECK ok: RUIN delivery rejects cargo outside its vertical volume at local y=-0.30
+[CCTEST] CHECK ok: RUIN delivery rejects cargo outside its vertical volume at local y=3.90
+[CCTEST] CHECK ok: RUIN unhandled initial ground cargo inside the volume does not score
+[CCTEST] CHECK ok: RUIN outside throw setup has actual ground under actor and cargo
+[CCTEST] RUIN DELIVERY before-grab phase=Playing actor=(57.929, 0.050, 4.840) eye=(57.929, 1.330, 4.840) facing=(1.000, 0.000, 0.000) carried=18446744073709551615 controller=True knocked=False staggered=False climbing=False cargo=(59.129, 0.109, 4.840) body=(59.129, 0.109, 4.840) state=Ground kinematic=False velocity=(0.000, 0.000, 0.000) edge=0.788 heightGap=0.050 reach=True blocked=none hit=none actorZone=(4.750, 0.050, 0.000) cargoZone=(3.550, 0.109, 0.000) inside=False score=0/0
+[CCTEST] CHECK ok: RUIN outside throw setup has a free collector, enabled controller and clear validated pickup reach
+[CCTEST] RUIN DELIVERY after-grab phase=Playing actor=(57.929, 0.050, 4.840) eye=(57.929, 1.330, 4.840) facing=(1.000, 0.000, 0.000) carried=10 controller=True knocked=False staggered=False climbing=False cargo=(58.948, 0.727, 4.840) body=(58.948, 0.727, 4.840) state=Carried kinematic=True velocity=(0.000, 0.000, 0.000) edge=0.607 heightGap=0.568 reach=True blocked=none hit=none actorZone=(4.750, 0.050, 0.000) cargoZone=(3.731, 0.727, 0.000) inside=False score=0/0
+[CCTEST] CHECK ok: RUIN collector picks up cargo while remaining outside the delivery ring
+[CCTEST] RUIN DELIVERY before-release phase=Playing actor=(57.929, 0.050, 4.840) eye=(57.929, 1.330, 4.840) facing=(1.000, 0.000, 0.000) carried=10 controller=True knocked=False staggered=False climbing=False cargo=(58.948, 0.728, 4.840) body=(58.948, 0.728, 4.840) state=Carried kinematic=True velocity=(0.000, 0.000, 0.000) edge=0.607 heightGap=0.569 reach=True blocked=none hit=none actorZone=(4.750, 0.050, 0.000) cargoZone=(3.731, 0.728, 0.000) inside=False score=0/0
+[CCTEST] RUIN DELIVERY in-flight phase=Playing actor=(57.929, 0.050, 4.840) eye=(57.929, 1.330, 4.840) facing=(1.000, 0.000, 0.000) carried=18446744073709551615 controller=True knocked=False staggered=False climbing=False cargo=(58.948, 0.728, 4.840) body=(58.948, 0.728, 4.840) state=Ground kinematic=False velocity=(2.500, 2.000, 0.000) edge=0.607 heightGap=0.569 reach=True blocked=none hit=none actorZone=(4.750, 0.050, 0.000) cargoZone=(3.731, 0.728, 0.000) inside=False score=0/0
+[CCTEST] RESCUED Small carriers=Player 1
+[CCTEST] RUIN DELIVERY after-flight phase=Playing actor=(57.929, 0.050, 4.840) eye=(57.929, 1.330, 4.840) facing=(1.000, 0.000, 0.000) carried=18446744073709551615 controller=True knocked=False staggered=False climbing=False cargo=(59.345, 0.905, 4.840) body=(59.345, 0.905, 4.840) state=Rescued kinematic=True velocity=(0.000, 0.000, 0.000) edge=1.004 heightGap=0.746 reach=True blocked=none hit=none actorZone=(4.750, 0.050, 0.000) cargoZone=(3.334, 0.905, 0.000) inside=True score=10/0
+[CCTEST] CHECK ok: RUIN normal collector throw into the truck bed ring rescues and scores once
+[CCTEST] CHECK ok: RUIN thrown cargo remaining in the delivery volume cannot score again
+[CCTEST] RUIN interaction suite finished
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-11.png
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Bot 4 with=Ram health=114 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=False
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Bot 1 with=Ram health=80 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 1 dropped=True
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 3 with=Ram health=80 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=False
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Player 1 with=Ram health=74 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=True
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 4 with=Ram health=94 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=False
+[CCTEST] HIT Bot 3 on Bot 1 with=Slam health=20 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 1 dropped=True
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 3 with=Ram health=60 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=False
+[CCTEST] HIT Bot 4 on Player 1 with=Slam health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 4 on Player 1 with=Slam
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-12.png
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Bot 1 with=Ram health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 3 on Bot 1 with=Ram
+[CCTEST] RESCUED Small carriers=Player 1
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-13.png
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-14.png
+[CCTEST] HELICOPTER FlyingIn
+[CCTEST] HIT Bot 3 on Player 1 with=Slam health=40 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=True
+[CCTEST] HIT Bot 3 on Bot 1 with=Slam health=40 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 1 dropped=True
+[CCTEST] HIT Bot 3 on Bot 2 with=Slam health=80 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=True
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 3 with=Ram health=40 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=False
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Player 1 with=Ram health=20 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-15.png
+[CCTEST] HIT Bot 3 on Bot 1 with=Hammer health=6 knockedDown=False knockedOut=False
+[CCTEST] HALF 1 seconds=120 collectors=Orange rescued=20 destroyed=300 lost=0 untouched=110 total=430 orange=20 blue=300
+[CCTEST] PHASE HalfOutro half=1 collectors=Orange orange=20 blue=300 avatars=6 cargo=7
+[CCTEST] HELICOPTER Lowering
+[CCTEST] HELICOPTER Clipping
+[CCTEST] HELICOPTER Lifting
+[CCTEST] HELICOPTER Leaving
+[CCTEST] PHASE HalfIntro half=2 collectors=Blue orange=20 blue=300 avatars=6 cargo=15
+[CCTEST] PHASE Playing half=2 collectors=Blue orange=20 blue=300 avatars=6 cargo=15
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-16.png
+[CCTEST] RAM Player 2
+[CCTEST] HIT Player 2 on Player 1 with=Ram health=80 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 3 with=Ram health=80 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=True
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 4 with=Ram health=120 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=True
+[CCTEST] HIT Player 1 on Player 2 with=Hammer health=66 knockedDown=False knockedOut=False
+[CCTEST] HIT Player 1 on Player 2 with=Hammer health=32 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 2 dropped=True
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Player 1 with=Ram health=54 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Bot 2 with=Ram health=120 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=False
+[CCTEST] HIT Bot 3 on Bot 1 with=Blast health=75 knockedDown=False knockedOut=False
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Player 2 with=Hammer health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Player 1 on Player 2 with=Hammer
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Player 1 with=Ram health=28 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] HIT Player 1 on Bot 4 with=Slam health=60 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=True
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-17.png
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Player 1 with=Ram health=2 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 4 with=Ram health=40 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=True
+[CCTEST] RAM Player 2
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Player 1 on Player 2 with=Hammer health=66 knockedDown=False knockedOut=False
+[CCTEST] HIT Bot 4 on Player 1 with=Ram health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 4 on Player 1 with=Ram
+[CCTEST] HIT Bot 3 on Bot 1 with=Blast health=50 knockedDown=False knockedOut=False
+[CCTEST] HIT Bot 3 on Bot 2 with=Blast health=95 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 3 with=Ram health=60 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=False
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Bot 3 with=Ram health=34 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=False
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Bot 3 with=Ram health=8 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=True
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Bot 2 with=Ram health=75 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=False
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-18.png
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Bot 3 with=Hammer health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 2 on Bot 3 with=Hammer
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Bot 2 with=Ram health=55 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=False
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Bot 3 with=Ram health=74 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=True
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Bot 2 with=Ram health=35 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=False
+[CCTEST] RESCUED Medium carriers=Bot 3
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Bot 3 with=Ram health=48 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=False
+[CCTEST] RAM Bot 3
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-19.png
+[CCTEST] HIT Bot 3 on Bot 2 with=Ram health=15 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=False
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 4 with=Ram health=20 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=True
+[CCTEST] HIT Player 1 on Player 2 with=Hammer health=32 knockedDown=False knockedOut=False
+[CCTEST] HIT Player 1 on Player 2 with=Hammer health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Player 1 on Player 2 with=Hammer
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Bot 3 with=Ram health=22 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=True
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Player 1 with=Ram health=74 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 4 with=Ram health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Player 1 on Bot 4 with=Ram
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 3 with=Ram health=2 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=True
+[CCTEST] RAM Player 2
+[CCTEST] HIT Player 2 on Player 1 with=Ram health=54 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] RAM Bot 2
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Player 2 with=Ram health=80 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 2 dropped=True
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 2 with=Ram health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 4 on Bot 2 with=Ram
+[CCTEST] RAM Player 2
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 3 with=Ram health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 1 on Bot 3 with=Ram
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Player 2 with=Ram health=60 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 2 dropped=True
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-20.png
+[CCTEST] RAM Player 2
+[CCTEST] HIT Player 2 on Player 1 with=Ram health=34 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] RAM Player 1
+[CCTEST] RESCUED Small carriers=Bot 4
+[CCTEST] HIT Player 1 on Player 2 with=Ram health=40 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 2 dropped=True
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Player 1 on Bot 3 with=Hammer health=66 knockedDown=False knockedOut=False
+[CCTEST] HIT Player 1 on Bot 3 with=Hammer health=32 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=False
+[CCTEST] RAM Player 2
+[CCTEST] HIT Player 2 on Player 1 with=Blast health=9 knockedDown=False knockedOut=False
+[CCTEST] HIT Player 2 on Bot 1 with=Blast health=25 knockedDown=False knockedOut=False
+[CCTEST] HIT Bot 3 on Player 1 with=Blast health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 3 on Player 1 with=Blast
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 4 with=Ram health=120 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=False
+[CCTEST] HIT Bot 1 on Player 2 with=Hammer health=6 knockedDown=False knockedOut=False
+[CCTEST] HIT Bot 1 on Player 2 with=Hammer health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 1 on Player 2 with=Hammer
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Bot 1 with=Ram health=5 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 1 dropped=False
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 3 with=Ram health=12 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=True
+[CCTEST] RAM Bot 2
+[CCTEST] RAM Bot 3
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 4 with=Ram health=100 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=True
+[CCTEST] HIT Bot 3 on Bot 2 with=Blast health=115 knockedDown=False knockedOut=False
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-21.png
+[CCTEST] RAM Bot 4
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Player 2 with=Ram health=74 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 2 dropped=True
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 2 on Bot 3 with=Hammer health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 2 on Bot 3 with=Hammer
+[CCTEST] HIT Bot 4 on Bot 1 with=Blast health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 4 on Bot 1 with=Blast
+[CCTEST] RAM Player 2
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 2 with=Ram health=89 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=False
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Player 2 with=Hammer health=40 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Player 2 with=Ram health=14 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 2 dropped=True
+[CCTEST] HIT Bot 4 on Player 1 with=Blast health=68 knockedDown=False knockedOut=False
+[CCTEST] HIT Bot 2 on Bot 4 with=Hammer health=56 knockedDown=False knockedOut=False
+[CCTEST] HIT Player 1 on Bot 4 with=Hammer health=22 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=True
+[CCTEST] RAM Player 2
+[CCTEST] HIT Player 2 on Player 1 with=Ram health=48 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] HIT Player 2 on Bot 2 with=Blast health=64 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Player 2 with=Ram health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 2 on Player 2 with=Ram
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 3 with=Ram health=80 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=False
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 2 with=Ram health=38 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=False
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 2 on Bot 4 with=Hammer health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 2 on Bot 4 with=Hammer
+[CCTEST] HIT Bot 3 on Player 1 with=Ram health=28 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] HIT Player 2 on Bot 2 with=Blast health=13 knockedDown=False knockedOut=False
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 3 with=Ram health=60 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=True
+[CCTEST] RAM Player 2
+[CCTEST] HIT Player 2 on Bot 2 with=Ram health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Player 2 on Bot 2 with=Ram
+[CCTEST] HIT Player 1 on Player 2 with=Hammer health=66 knockedDown=False knockedOut=False
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-22.png
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Player 1 with=Ram health=8 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] HIT Bot 3 on Bot 1 with=Blast health=75 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Player 2 with=Ram health=46 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 2 dropped=True
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 1 with=Ram health=49 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 1 dropped=False
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 4 with=Ram health=120 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=True
+[CCTEST] RAM Player 2
+[CCTEST] HIT Player 2 on Player 1 with=Ram health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Player 2 on Player 1 with=Ram
+[CCTEST] RESCUED Small carriers=Bot 3
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 3 with=Ram health=40 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=False
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Player 2 with=Ram health=26 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 2 dropped=True
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 1 with=Ram health=23 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 1 dropped=False
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-23.png
+[CCTEST] HIT Bot 1 on Bot 4 with=Hammer health=86 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 4 with=Ram health=66 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=True
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Player 2 with=Ram health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 2 on Player 2 with=Ram
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Bot 2 with=Ram health=120 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=False
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 1 with=Ram health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 4 on Bot 1 with=Ram
+[CCTEST] HELICOPTER FlyingIn
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 3 with=Ram health=20 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=True
+[CCTEST] RAM Player 2
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Player 2 on Player 1 with=Ram health=80 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Bot 2 with=Ram health=100 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=False
+[CCTEST] HIT Player 1 on Bot 3 with=Slam health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Player 1 on Bot 3 with=Slam
+[CCTEST] RAM Player 1
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Player 1 on Player 2 with=Ram health=80 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 2 dropped=True
+[CCTEST] HIT Bot 2 on Bot 4 with=Ram health=40 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=True
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Player 1 with=Ram health=54 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Player 2 with=Ram health=60 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 2 dropped=True
+[CCTEST] HIT Bot 4 on Bot 2 with=Blast health=68 knockedDown=False knockedOut=False
+[CCTEST] HIT Player 1 on Bot 4 with=Hammer health=6 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 2
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 2 with=Ram health=42 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=False
+[CCTEST] HIT Player 1 on Bot 4 with=Hammer health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Player 1 on Bot 4 with=Hammer
+[CCTEST] RAM Player 2
+[CCTEST] HIT Player 2 on Player 1 with=Ram health=34 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] HALF 2 seconds=120 collectors=Blue rescued=50 destroyed=220 lost=0 untouched=160 total=430 orange=240 blue=350
+[CCTEST] PHASE HalfOutro half=2 collectors=Blue orange=240 blue=350 avatars=6 cargo=6
+[CCTEST] HELICOPTER Lowering
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-24.png
+[CCTEST] HELICOPTER Clipping
+[CCTEST] HELICOPTER Lifting
+[CCTEST] HELICOPTER Leaving
+[CCTEST] PHASE Results half=2 collectors=Blue orange=240 blue=350 avatars=6 cargo=6
+[CCTEST] RESULT orange=240 blue=350 titles=5
+[CCTEST] TITLE Mover Supreme -> Bot 3 (40)
+[CCTEST] TITLE Demolition Chief -> Bot 3 (150)
+[CCTEST] TITLE Knockout King -> Player 1 (5)
+[CCTEST] TITLE Butterfingers -> Player 2 (15)
+[CCTEST] TITLE Punching Bag -> Player 2 (5)
+[CCTEST] HELICOPTER Gone
+[CCTEST] SHOT /Users/chenhaoyu/Documents/ChatGPT/CargoClash/Integration/Cargo-Clash-Mac/Builds/Verification/ruin-v10-window/host-25.png
+[CCTEST] DONE errors=0 timedOut=False
+[CCTEST] STOPPED wasHost=True onPurpose=False message=

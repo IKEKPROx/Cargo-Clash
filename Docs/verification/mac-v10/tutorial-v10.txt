@@ -1,0 +1,146 @@
+[CCTEST] START mode=practice halfSeconds=35 localBot=True body=Medium
+[CCTEST] CREW Player 1 body=Medium hat=6 glasses=1 health=100 speed=6.50 damage=1.00
+[CCTEST] CREW Bot 1 body=Medium hat=4 glasses=3 health=100 speed=6.50 damage=1.00
+[CCTEST] CREW Bot 2 body=Short hat=1 glasses=0 health=140 speed=5.59 damage=1.30
+[CCTEST] CREW Bot 3 body=Medium hat=1 glasses=0 health=100 speed=6.50 damage=1.00
+[CCTEST] CREW Bot 4 body=Short hat=3 glasses=3 health=140 speed=5.59 damage=1.30
+[CCTEST] CREW Bot 5 body=Tall hat=0 glasses=0 health=75 speed=7.41 damage=0.82
+[CCTEST] PHASE HalfIntro half=1 collectors=Orange orange=0 blue=0 avatars=6 cargo=20
+[CCTEST] PHASE Playing half=1 collectors=Orange orange=0 blue=0 avatars=6 cargo=20
+[CCTEST] CHECK ok: the crew picked here is the one in the match (picked Medium, playing Medium)
+[CCTEST] COCARRY half=1 a=Player 1 b=Bot 1 grabbed=False,False start=(16.00, 0.78, 16.00)
+[CCTEST] COCARRY half=1 moved=12.8m state=Carried a=(11.80, 0.00, 3.64) slotGap=1.8
+[CCTEST] RESCUED Medium carriers=Bot 2
+[CCTEST] RESCUED Small carriers=Bot 2
+[CCTEST] RESCUED Small carriers=Bot 2
+[CCTEST] RESCUED Small carriers=Bot 2
+[CCTEST] RESCUED Small carriers=Bot 2
+[CCTEST] RAM Bot 5
+[CCTEST] HIT Bot 5 on Player 1 with=Ram health=84 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=True
+[CCTEST] HELICOPTER FlyingIn
+[CCTEST] HIT Bot 5 on Bot 1 with=Hammer health=72 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 1 with=Ram health=46 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 1 dropped=True
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 5 with=Ram health=55 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 5 dropped=False
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Bot 2 with=Ram health=120 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=True
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 4 with=Ram health=120 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=False
+[CCTEST] HIT Bot 5 on Player 1 with=Hammer health=56 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 5
+[CCTEST] HIT Bot 5 on Player 1 with=Ram health=40 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=True
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Bot 3 with=Ram health=74 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=False
+[CCTEST] RAM Bot 4
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 5 with=Ram health=35 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 5 dropped=False
+[CCTEST] HIT Bot 4 on Bot 1 with=Ram health=20 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 1 dropped=True
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Bot 2 with=Ram health=100 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=True
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 4 with=Ram health=100 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=False
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 3 on Player 1 with=Hammer health=6 knockedDown=False knockedOut=False
+[CCTEST] HIT Bot 2 on Bot 3 with=Blast health=42 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 5
+[CCTEST] HIT Bot 5 on Player 1 with=Ram health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 5 on Player 1 with=Ram
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 1 with=Ram health=0 knockedDown=True knockedOut=True
+[CCTEST] KNOCKOUT Bot 4 on Bot 1 with=Ram
+[CCTEST] HALF 1 seconds=35 collectors=Orange rescued=80 destroyed=190 lost=0 untouched=230 total=500 orange=80 blue=190
+[CCTEST] PHASE HalfOutro half=1 collectors=Orange orange=80 blue=190 avatars=6 cargo=16
+[CCTEST] HELICOPTER Lowering
+[CCTEST] HELICOPTER Clipping
+[CCTEST] HELICOPTER Lifting
+[CCTEST] HELICOPTER Leaving
+[CCTEST] PHASE HalfIntro half=2 collectors=Blue orange=80 blue=190 avatars=6 cargo=20
+[CCTEST] PHASE Playing half=2 collectors=Blue orange=80 blue=190 avatars=6 cargo=20
+[CCTEST] COCARRY half=2 a=Bot 3 b=Bot 4 grabbed=False,False start=(-1.86, 0.78, -26.81)
+[CCTEST] RESCUED Large carriers=Bot 4+Bot 3
+[CCTEST] RESCUED Small carriers=Bot 3
+[CCTEST] RESCUED Medium carriers=Bot 5
+[CCTEST] COCARRY half=2 moved=13.7m state=Rescued a=(6.64, 0.05, -27.34) slotGap=7.7
+[CCTEST] RESCUED Small carriers=Bot 4
+[CCTEST] RESCUED Small carriers=Bot 4
+[CCTEST] RESCUED Small carriers=Bot 5
+[CCTEST] RESCUED Small carriers=Bot 4
+[CCTEST] RESCUED Medium carriers=Bot 3
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Bot 1 with=Ram health=80 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 1 dropped=False
+[CCTEST] RESCUED Small carriers=Bot 4
+[CCTEST] HIT Bot 3 on Bot 2 with=Blast health=115 knockedDown=False knockedOut=False
+[CCTEST] RESCUED Medium carriers=Bot 5
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Bot 3 with=Ram health=74 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=False
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Bot 2 with=Blast health=90 knockedDown=False knockedOut=False
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Bot 3 with=Ram health=48 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=False
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 2 with=Blast health=58 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=False
+[CCTEST] HELICOPTER FlyingIn
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Player 1 with=Ram health=80 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] RESCUED Small carriers=Bot 4
+[CCTEST] RAM Bot 1
+[CCTEST] HIT Bot 1 on Bot 3 with=Ram health=28 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=True
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 2 with=Ram health=32 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=False
+[CCTEST] RESCUED Medium carriers=Bot 5
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Bot 1 with=Ram health=60 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 1 dropped=False
+[CCTEST] RESCUED Small carriers=Bot 5
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Bot 4 with=Ram health=114 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 4 dropped=True
+[CCTEST] HIT Bot 3 on Player 1 with=Blast health=55 knockedDown=False knockedOut=False
+[CCTEST] RAM Player 1
+[CCTEST] HIT Player 1 on Bot 3 with=Ram health=8 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 3 dropped=True
+[CCTEST] RESCUED Small carriers=Bot 5
+[CCTEST] RAM Bot 4
+[CCTEST] HIT Bot 4 on Bot 2 with=Ram health=6 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 2 dropped=False
+[CCTEST] RAM Bot 3
+[CCTEST] HIT Bot 3 on Player 1 with=Ram health=35 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Player 1 dropped=False
+[CCTEST] RAM Bot 2
+[CCTEST] HIT Bot 2 on Bot 5 with=Ram health=49 knockedDown=True knockedOut=False
+[CCTEST] KNOCKDOWN Bot 5 dropped=False
+[CCTEST] HALF 2 seconds=35 collectors=Blue rescued=325 destroyed=100 lost=0 untouched=75 total=500 orange=180 blue=515
+[CCTEST] PHASE HalfOutro half=2 collectors=Blue orange=180 blue=515 avatars=6 cargo=19
+[CCTEST] HELICOPTER Lowering
+[CCTEST] HELICOPTER Clipping
+[CCTEST] HELICOPTER Lifting
+[CCTEST] HELICOPTER Leaving
+[CCTEST] PHASE Results half=2 collectors=Blue orange=180 blue=515 avatars=6 cargo=19
+[CCTEST] RESULT orange=180 blue=515 titles=5
+[CCTEST] TITLE Mover Supreme -> Bot 4 (125)
+[CCTEST] TITLE Demolition Chief -> Bot 3 (63)
+[CCTEST] TITLE Knockout King -> Bot 4 (1)
+[CCTEST] TITLE Butterfingers -> Player 1 (3)
+[CCTEST] TITLE Punching Bag -> Player 1 (1)
+[CCTEST] HELICOPTER Gone
+[CCTEST] DONE errors=0 timedOut=False
+[CCTEST] STOPPED wasHost=True onPurpose=False message=

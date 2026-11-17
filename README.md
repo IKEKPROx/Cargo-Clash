@@ -2,7 +2,7 @@
 
 最多 6 人的联网对抗游戏，COMP4122 课程项目。货车翻车后，正方把散落的货物搬回车上，反方把货砸掉，比谁抢救或毁掉的货物价值更高。每关两个半场，中场换边；教学关与藤坠石庭每半场 1 分钟，河流关每半场 3 分钟。时间到时直升机赶来，把车上的货箱吊走。
 
-本分支开放教学关（TUTORIAL）、河流关（RIVER FLATS）和藤坠石庭 V09（RUIN COURTYARD），可以与机器人练习或联网对战，其余卡片保留为占位。[Mac 版整合与实际验证](Docs/MacRuinV09.md)记录了构建、交互和主机/客户端测试结果。
+本分支开放教学关（TUTORIAL）、河流关（RIVER FLATS）和藤坠石庭 V10（RUIN COURTYARD），可以与机器人练习或联网对战，其余卡片保留为占位。V10 更新现用货物、中央可破坏建筑、双坑石阶、出生标识与环绕车厢的投放回收区，见[地图与交互说明](Docs/RuinCourtyardV10.md)及[实际验证](Docs/verification/mac-v10/README.md)。原 [Mac 整合记录](Docs/MacRuinV09.md)保留。
 
 每一版改了什么、还缺什么，见 `CHANGELOG.md`。
 
