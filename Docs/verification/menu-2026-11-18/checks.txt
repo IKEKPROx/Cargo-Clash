@@ -1,0 +1,37 @@
+Unity 6000.6.1f1 / macOS / Editor Play Mode
+
+Main menu
+[CCTEST] START mode=menu-loop halfSeconds=0 localBot=False body=Medium
+[EditorMenuCheck] PASS direct menu, three 20 s clips and facial shapes
+[EditorMenuCheck] PASS Chinese practice label
+[EditorMenuCheck] PASS settings opens
+[EditorMenuCheck] PASS settings switches to English
+[EditorMenuCheck] PASS English menu after settings
+[EditorMenuCheck] PASS crew preview opens
+[EditorMenuCheck] PASS crew choice updates
+[EditorMenuCheck] PASS room code enables join
+[EditorMenuCheck] PASS invalid room code shows feedback
+[EditorMenuCheck] PASS create opens level select with tutorial, river and ruin card
+[EditorMenuCheck] PASS create opens local ruin lobby
+[EditorMenuCheck] PASS leave returns to main menu
+[EditorMenuCheck] done status=0 steps=13 loopWrapped=True ruin15=False reachedResults=False
+[CCTEST] DONE errors=0 timedOut=False
+
+Ruin practice through the menu
+[CCTEST] START mode=practice halfSeconds=16 localBot=True body=Medium
+[CCTEST] PHASE HalfIntro half=1 collectors=Orange orange=0 blue=0 avatars=6 cargo=15
+[CCTEST] PHASE Playing half=1 collectors=Orange orange=0 blue=0 avatars=6 cargo=15
+[EditorMenuCheck] normal practice flow loaded LevelRuinCourtyard with 15 live cargo items
+[CCTEST] PHASE HalfOutro half=1 collectors=Orange orange=0 blue=0 avatars=6 cargo=15
+[CCTEST] PHASE HalfIntro half=2 collectors=Blue orange=0 blue=0 avatars=6 cargo=15
+[CCTEST] PHASE Playing half=2 collectors=Blue orange=0 blue=0 avatars=6 cargo=15
+[CCTEST] PHASE HalfOutro half=2 collectors=Blue orange=0 blue=0 avatars=6 cargo=15
+[CCTEST] PHASE Results half=2 collectors=Blue orange=0 blue=0 avatars=6 cargo=15
+[CCTEST] RESULT orange=0 blue=0 titles=3
+[CCTEST] DONE errors=0 timedOut=False
+
+River practice through the menu
+[CCTEST] START mode=practice halfSeconds=10 localBot=True body=Medium
+[EditorMenuCheck] normal practice flow loaded LevelRiver
+[CCTEST] RESULT orange=175 blue=205 titles=2
+[CCTEST] DONE errors=0 timedOut=False

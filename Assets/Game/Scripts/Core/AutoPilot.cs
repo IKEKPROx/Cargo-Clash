@@ -208,6 +208,17 @@ namespace CargoClash
                     Log($"DONE errors={errorCount} timedOut=False");
                     Application.Quit(errorCount > 0 ? 1 : 0);
                     yield break;
+                case "menu-loop":
+                    yield return new WaitForSeconds(1f);
+                    var delivery = FindAnyObjectByType<MenuDeliveryLoop>();
+                    for (var frame = 0; frame < 120; frame++)
+                    {
+                        yield return new WaitForSeconds(0.2f);
+                        Shot($"loop-{delivery.LoopTime:00.00}");
+                    }
+                    Log($"DONE errors={errorCount} timedOut=False");
+                    Application.Quit(errorCount > 0 ? 1 : 0);
+                    yield break;
                 case "practice-ui":
                 case "host-ui":
                 case "client-ui":
@@ -1403,23 +1414,17 @@ namespace CargoClash
             TitleFlow flow = FindAnyObjectByType<TitleFlow>();
             GameConfig config = GameConfig.Get();
             yield return new WaitForSeconds(3f);
-            Expect(flow.titlePanel.activeSelf, "the game opens on the title");
+            Expect(flow.menuPanel.activeSelf, "the game opens directly on the menu");
             yield return ShotThenWait();
             yield return new WaitForSeconds(6f);
             yield return ShotThenWait();
 
             // The button held down, to see its face sink.
             PointerEventData press = new PointerEventData(EventSystem.current);
-            ExecuteEvents.Execute(flow.playButton.gameObject, press, ExecuteEvents.pointerDownHandler);
+            ExecuteEvents.Execute(flow.practiceButton.gameObject, press, ExecuteEvents.pointerDownHandler);
             yield return new WaitForSeconds(0.4f);
             yield return ShotThenWait();
-            ExecuteEvents.Execute(flow.playButton.gameObject, press, ExecuteEvents.pointerUpHandler);
-
-            Click(flow.playButton);
-            yield return new WaitForSeconds(0.6f);
-            yield return ShotThenWait();
-            yield return new WaitForSeconds(2f);
-            Expect(flow.menuPanel.activeSelf && !flow.titlePanel.activeSelf, "Play opens the menu");
+            ExecuteEvents.Execute(flow.practiceButton.gameObject, press, ExecuteEvents.pointerUpHandler);
             yield return ShotThenWait();
 
             flow.codeInput.text = "NOSUCHROOM";
@@ -1650,9 +1655,6 @@ namespace CargoClash
         {
             yield return new WaitForSeconds(1f);
             TitleFlow flow = FindAnyObjectByType<TitleFlow>();
-            Click(flow.playButton);
-            yield return new WaitForSeconds(1f);
-
             if (mode == "practice")
             {
                 Click(flow.practiceButton);

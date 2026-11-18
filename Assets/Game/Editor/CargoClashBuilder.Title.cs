@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using CargoClash;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -400,6 +401,7 @@ public static partial class CargoClashBuilder
     private static Sprite uiFrame;
     private static Sprite uiLock;
     private static Sprite uiTape;
+    private static Sprite uiGloss;
 
     private static void LoadUiAssets()
     {
@@ -411,6 +413,7 @@ public static partial class CargoClashBuilder
         uiFrame = UiSprite("UI_Frame", 48);
         uiLock = UiSprite("UI_Lock");
         uiTape = UiSprite("UI_Hazard", repeat: true);
+        uiGloss = UiSprite("UI_ButtonGloss", 96);
     }
 
     /// <summary>Import settings for a picture in Assets/Game/UI. `border` is how much of each edge doesn't stretch.</summary>
@@ -651,7 +654,6 @@ public static partial class CargoClashBuilder
         flow.stage = stage;
         Sprite logo = UiSprite("UI_Logo", mipmaps: true);
 
-        BuildTitlePanel(canvas.transform, flow, logo);
         BuildMenuPanel(canvas.transform, flow, logo);
         BuildLevelPanel(canvas.transform, flow);
         BuildLobbyPanel(canvas.transform, flow);
@@ -660,55 +662,140 @@ public static partial class CargoClashBuilder
         EditorUtility.SetDirty(flow);
     }
 
-    private static void BuildTitlePanel(Transform canvas, TitleFlow flow, Sprite logo)
-    {
-        RectTransform panel = UiPanelRoot(canvas, "TitlePanel");
-        flow.titlePanel = panel.gameObject;
+    // The main menu's column down the left. MenuDeliveryLoop moves the picture behind it over by this much of the width.
+    private const float MenuLeft = 84f;
+    private const float MenuWidth = 520f;
 
-        RectTransform slot = PopSlot(panel, "Logo", AnchorTop, new Vector2(0f, -285f), new Vector2(980f, 544f), 0.1f);
-        Image picture = UiImage(slot, "Picture", logo, Color.white);
-        Fill(picture.rectTransform);
-        picture.gameObject.AddComponent<UiFloat>();
-
-        flow.playButton = UiButton(panel, "Play", GameText.Play, AnchorBottom, new Vector2(0f, 96f), new Vector2(440f, 138f), UiOrange, 84, 0.35f, out _);
-        flow.playButton.GetComponent<UiButtonFeel>().pulse = 0.025f;
-    }
-
+    /// <summary>
+    /// The main menu: the logo, then one column of buttons down the left, in order of how much they're used. Practising
+    /// with bots is the big orange one, with Astra's gold case on it; rooms come next; the crew page, settings and quit
+    /// are three small buttons with pictures (make_ui.py -- --only menu). The start scene's loop plays to the right.
+    /// </summary>
     private static void BuildMenuPanel(Transform canvas, TitleFlow flow, Sprite logo)
     {
         RectTransform panel = UiPanelRoot(canvas, "MenuPanel");
         flow.menuPanel = panel.gameObject;
         panel.gameObject.SetActive(false);
+        Vector2 topLeft = new Vector2(0f, 1f);
+        float middle = MenuLeft + MenuWidth / 2f;
 
-        const float columnX = 310f;
-        Vector2 left = new Vector2(0f, 0.5f);
-        Vector2 buttonSize = new Vector2(540f, 108f);
-
-        RectTransform slot = PopSlot(panel, "Logo", new Vector2(0f, 1f), new Vector2(columnX, -165f), new Vector2(540f, 300f), 0f);
+        RectTransform slot = PopSlot(panel, "Logo", topLeft, new Vector2(middle, -178f), new Vector2(570f, 317f), 0f);
         Image picture = UiImage(slot, "Picture", logo, Color.white);
         Fill(picture.rectTransform);
         picture.gameObject.AddComponent<UiFloat>().bobHeight = 5f;
 
-        Sprite cargo = UiSprite("Icon_Cargo");
-        Sprite truck = UiSprite("Icon_Truck");
-        flow.practiceButton = UiButton(panel, "Practice", GameText.Practice, left, new Vector2(columnX, 130f), buttonSize, UiOrange, 40, 0.05f, out _, cargo);
-        flow.createButton = UiButton(panel, "Create", GameText.CreateRoomButton, left, new Vector2(columnX, 8f), buttonSize, UiBlue, 40, 0.1f, out _, truck);
-        flow.codeInput = UiCodeInput(panel, left, new Vector2(columnX - 106f, -112f), new Vector2(328f, 100f), 0.15f);
-        flow.joinButton = UiButton(panel, "Join", GameText.Join, left, new Vector2(columnX + 170f, -112f), new Vector2(200f, 100f), UiGreen, 40, 0.15f, out _);
-        Vector2 smallButton = new Vector2(172f, 84f);
-        flow.crewButton = UiButton(panel, "Crew", GameText.Crew, left, new Vector2(columnX - 184f, -226f), smallButton, UiGreen, 30, 0.2f, out _);
-        flow.settingsButton = UiButton(panel, "Settings", GameText.Settings, left, new Vector2(columnX, -226f), smallButton, UiBlue, 30, 0.2f, out _);
-        flow.quitButton = UiButton(panel, "Quit", GameText.Quit, left, new Vector2(columnX + 184f, -226f), smallButton, UiGray, 30, 0.2f, out _);
+        flow.practiceButton = MenuButton(panel, "Practice", GameText.Practice, new Vector2(middle, -414f), new Vector2(MenuWidth, 122f),
+            UiOrange, 42, 0.05f, UiSprite("Icon_Cargo"), 150f);
+        flow.createButton = MenuButton(panel, "Create", GameText.CreateRoomButton, new Vector2(middle, -546f), new Vector2(MenuWidth, 100f),
+            UiBlue, 38, 0.1f, UiSprite("Icon_Truck"), 132f);
+        flow.codeInput = UiCodeInput(panel, topLeft, new Vector2(MenuLeft + 166f, -662f), new Vector2(332f, 88f), 0.15f);
+        flow.joinButton = MenuButton(panel, "Join", GameText.Join, new Vector2(MenuLeft + MenuWidth - 88f, -662f), new Vector2(176f, 88f),
+            UiGreen, 36, 0.15f, null, 0f);
 
-        flow.statusText = UiText(panel, "Status", "", 30, UiYellow, 2f);
-        Rect(flow.statusText.gameObject, panel, left, new Vector2(columnX, -320f), new Vector2(560f, 80f));
+        const float gap = 14f;
+        float small = (MenuWidth - gap * 2f) / 3f;
+        Vector2 smallSize = new Vector2(small, 136f);
+        flow.crewButton = SmallMenuButton(panel, "Crew", GameText.Crew, new Vector2(MenuLeft + small / 2f, -800f), smallSize, 0.2f, UiSprite("Icon_Hat"));
+        flow.settingsButton = SmallMenuButton(panel, "Settings", GameText.Settings, new Vector2(MenuLeft + small * 1.5f + gap, -800f), smallSize, 0.22f, UiSprite("Icon_Gear"));
+        flow.quitButton = SmallMenuButton(panel, "Quit", GameText.Quit, new Vector2(MenuLeft + small * 2.5f + gap * 2f, -800f), smallSize, 0.24f, UiSprite("Icon_Power"));
+
+        flow.statusText = UiText(panel, "Status", "", 28, UiYellow, 2f);
+        Rect(flow.statusText.gameObject, panel, topLeft, new Vector2(middle, -914f), new Vector2(MenuWidth + 40f, 80f));
         flow.statusText.horizontalOverflow = HorizontalWrapMode.Wrap;
+    }
 
-        RectTransform keys = PopSlot(panel, "Keys", AnchorBottom, new Vector2(240f, 56f), new Vector2(1320f, 66f), 0.25f);
-        Image back = UiImage(keys, "Back", uiRound, new Color(UiNavy.r, UiNavy.g, UiNavy.b, 0.82f), 1.8f);
-        Fill(back.rectTransform);
-        Text hint = UiText(keys, "Hint", GameText.KeysHint, 26, UiCream);
-        Fill(hint.rectTransform);
+    /// <summary>
+    /// A main-menu button: a navy rim, a darker lip, and a face with its own shine (UI_ButtonGloss), which sinks when
+    /// pressed. The word has a hard shadow under its outline. A picture, if there is one, sits on the left end and is
+    /// allowed to stick out past the top, like a sticker.
+    /// </summary>
+    private static Button MenuButton(Transform parent, string name, string content, Vector2 position, Vector2 size, Color color,
+        int fontSize, float delay, Sprite icon, float iconSize)
+    {
+        Image face = MenuButtonBody(parent, name, position, size, color, delay, out Button button);
+        float room = 0f;
+        if (icon != null)
+        {
+            room = iconSize * 0.78f;
+            Image picture = UiImage(face.transform, "Icon", icon, Color.white);
+            picture.preserveAspect = true;
+            Rect(picture.gameObject, face.transform, new Vector2(0f, 0.5f), new Vector2(iconSize * 0.42f, size.y * 0.1f), Vector2.one * iconSize);
+        }
+        // One line: too high for two, so a long word gets smaller rather than wrapping.
+        Text label = UiText(face.transform, "Label", content, fontSize, Color.white, 2.5f);
+        RectTransform line = label.rectTransform;
+        line.anchorMin = new Vector2(0f, 0.5f);
+        line.anchorMax = new Vector2(1f, 0.5f);
+        line.offsetMin = new Vector2(14f + room, -fontSize * 0.75f);
+        line.offsetMax = new Vector2(-14f, fontSize * 0.75f);
+        label.resizeTextForBestFit = true;
+        label.resizeTextMinSize = fontSize - 14;
+        label.resizeTextMaxSize = fontSize;
+        label.horizontalOverflow = HorizontalWrapMode.Wrap;
+        label.verticalOverflow = VerticalWrapMode.Truncate;
+        Shadow drop = label.gameObject.AddComponent<Shadow>();
+        drop.effectColor = new Color(UiNavy.r, UiNavy.g, UiNavy.b, 0.55f);
+        drop.effectDistance = new Vector2(0f, -4f);
+        return button;
+    }
+
+    /// <summary>One of the three small buttons under the rooms: a picture over a word, on cream.</summary>
+    private static Button SmallMenuButton(Transform parent, string name, string content, Vector2 position, Vector2 size, float delay, Sprite icon)
+    {
+        Image face = MenuButtonBody(parent, name, position, size, UiCream, delay, out Button button);
+        Image picture = UiImage(face.transform, "Icon", icon, Color.white);
+        picture.preserveAspect = true;
+        Rect(picture.gameObject, face.transform, new Vector2(0.5f, 1f), new Vector2(0f, -42f), new Vector2(74f, 74f));
+        Text label = UiText(face.transform, "Label", content, 27, UiNavy);
+        RectTransform rect = label.rectTransform;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = new Vector2(1f, 0f);
+        rect.pivot = new Vector2(0.5f, 0f);
+        rect.anchoredPosition = new Vector2(0f, 8f);
+        rect.sizeDelta = new Vector2(-12f, 32f);
+        label.resizeTextForBestFit = true;
+        label.resizeTextMinSize = 18;
+        label.resizeTextMaxSize = 27;
+        return button;
+    }
+
+    private static Image MenuButtonBody(Transform parent, string name, Vector2 position, Vector2 size, Color color, float delay, out Button button)
+    {
+        const float rim = 6f;
+        const float lipHeight = 9f;
+        RectTransform slot = PopSlot(parent, name, new Vector2(0f, 1f), position, size, delay);
+        AddSoftShadow(slot, 0.32f);
+        Image body = UiImage(slot, "Button", uiRound, UiNavy, 1.4f);
+        Fill(body.rectTransform);
+        body.raycastTarget = true;
+        Image lip = UiImage(body.transform, "Lip", uiRound, new Color(color.r * 0.62f, color.g * 0.62f, color.b * 0.62f), 1.7f);
+        Fill(lip.rectTransform, rim, rim, rim, rim);
+        Image face = UiImage(body.transform, "Face", uiGloss, color, 2.6f);
+        Fill(face.rectTransform, rim, rim + lipHeight, rim, rim);
+        button = body.gameObject.AddComponent<Button>();
+        button.transition = Selectable.Transition.None;
+        button.navigation = new Navigation { mode = Navigation.Mode.None };
+        button.targetGraphic = body;
+        UiButtonFeel feel = body.gameObject.AddComponent<UiButtonFeel>();
+        feel.face = face;
+        feel.lip = lip;
+        feel.hoverScale = 1.04f;
+        feel.pressDepth = 6f;
+        return face;
+    }
+
+    /// <summary>Builds the main menu again in the open start scene, in place of the one there (Apply Menu Presentation).</summary>
+    public static void RebuildMainMenu(TitleFlow flow)
+    {
+        LoadUiAssets();
+        Transform canvas = flow.menuPanel.transform.parent;
+        int order = flow.menuPanel.transform.GetSiblingIndex();
+        Object.DestroyImmediate(flow.menuPanel);
+        foreach (Transform old in canvas.Cast<Transform>().Where(child => child.name == "TitlePanel").ToArray()) Object.DestroyImmediate(old.gameObject);
+        BuildMenuPanel(canvas, flow, UiSprite("UI_Logo", mipmaps: true));
+        flow.menuPanel.transform.SetSiblingIndex(order);
+        flow.menuPanel.SetActive(true);
+        EditorUtility.SetDirty(flow);
     }
 
     private static void AddTape(Transform parent, string name, bool top)

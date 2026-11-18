@@ -13,6 +13,7 @@ Shader "CargoClash/RiverV16/EnvironmentSurface"
         _Grain("Wood grain",Float)=0
         _DetailScale("Surface detail scale",Float)=12
         _DetailStrength("Surface relief",Float)=0.015
+        _WorldTextureScale("Ground texture repeats per metre, 0 uses mesh UV",Float)=0
         _PreviewTime("Preview time, -1 = automatic",Float)=-1
         [Enum(UnityEngine.Rendering.CullMode)] _Cull("Cull",Float)=2
         [HideInInspector] _Cutoff("Cutoff",Float)=.5
@@ -28,7 +29,7 @@ Shader "CargoClash/RiverV16/EnvironmentSurface"
         // All passes must share this exact layout for persistent SRP batching.
         CBUFFER_START(UnityPerMaterial)
             half4 _BaseColor;float4 _BaseMap_ST;
-            float _UseVertexColor,_Smoothness,_Metallic,_Wetness,_RainStrength,_Grain,_PreviewTime,_Cull,_Cutoff,_DetailScale,_DetailStrength,_LeafSoftness;
+            float _UseVertexColor,_Smoothness,_Metallic,_Wetness,_RainStrength,_Grain,_PreviewTime,_Cull,_Cutoff,_DetailScale,_DetailStrength,_LeafSoftness,_WorldTextureScale;
         CBUFFER_END
         ENDHLSL
         Pass
@@ -44,8 +45,8 @@ Shader "CargoClash/RiverV16/EnvironmentSurface"
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
             #pragma multi_compile_fog
             struct A {float4 positionOS:POSITION;float3 normalOS:NORMAL;float2 uv:TEXCOORD0;half4 color:COLOR;UNITY_VERTEX_INPUT_INSTANCE_ID};
-            struct V {float4 positionCS:SV_POSITION;float3 positionWS:TEXCOORD0;half3 normalWS:TEXCOORD1;float2 uv:TEXCOORD2;half4 color:COLOR;float4 shadow:TEXCOORD3;};
-            V vert(A a){UNITY_SETUP_INSTANCE_ID(a);V o;VertexPositionInputs p=GetVertexPositionInputs(a.positionOS.xyz);o.positionCS=p.positionCS;o.positionWS=p.positionWS;o.normalWS=TransformObjectToWorldNormal(a.normalOS);o.uv=TRANSFORM_TEX(a.uv,_BaseMap);o.color=a.color;o.shadow=GetShadowCoord(p);return o;}
+            struct V {float4 positionCS:SV_POSITION;float3 positionWS:TEXCOORD0;half3 normalWS:TEXCOORD1;float2 uv:TEXCOORD2;half4 color:COLOR;float4 shadow:TEXCOORD3;half fog:TEXCOORD4;};
+            V vert(A a){UNITY_SETUP_INSTANCE_ID(a);V o;VertexPositionInputs p=GetVertexPositionInputs(a.positionOS.xyz);o.positionCS=p.positionCS;o.positionWS=p.positionWS;o.normalWS=TransformObjectToWorldNormal(a.normalOS);o.uv=TRANSFORM_TEX(a.uv,_BaseMap);o.color=a.color;o.shadow=GetShadowCoord(p);o.fog=ComputeFogFactor(p.positionCS.z);return o;}
             
             float DetailHash(float3 p){p=frac(p*.1031);p+=dot(p,p.yzx+33.33);return frac((p.x+p.y)*p.z);}
             float DetailNoise(float3 p){float3 b=floor(p),f=frac(p);f=f*f*(3-2*f);return lerp(lerp(lerp(DetailHash(b),DetailHash(b+float3(1,0,0)),f.x),lerp(DetailHash(b+float3(0,1,0)),DetailHash(b+float3(1,1,0)),f.x),f.y),lerp(lerp(DetailHash(b+float3(0,0,1)),DetailHash(b+float3(1,0,1)),f.x),lerp(DetailHash(b+float3(0,1,1)),DetailHash(b+float3(1,1,1)),f.x),f.y),f.z);}
@@ -57,7 +58,8 @@ Shader "CargoClash/RiverV16/EnvironmentSurface"
                 #if defined(MAIN_LIGHT_CALCULATE_SHADOWS) && !defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
                     shadowCoordinate=TransformWorldToShadowCoord(i.positionWS);
                 #endif
-                half3 base=lerp(_BaseColor.rgb,i.color.rgb,saturate(_UseVertexColor))*SAMPLE_TEXTURE2D(_BaseMap,sampler_BaseMap,i.uv).rgb;
+                float2 textureUV=_WorldTextureScale>0?i.positionWS.xz*_WorldTextureScale:i.uv;
+                half3 base=lerp(_BaseColor.rgb,i.color.rgb,saturate(_UseVertexColor))*SAMPLE_TEXTURE2D(_BaseMap,sampler_BaseMap,textureUV).rgb;
                 float grain=sin((i.uv.x*47+sin(i.uv.y*1.8)*1.2))*sin(i.uv.x*113+i.uv.y*2);
                 base*=lerp(1, .96+.04*grain,_Grain);
                 base*=1-_Wetness*.12;
@@ -76,12 +78,13 @@ Shader "CargoClash/RiverV16/EnvironmentSurface"
                     leafSurface.normalTS=half3(0,0,1);leafSurface.occlusion=1;
                     leafSurface.emission=base*.065;
                     InputData leafInput=RiverLightingInput(i.positionWS,n,shadowCoordinate,i.positionCS);
+                    leafInput.fogCoord=i.fog;
                     half4 foliage=UniversalFragmentPBR(leafInput,leafSurface);
                     foliage.rgb=MixFog(foliage.rgb,leafInput.fogCoord);
                     return foliage;
                 }
                 SurfaceData s=(SurfaceData)0;s.albedo=base;s.alpha=1;s.metallic=_Metallic;s.specular=.04;s.smoothness=lerp(_Smoothness,max(_Smoothness,.67),_Wetness);s.normalTS=half3(0,0,1);s.occlusion=1;
-                InputData d=RiverLightingInput(i.positionWS,n,shadowCoordinate,i.positionCS);half4 c=UniversalFragmentPBR(d,s);c.rgb=MixFog(c.rgb,d.fogCoord);return c;
+                InputData d=RiverLightingInput(i.positionWS,n,shadowCoordinate,i.positionCS);d.fogCoord=i.fog;half4 c=UniversalFragmentPBR(d,s);c.rgb=MixFog(c.rgb,d.fogCoord);return c;
             }
             ENDHLSL
         }

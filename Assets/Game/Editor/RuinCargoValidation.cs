@@ -7,9 +7,38 @@ using Unity.Netcode;
 using UnityEditor;
 using UnityEngine;
 
-/// <summary>Refreshes NGO identities for ruin-only copies and checks their references without regenerating content.</summary>
+/// <summary>Initializes registered network prefabs for Editor Play and checks the ruin cargo used in builds.</summary>
 public static class RuinCargoValidation
 {
+    private static MethodInfo ValidateNetworkObject => typeof(NetworkObject)
+        .GetMethod("OnValidate", BindingFlags.Instance | BindingFlags.NonPublic)
+        ?? throw new InvalidOperationException("NGO prefab identity validation is unavailable.");
+
+    private static IEnumerable<GameObject> RegisteredPrefabs(GameConfig config)
+    {
+        var prefabs = new List<GameObject> { config.avatarPrefab, config.directorPrefab, config.rosterPrefab };
+        prefabs.AddRange(config.cargo.Select(d => d.prefab));
+        if (config.ruinCargo != null) prefabs.AddRange(config.ruinCargo.Select(d => d.prefab));
+        if (config.plank != null) prefabs.Add(config.plank.prefab);
+        return prefabs.Distinct();
+    }
+
+    // The original shared prefabs serialize zero until NGO validates them in the editor.
+    // A direct Play from the menu can reach RoomService.Awake before they have ever been opened.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+    private static void PrepareEditorPlay()
+    {
+        MethodInfo validate = ValidateNetworkObject;
+        foreach (GameObject prefab in RegisteredPrefabs(GameConfig.Get()))
+        {
+            NetworkObject network = prefab.GetComponent<NetworkObject>();
+            if (network.PrefabIdHash != 0) continue;
+            validate.Invoke(network, null);
+            if (network.PrefabIdHash == 0)
+                throw new InvalidOperationException("Missing network prefab identity before Play: " + prefab.name);
+        }
+    }
+
     public static void BuildMac()
     {
         Prepare();
@@ -26,17 +55,12 @@ public static class RuinCargoValidation
             definitions.Count(d => d.kind == CargoKind.Art && d.value == 100) != 1)
             throw new InvalidOperationException("Ruin cargo must be current Tobacco/Cash10, Gold30 and Art100.");
 
-        MethodInfo validate = typeof(NetworkObject).GetMethod("OnValidate", BindingFlags.Instance | BindingFlags.NonPublic);
-        if (validate == null) throw new InvalidOperationException("NGO prefab identity validation is unavailable.");
+        MethodInfo validate = ValidateNetworkObject;
         MethodInfo hashString = typeof(NetworkObject).Assembly.GetType("Unity.Netcode.XXHash", true)
             .GetMethod("Hash32", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(string) }, null);
         if (hashString == null) throw new InvalidOperationException("NGO prefab identity hashing is unavailable.");
         var hashes = new HashSet<uint>();
-        var prefabs = new List<GameObject> { config.avatarPrefab, config.directorPrefab, config.rosterPrefab };
-        prefabs.AddRange(config.cargo.Select(d => d.prefab));
-        prefabs.AddRange(definitions.Select(d => d.prefab));
-        if (config.plank != null) prefabs.Add(config.plank.prefab);
-        foreach (GameObject prefab in prefabs.Distinct())
+        foreach (GameObject prefab in RegisteredPrefabs(config))
         {
             NetworkObject network = prefab.GetComponent<NetworkObject>();
             if (network == null) throw new InvalidOperationException("Missing NetworkObject: " + prefab.name);

@@ -33,7 +33,7 @@
 
 ## 怎么测试
 
-- **一个人：** 开始页面点 PLAY，再点 PRACTICE WITH BOTS，再选 TUTORIAL。不需要联网。
+- **单人练习**　进入主菜单后点「和机器人练习」，选关、选角色，再点「开始」。第 5 张卡片是「藤坠石庭」。
 - **一台电脑开多个玩家：** Window > Multiplayer > Multiplayer Play Mode，勾选 Player 2。
 - **局域网：** 一方点 CREATE ROOM 并选关。工程还没连 Unity Cloud 时，房间码就是主机的 IP，另一方输入它点 JOIN。
 - **自动测试：** 见 `AGENTS.md`。
