@@ -4,7 +4,8 @@ Run from the repository root:
 
     /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup --python Tools/blender/make_ui.py
 
-Add `-- --only logo`, `-- --only icons`, `-- --only appicon`, `-- --only sprites` or `-- --only cards` to make one group.
+Add `-- --only logo`, `-- --only icons`, `-- --only appicon`, `-- --only sprites`, `-- --only cards` or `-- --only menu`
+(the main menu's button face and its small buttons' icons) to make one group.
 
 Sprites and level cards are painted with numpy. The logo is too, from the shapes of the letters in
 the font Lilita One (see ASSETS.md), with each letter tilted a little. The cargo on the logo, the Practice
@@ -1099,6 +1100,136 @@ def make_sprites():
     write_png(FOLDER / "UI_Hazard.png", make_hazard())
 
 
+# ---- The main menu (Assets/Game/Editor/CargoClashBuilder.Title.cs, BuildMenuPanel) ----
+
+def make_button_gloss():
+    """A main-menu button's top, tinted by the game: brightest under a soft shine along the top, a little darker toward
+    the bottom edge, so a flat colour looks like a rounded slab. Nine-sliced with a border of 96."""
+    size = 256
+    xs, ys = grid(size, size)
+    image = blank(size, size)
+    shade = 0.94 - 0.16 * smoothstep(60.0, 252.0, ys)
+    shade = shade + smoothstep(10.0, -14.0, box(xs, ys, 128, 54, 100, 26, 26)) * 0.06
+    image[..., :3] = np.clip(shade, 0.0, 1.0)[..., None]
+    image[..., 3] = cover(box(xs, ys, 128, 128, 128, 128, 80))
+    return image
+
+
+def render_crew_hat(size, folder):
+    """The porters' hard hat from the medium body (Crew_Medium.fbx), in the game's hat colours, tipped toward the viewer."""
+    modeling.reset_scene()
+    setup_render(size, 0.62)
+    objects = import_fbx(ROOT / "Assets/Game/Models/Crew_Medium.fbx")
+    for item in list(objects):
+        if item.type == "MESH" and item.name.split(".")[0] != "Porter_Hat_classic":
+            objects.remove(item)
+            bpy.data.objects.remove(item)
+    for item in objects:
+        for modifier in list(item.modifiers):
+            item.modifiers.remove(modifier)
+    colours = {"Crew_HatPrimary": ((0.95, 0.72, 0.25), 0.45, 0.0), "Crew_HatTrim": ((0.66, 0.49, 0.2), 0.5, 0.0),
+               "Crew_Light": ((0.86, 0.82, 0.71), 0.6, 0.0), "Char_Team": ((0.95, 0.5, 0.15), 0.6, 0.0),
+               "Crew_Lamp": ((1.0, 0.95, 0.75), 0.3, 0.0), "Crew_Brass": ((0.67, 0.58, 0.4), 0.4, 0.4)}
+    paint_materials(lambda name: (tuple(linear(c) for c in colours[name][0]), colours[name][1], colours[name][2]) if name in colours else None)
+    meshes = flatten(objects)
+    lows = [min((item.matrix_world @ Vector(corner)).z for corner in item.bound_box) for item in meshes]
+    highs = [max((item.matrix_world @ Vector(corner)).z for corner in item.bound_box) for item in meshes]
+    turn_to_camera((22.0, 32.0, 0.0), (0.0, 0.0, (min(lows) + max(highs)) / 2.0))
+    return render_to_array(folder)
+
+
+def solid(name, mesh, colour, roughness=0.5, metallic=0.0, bevel=0.03):
+    material = bpy.data.materials.new(name)
+    material.use_nodes = True
+    shader = material.node_tree.nodes.get("Principled BSDF")
+    shader.inputs["Base Color"].default_value = (*(linear(c) for c in colour), 1.0)
+    shader.inputs["Roughness"].default_value = roughness
+    shader.inputs["Metallic"].default_value = metallic
+    item = bpy.data.objects.new(name, mesh)
+    bpy.context.scene.collection.objects.link(item)
+    item.data.materials.append(material)
+    if bevel > 0.0:
+        modifier = item.modifiers.new("Rounded", "BEVEL")
+        modifier.width, modifier.segments, modifier.limit_method = bevel, 4, "ANGLE"
+    for polygon in item.data.polygons:
+        polygon.use_smooth = True
+    return item
+
+
+def extruded(points, depth):
+    """A flat shape from its outline, made `depth` thick, standing on the XY plane."""
+    import bmesh
+    mesh = bpy.data.meshes.new("Shape")
+    bm = bmesh.new()
+    bm.faces.new([bm.verts.new((x, y, 0.0)) for x, y in points])
+    extrude = bmesh.ops.extrude_face_region(bm, geom=list(bm.faces))
+    bmesh.ops.translate(bm, vec=(0.0, 0.0, depth), verts=[v for v in extrude["geom"] if isinstance(v, bmesh.types.BMVert)])
+    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    bm.to_mesh(mesh)
+    bm.free()
+    return mesh
+
+
+def render_gear(size, folder):
+    """A chunky eight-toothed cog with a hub, for SETTINGS."""
+    modeling.reset_scene()
+    setup_render(size, 2.6)
+    teeth, points = 8, []
+    for step in range(teeth * 24):
+        u = (step % 24) / 24.0
+        lift = max(0.0, min(1.0, min((u - 0.08) / 0.14, (0.62 - u) / 0.14)))
+        radius = 0.82 + 0.26 * lift
+        angle = step * math.tau / (teeth * 24)
+        points.append((radius * math.cos(angle), radius * math.sin(angle)))
+    solid("Cog", extruded(points, 0.32), (0.86, 0.88, 0.9), 0.35, 0.35, bevel=0.06)
+    hub = bpy.data.meshes.new("Hub")
+    import bmesh
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=48, radius1=0.42, radius2=0.42, depth=0.16)
+    bmesh.ops.translate(bm, vec=(0.0, 0.0, 0.38), verts=bm.verts)
+    bm.to_mesh(hub)
+    bm.free()
+    solid("Hub", hub, (1.0, 0.72, 0.2), 0.4, 0.2, bevel=0.04)
+    turn_to_camera((58.0, 0.0, 12.0), (0.0, 0.0, 0.2))
+    return render_to_array(folder)
+
+
+def render_power(size, folder):
+    """The power sign standing up, for QUIT: a ring open at the top, with a bar through the gap."""
+    modeling.reset_scene()
+    setup_render(size, 2.7)
+    ring = []
+    for step in range(97):
+        angle = math.radians(120.0 + step * 300.0 / 96.0)
+        ring.append((0.0 + 0.78 * math.cos(angle), 0.0, 0.78 * math.sin(angle)))
+    part = modeling.MeshPart("Power")
+    part.tube(ring, 0.17, "Sign", points=16, smooth=False)
+    part.along((0.0, 0.0, 0.08), (0.0, 0.0, 1.0), 0.17, 0.17, "Sign", points=16)
+    material = bpy.data.materials.new("Sign")
+    paint_one(material, (1.0, 0.95, 0.88), 0.45, 0.0)
+    sign = part.to_object({"Sign": material})
+    for polygon in sign.data.polygons:
+        polygon.use_smooth = True
+    turn_to_camera((12.0, 18.0, 0.0), (0.0, 0.0, 0.1))
+    return render_to_array(folder)
+
+
+def paint_one(material, colour, roughness, metallic):
+    material.use_nodes = True
+    shader = material.node_tree.nodes.get("Principled BSDF")
+    shader.inputs["Base Color"].default_value = (*(linear(c) for c in colour), 1.0)
+    shader.inputs["Roughness"].default_value = roughness
+    shader.inputs["Metallic"].default_value = metallic
+
+
+def make_menu():
+    write_png(FOLDER / "UI_ButtonGloss.png", make_button_gloss())
+    with tempfile.TemporaryDirectory() as folder:
+        write_png(FOLDER / "Icon_Hat.png", with_outline(render_crew_hat(512, folder), 6))
+        write_png(FOLDER / "Icon_Gear.png", with_outline(render_gear(512, folder), 6))
+        write_png(FOLDER / "Icon_Power.png", with_outline(render_power(512, folder), 6))
+
+
 def make_cards():
     write_png(FOLDER / "Level02_Card.png", card_forest())
     write_png(FOLDER / "Level03_Card.png", card_mountain())
@@ -1109,7 +1240,8 @@ def make_cards():
 
 def main():
     only = sys.argv[sys.argv.index("--only") + 1] if "--only" in sys.argv else None
-    groups = {"sprites": make_sprites, "cards": make_cards, "logo": make_logo, "icons": make_icons, "appicon": make_app_icon}
+    groups = {"sprites": make_sprites, "cards": make_cards, "logo": make_logo, "icons": make_icons, "appicon": make_app_icon,
+              "menu": make_menu}
     for name, make in groups.items():
         if only is None or only == name:
             make()

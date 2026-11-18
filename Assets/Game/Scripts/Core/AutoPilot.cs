@@ -1599,7 +1599,7 @@ namespace CargoClash
                 Click(settings.backButton);
                 yield return new WaitForSeconds(1f);
                 Expect(flow.menuPanel.activeSelf && !settings.IsOpen, "Back leaves the settings page");
-                Expect(flow.practiceButton.GetComponentInChildren<Text>().text == "开始练习", "the menu changes language");
+                Expect(flow.practiceButton.GetComponentInChildren<Text>().text == "和机器人练习", "the menu changes language");
                 yield return ShotThenWait();
                 Click(flow.practiceButton);
                 yield return new WaitForSeconds(1.5f);
@@ -1621,7 +1621,7 @@ namespace CargoClash
                 // The menu was hidden when the language changed; it catches up when it shows again.
                 Click(settings.backButton);
                 yield return new WaitForSeconds(1f);
-                Expect(flow.practiceButton.GetComponentInChildren<Text>().text == "START PRACTICE", "the menu is back in English");
+                Expect(flow.practiceButton.GetComponentInChildren<Text>().text == "PRACTICE WITH BOTS", "the menu is back in English");
                 Click(flow.settingsButton);
                 yield return new WaitForSeconds(0.6f);
             }

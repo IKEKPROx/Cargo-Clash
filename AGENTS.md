@@ -176,7 +176,7 @@ Astra 的四种货物（`独立建模/互动货物_v08`）：烟盒、现金箱�
 
 ## 开始页面和关卡列表
 
-开始场景是 `Assets/CargoRover/Scenes/CargoRover.unity`，整个由 `CargoClashBuilder.BuildTitleScene` 生成。页面的跳转在 `TitleFlow`：标题 → 主菜单 → 选关 → 练习或大厅。加入别人的房间不选关，由主机决定。
+开始场景是 `Assets/CargoRover/Scenes/CargoRover.unity`，由 `CargoClashBuilder.BuildTitleScene` 生成，再由 `Tools > Cargo Clash > Apply Menu Presentation`（`CargoClashMenuPresentation`）加上主菜单后面的循环：能看见车内的货车（`make_menu_truck.py`）、三个人的动作（`make_menu_animation.py` 写的 `Menu_*.fbx`）和 `MenuLoop.json`（方向盘、车的晃动、表情、镜头），由 `MenuDeliveryLoop` 播放。改这段看交接说明第 21 步，不打包看效果用 `MenuLoopPreview`。页面的跳转在 `TitleFlow`：打开就是主菜单 → 选关 → 练习或大厅。加入别人的房间不选关，由主机决定。
 
 **关卡列表**在 `GameConfig.levels`，由 `CargoClashBuilder.BuildLevelList` 写入。第 1 个是教学关（`Level01`），第 4 个是河流关卡（`LevelRiver`，卡片由生成脚本渲染），其余是占位：`scene` 为空的关卡，卡片是锁着的。一关可以有自己的半场时长（`LevelLayout.halfSeconds`）和按种类摆的货物点（`LevelLayout.kindSpots`）。开放一关要做三件事：
 

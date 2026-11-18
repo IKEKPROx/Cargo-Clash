@@ -18,12 +18,6 @@ namespace CargoClash
             ["That room is full."] = "这个房间满了。",
 
             // The title and the main menu.
-            ["DISPATCH DESK"] = "运输调度",
-            ["CARGO CO. / READY FOR DISPATCH"] = "CARGO CO.  /  准备发车",
-            ["START PRACTICE"] = "开始练习",
-            ["Warm up with the crew"] = "与机器人热身",
-            ["CREW PROFILE"] = "员工档案",
-            ["PLAYER 1"] = "PLAYER 1",
             ["PLAY"] = "开始游戏",
             ["PRACTICE WITH BOTS"] = "和机器人练习",
             ["CREATE ROOM"] = "创建房间",
