@@ -79,6 +79,7 @@ namespace CargoClash
     {
         [Tooltip("The English this label was made with, or empty when only code writes it.")]
         public string english;
+        public bool boldChinese = true;
 
         private Text label;
         private Font latin;
@@ -124,7 +125,7 @@ namespace CargoClash
             seen = label.text;
             Font chinese = UiFonts.NeedsChinese(seen) ? UiFonts.Chinese : null;
             Font font = chinese != null ? chinese : latin;
-            FontStyle style = chinese != null ? FontStyle.Bold : latinStyle;
+            FontStyle style = chinese != null ? (boldChinese ? FontStyle.Bold : FontStyle.Normal) : latinStyle;
             if (label.font != font) label.font = font;
             if (label.fontStyle != style) label.fontStyle = style;
         }

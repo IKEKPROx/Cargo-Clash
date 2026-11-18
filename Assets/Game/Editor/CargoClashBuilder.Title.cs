@@ -650,27 +650,12 @@ public static partial class CargoClashBuilder
         flow.stage = stage;
         Sprite logo = UiSprite("UI_Logo", mipmaps: true);
 
-        BuildTitlePanel(canvas.transform, flow, logo);
         BuildMenuPanel(canvas.transform, flow, logo);
         BuildLevelPanel(canvas.transform, flow);
         BuildLobbyPanel(canvas.transform, flow);
         BuildCrewPanel(canvas.transform, flow, preview, previewPicture);
         flow.settings = BuildSettingsPanel(canvas.transform);
         EditorUtility.SetDirty(flow);
-    }
-
-    private static void BuildTitlePanel(Transform canvas, TitleFlow flow, Sprite logo)
-    {
-        RectTransform panel = UiPanelRoot(canvas, "TitlePanel");
-        flow.titlePanel = panel.gameObject;
-
-        RectTransform slot = PopSlot(panel, "Logo", AnchorTop, new Vector2(0f, -285f), new Vector2(980f, 544f), 0.1f);
-        Image picture = UiImage(slot, "Picture", logo, Color.white);
-        Fill(picture.rectTransform);
-        picture.gameObject.AddComponent<UiFloat>();
-
-        flow.playButton = UiButton(panel, "Play", GameText.Play, AnchorBottom, new Vector2(0f, 96f), new Vector2(440f, 138f), UiOrange, 84, 0.35f, out _);
-        flow.playButton.GetComponent<UiButtonFeel>().pulse = 0.025f;
     }
 
     private static void BuildMenuPanel(Transform canvas, TitleFlow flow, Sprite logo)

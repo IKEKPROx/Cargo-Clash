@@ -25,8 +25,10 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Width: 0.0026
+    - _FadeEnd: 150
+    - _FadeStart: 26
+    - _Width: 0.0011
     m_Colors:
-    - _Color: {r: 0.09999997, g: 0.07999996, b: 0.089999996, a: 1}
+    - _Color: {r: 0.12, g: 0.15, b: 0.2, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

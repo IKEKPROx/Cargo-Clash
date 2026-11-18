@@ -7,24 +7,17 @@ using UnityEngine.UI;
 namespace CargoClash
 {
     /// <summary>
-    /// The screens of the start scene: title, main menu, level select, crew page and a room's lobby.
+    /// The start scene opens on the main menu, with level select, crew page and a room's lobby.
     /// Practice and creating a room both go through the level select. Joining doesn't, because the host picks.
     /// The crew page is where players pick their body type, hat, glasses and face: from the menu, from the
     /// lobby, and on the way into practice, where its button starts the match. The settings page opens from the menu.
     /// </summary>
     public sealed class TitleFlow : MonoBehaviour
     {
-        private enum Page { Title, Menu, Levels, Lobby, Crew, Settings }
+        private enum Page { Menu, Levels, Lobby, Crew, Settings }
         private enum Plan { Practice, CreateRoom }
 
-        // Once someone has pressed Play, coming back from a match goes straight to the menu.
-        private static bool pastTitle;
-
         public CargoClashStartMenu stage;
-
-        [Header("Title")]
-        public GameObject titlePanel;
-        public Button playButton;
 
         [Header("Main menu")]
         public GameObject menuPanel;
@@ -89,7 +82,7 @@ namespace CargoClash
         public SettingsPanel settings;
 
         private GameConfig config;
-        private Page page = Page.Title;
+        private Page page = Page.Menu;
         private Plan plan;
         private bool busy;
         private Page crewReturn = Page.Menu;
@@ -100,7 +93,6 @@ namespace CargoClash
         {
             config = GameConfig.Get();
 
-            playButton.onClick.AddListener(HandlePlay);
             practiceButton.onClick.AddListener(() => ChooseLevelFor(Plan.Practice));
             createButton.onClick.AddListener(() => ChooseLevelFor(Plan.CreateRoom));
             joinButton.onClick.AddListener(HandleJoin);
@@ -132,12 +124,7 @@ namespace CargoClash
             GameAudio.SetMusicDucked(true);
             GameAudio.SetMusic("music");
 
-            NetworkManager net = NetworkManager.Singleton;
-            if (pastTitle || (net != null && net.IsListening))
-            {
-                page = Page.Menu;
-                stage.JumpToMenus();
-            }
+            stage.JumpToMenus();
             ShowPage();
         }
 
@@ -194,14 +181,13 @@ namespace CargoClash
 
         private void ShowPage()
         {
-            SetActive(titlePanel, page == Page.Title);
             SetActive(menuPanel, page == Page.Menu);
             SetActive(levelPanel, page == Page.Levels);
             SetActive(lobbyPanel, page == Page.Lobby);
             SetActive(crewPanel, page == Page.Crew);
             SetActive(preview.gameObject, page == Page.Crew);
             if (page != Page.Settings && settings.IsOpen) settings.panel.SetActive(false);
-            if (page != Page.Title) stage.SwingToMenus();
+            stage.SwingToMenus();
         }
 
         private static void SetActive(GameObject panel, bool active)
@@ -234,12 +220,6 @@ namespace CargoClash
             startButton.interactable = roster.CanStart;
             fillLabel.text = GameText.BotsFill(roster.FillWithBots.Value);
             lobbyHint.text = !isHost ? GameText.LobbyWaitForHost : roster.CanStart ? GameText.LobbyAllReady : GameText.LobbyWaitForReady;
-        }
-
-        private void HandlePlay()
-        {
-            pastTitle = true;
-            page = Page.Menu;
         }
 
         private void ChooseLevelFor(Plan chosenPlan)

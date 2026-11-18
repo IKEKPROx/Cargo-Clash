@@ -52,34 +52,35 @@ GRIP_INWARD = 0.061
 HAND_SHAPES = (("Relaxed", "Relaxed"), ("Open", "Carry"), ("Fist", "Fist"), ("Grip", "Grip"))
 
 # Seen this close, the gloves and tools keep more of their detail than on people across the field.
-GLOVE_DETAIL = 2.6
-TOOL_DETAIL = 4.0
+GLOVE_DETAIL = 3.4
+TOOL_DETAIL = 6.0
 
 
 def build_forearm(name):
-    """From the wrist back to the elbow. Its open end covers the back of the glove's cuff."""
+    """The glove and sleeve rotate independently around the wrist; their rounded overlap closes that joint."""
     part = MeshPart(name)
     part.lengthwise([
-        (0.03, 0, 0, 0.012, 0.012, 2.0),
+        (0.005, 0, 0, 0.046, 0.046, 2.0),
         (0.035, 0, 0, 0.074, 0.074, 2.0),
         (0.25, 0, 0, 0.084, 0.084, 2.0),
         (FOREARM_LENGTH, 0, 0, 0.1, 0.1, 2.0),
         (FOREARM_LENGTH + 0.005, 0, 0, 0.012, 0.012, 2.0),
-    ], SLEEVE, points=24, samples=3)
+    ], SLEEVE, points=32, samples=4)
+    part.ellipsoid((0, 0.024, 0), (0.034, 0.041, 0.026), "Crew_Glove", rings=16, points=28)
     return part
 
 
 def build_upper_arm(name):
     """From the elbow back to the shoulder. The round end hides the joint however far the elbow bends."""
     part = MeshPart(name)
-    part.ellipsoid((0, 0, 0), (0.104, 0.104, 0.104), SLEEVE, rings=12, points=20)
+    part.ellipsoid((0, 0, 0), (0.104, 0.104, 0.104), SLEEVE, rings=16, points=28)
     part.lengthwise([
         (0.0, 0, 0, 0.012, 0.012, 2.0),
         (0.005, 0, 0, 0.098, 0.098, 2.0),
         (UPPER_ARM_LENGTH * 0.5, 0, 0, 0.11, 0.11, 2.0),
         (UPPER_ARM_LENGTH, 0, 0, 0.122, 0.122, 2.0),
         (UPPER_ARM_LENGTH + 0.005, 0, 0, 0.012, 0.012, 2.0),
-    ], SLEEVE, points=24, samples=3)
+    ], SLEEVE, points=32, samples=4)
     return part
 
 
@@ -145,7 +146,7 @@ def render_checks(folder):
 def main():
     options = crew.arguments()
     modeling.reset_scene()
-    materials = crew.game_materials([SLEEVE])
+    materials = crew.game_materials([SLEEVE, "Crew_Glove"])
     for part in (build_upper_arm("UpperArm_L"), build_upper_arm("UpperArm_R"), build_forearm("Forearm_L"), build_forearm("Forearm_R")):
         part.to_object(materials)
     build_hands(options["source"])

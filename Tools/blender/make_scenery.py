@@ -723,6 +723,37 @@ def main():
         modeling.reset_scene()
         materials = modeling.make_materials(PALETTE)
         build(materials)
+        if name.startswith(("Tree_", "Bush_", "Cloud_")):
+            for obj in bpy.context.scene.objects:
+                if obj.type != "MESH":
+                    continue
+                for polygon in obj.data.polygons:
+                    polygon.use_smooth = True
+                modifier = obj.modifiers.new("Soft foliage", "SUBSURF")
+                modifier.levels = modifier.render_levels = 1
+                with bpy.context.temp_override(object=obj, active_object=obj, selected_objects=[obj]):
+                    bpy.ops.object.modifier_apply(modifier=modifier.name)
+                if name.startswith(("Tree_", "Bush_")):
+                    mesh = obj.data
+                    colors = [Vector((0, 0, 0)) for _ in mesh.vertices]
+                    counts = [0 for _ in mesh.vertices]
+                    neighbors = [set() for _ in mesh.vertices]
+                    for polygon in mesh.polygons:
+                        color = Vector(mesh.materials[polygon.material_index].diffuse_color[:3])
+                        for vertex in polygon.vertices:
+                            colors[vertex] += color
+                            counts[vertex] += 1
+                    for edge in mesh.edges:
+                        a, b = edge.vertices
+                        neighbors[a].add(b)
+                        neighbors[b].add(a)
+                    colors = [color / count for color, count in zip(colors, counts)]
+                    for _ in range(2):
+                        colors = [color.lerp(sum((colors[j] for j in neighbors[i]), Vector()) / len(neighbors[i]), 0.5)
+                                  for i, color in enumerate(colors)]
+                    layer = mesh.color_attributes.new(name="Color", type="FLOAT_COLOR", domain="POINT")
+                    for point, color in zip(layer.data, colors):
+                        point.color = (*color, 1)
         output = root / "Assets/Game/Models" / f"{name}.fbx"
         modeling.export_fbx(output)
         triangles = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in bpy.context.scene.objects if o.type == "MESH")

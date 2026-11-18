@@ -1,0 +1,25 @@
+{
+  "bodies": [
+    {
+      "body": "Medium",
+      "seatedHip": 0.5399257621765136,
+      "top": 1.6608888816833496,
+      "unreachable": 0,
+      "maxWheelContactError": 4.0675355552996437e-07
+    },
+    {
+      "body": "Short",
+      "seatedHip": 0.41090104608535766,
+      "top": 1.3881805372238158,
+      "unreachable": 0,
+      "maxWheelContactError": 1.8900218384347646e-07
+    },
+    {
+      "body": "Tall",
+      "seatedHip": 0.6015345153808592,
+      "top": 1.8948950386047363,
+      "unreachable": 0,
+      "maxWheelContactError": 0
+    }
+  ]
+}

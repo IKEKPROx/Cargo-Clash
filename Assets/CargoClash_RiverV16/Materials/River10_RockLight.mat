@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: River10_RockLight
-  m_Shader: {fileID: 4800000, guid: 57d5a5113d44646638676510fb2776b6, type: 3}
+  m_Shader: {fileID: 4800000, guid: 4fdc38334d0494aceab59673cc954c9b, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -24,20 +24,24 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: c6a04c6b3f5c1489d9d743b6d4f8eaf6, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
     - _Cull: 2
     - _Cutoff: 0.5
+    - _DetailScale: 9
+    - _DetailStrength: 0.045
     - _Grain: 0
+    - _LeafSoftness: 0
     - _Metallic: 0
     - _PreviewTime: -1
     - _RainStrength: 0
     - _Smoothness: 0.19999999
     - _UseVertexColor: 0
     - _Wetness: 0.32
+    - _WorldTextureScale: 0.65
     m_Colors:
     - _BaseColor: {r: 0.572549, g: 0.60392153, b: 0.635294, a: 1}
   m_BuildTextureStacks: []

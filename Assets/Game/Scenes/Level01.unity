@@ -5598,7 +5598,7 @@ SkinnedMeshRenderer:
   m_Quality: 0
   m_UpdateWhenOffscreen: 1
   m_SkinnedMotionVectors: 1
-  m_Mesh: {fileID: 8342110510411867484, guid: d022396760044432c9bbbc4a44ecd0c4, type: 3}
+  m_Mesh: {fileID: 8342110510411867484, guid: a49ff4ebf6fe64d7891aa474f4236775, type: 3}
   m_Bones:
   - {fileID: 585991477}
   - {fileID: 1179614269}
@@ -5645,10 +5645,6 @@ SkinnedMeshRenderer:
   - {fileID: 1811760662}
   - {fileID: 1839816395}
   - {fileID: 1100793959}
-  - {fileID: 819823571}
-  - {fileID: 103110537}
-  - {fileID: 795352613}
-  - {fileID: 2061365943}
   - {fileID: 876436426}
   - {fileID: 1429919106}
   - {fileID: 1888635212}
@@ -5660,8 +5656,8 @@ SkinnedMeshRenderer:
   m_BlendShapeWeights: []
   m_RootBone: {fileID: 585991477}
   m_AABB:
-    m_Center: {x: 0.025401086, y: 0.9392023, z: 0.07407546}
-    m_Extent: {x: 0.29626468, y: 0.20424727, z: 0.30881184}
+    m_Center: {x: 0.0000114142895, y: 0.88751316, z: 0.075301886}
+    m_Extent: {x: 0.39587185, y: 0.25813913, z: 0.3078289}
   m_DirtyAABB: 0
 --- !u!1 &129778832
 GameObject:
@@ -21341,7 +21337,7 @@ SkinnedMeshRenderer:
   m_Quality: 0
   m_UpdateWhenOffscreen: 1
   m_SkinnedMotionVectors: 1
-  m_Mesh: {fileID: -9073019736851073122, guid: d022396760044432c9bbbc4a44ecd0c4, type: 3}
+  m_Mesh: {fileID: -9073019736851073122, guid: a49ff4ebf6fe64d7891aa474f4236775, type: 3}
   m_Bones:
   - {fileID: 585991477}
   - {fileID: 1179614269}
@@ -21388,10 +21384,6 @@ SkinnedMeshRenderer:
   - {fileID: 1811760662}
   - {fileID: 1839816395}
   - {fileID: 1100793959}
-  - {fileID: 819823571}
-  - {fileID: 103110537}
-  - {fileID: 795352613}
-  - {fileID: 2061365943}
   - {fileID: 876436426}
   - {fileID: 1429919106}
   - {fileID: 1888635212}
@@ -21403,8 +21395,8 @@ SkinnedMeshRenderer:
   m_BlendShapeWeights: []
   m_RootBone: {fileID: 585991477}
   m_AABB:
-    m_Center: {x: 0.06323832, y: 0.8177813, z: 0.23179103}
-    m_Extent: {x: 0.12790668, y: 0.07865229, z: 0.20437197}
+    m_Center: {x: -0.00006133318, y: 0.6663878, z: 0.2229836}
+    m_Extent: {x: 0.4547736, y: 0.2252214, z: 0.21290612}
   m_DirtyAABB: 0
 --- !u!1001 &554428944
 PrefabInstance:
@@ -69164,6 +69156,7 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: b8777e129e3d5402c9f13cf97645bb5c, type: 2}
+  - {fileID: 2100000, guid: 664dd21889fd444108bd4ba2c246086c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -82466,6 +82459,7 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: b8777e129e3d5402c9f13cf97645bb5c, type: 2}
+  - {fileID: 2100000, guid: 664dd21889fd444108bd4ba2c246086c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
