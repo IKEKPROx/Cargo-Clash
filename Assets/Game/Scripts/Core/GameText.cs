@@ -20,14 +20,14 @@ namespace CargoClash
 
         public static string RuinOpenDoor => T("OPEN GATE");
         public static string RuinCloseDoor => T("CLOSE GATE");
-        public static string RuinDoorBlocked => T("GATE BLOCKED");
+        public static string RuinDoorBlocked => T("CLEAR THE GATE SWING");
         public static string RuinTakeVine => T("TAKE VINE");
         public static string RuinThrowVine => T("THROW VINE");
         public static string RuinAttachVine => T("ATTACH VINE");
         public static string RuinClimb => T("CLIMB");
         public static string RuinBoost => T("TEAM BOOST");
         public static string RuinBreak => T("BREAK WALL");
-        public static string RuinRestore => T("RESTORE WALL");
+        public static string RuinRestore => T("HOLD TO RESTORE WALL");
         public static string RuinPullTeammate => T("PULL UP TEAMMATE");
         public static string RuinBoostReady => T("READY TO BOOST");
         public static string RuinTitle => T("RUIN COURTYARD");
@@ -35,6 +35,8 @@ namespace CargoClash
         public const string RuinInterrupterBaseEnglish = "INTERRUPTER BASE";
         public const string RuinCollectorAssemblyEnglish = "3 CREW / CARRY TO TRUCK";
         public const string RuinInterrupterAssemblyEnglish = "3 CREW / BLOCK THE CARGO";
+        public const string RuinCordonEnglish = "SITE CLOSED";
+        public const string RuinKeepOutEnglish = "DO NOT CROSS";
 
         /// <summary>T with a format string, so each language can put the numbers where it wants them.</summary>
         public static string F(string english, params object[] values) => string.Format(T(english), values);

@@ -16,6 +16,10 @@ namespace CargoClash
         private Transform field;
         private NavMeshData runtimeNavMesh;
         private NavMeshSurface navigation;
+        private const float RoadApronDepth = 18f;
+        private const float CargoExitHalfWidth = 6f;
+        private float CargoExitWest => data.truckZone.x - CargoExitHalfWidth;
+        private float CargoExitEast => data.truckZone.x + CargoExitHalfWidth;
 
         private static T Load<T>(string name) where T : UnityEngine.Object
         {
@@ -137,7 +141,11 @@ namespace CargoClash
             AddBox("West play boundary", new Bounds(new Vector3(-.5f, 5f, data.size.y*.5f), new Vector3(1, 10, data.size.y+2)));
             AddBox("East play boundary", new Bounds(new Vector3(data.size.x+.5f, 5f, data.size.y*.5f), new Vector3(1, 10, data.size.y+2)));
             AddBox("North play boundary", new Bounds(new Vector3(data.size.x*.5f, 5f, data.size.y+.5f), new Vector3(data.size.x, 10, 1)));
-            AddBox("South play boundary", new Bounds(new Vector3(data.size.x*.5f, 5f, -.5f), new Vector3(data.size.x, 10, 1)));
+            AddBox("South west play boundary", RectBounds(new Vector4(0, -1, CargoExitWest, 0), 0, 10));
+            AddBox("South east play boundary", RectBounds(new Vector4(CargoExitEast, -1, data.size.x, 0), 0, 10));
+            AddBox("Cargo apron west edge", RectBounds(new Vector4(CargoExitWest - 1, -RoadApronDepth, CargoExitWest, 0), 0, 10));
+            AddBox("Cargo apron east edge", RectBounds(new Vector4(CargoExitEast, -RoadApronDepth, CargoExitEast + 1, 0), 0, 10));
+            AddBox("Far road edge", RectBounds(new Vector4(CargoExitWest, -RoadApronDepth - 1, CargoExitEast, -RoadApronDepth), 0, 10));
 
             // Thin landing tops preserve the walkable west descent and the continuous upper deck.
             AddBox("Terrace upper deck", RectBounds(new Vector4(56.4f, 37.38f, 71.6f, 44.62f), 2.47f, .03f));
@@ -159,8 +167,8 @@ namespace CargoClash
             navigation = gameObject.AddComponent<NavMeshSurface>();
             navigation.navMeshData = null;
             navigation.collectObjects = CollectObjects.Volume;
-            navigation.center = new Vector3(data.size.x*.5f, 0f, data.size.y*.5f);
-            navigation.size = new Vector3(data.size.x, 10f, data.size.y);
+            navigation.center = new Vector3(data.size.x * .5f, 0f, (data.size.y - RoadApronDepth) * .5f);
+            navigation.size = new Vector3(data.size.x, 10f, data.size.y + RoadApronDepth);
             navigation.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
             navigation.layerMask = GameLayers.LevelMask;
             Physics.SyncTransforms();
@@ -182,6 +190,7 @@ namespace CargoClash
             if (runtimeNavMesh == null) throw new InvalidOperationException("Ruin Courtyard navigation build failed.");
             navigation.navMeshData = runtimeNavMesh;
             navigation.AddData();
+            BuildCordon();
             ShowState();
         }
 
@@ -224,6 +233,7 @@ namespace CargoClash
             if (runtimeNavMesh != null) Destroy(runtimeNavMesh);
             foreach (Mesh mesh in collisionMeshes) Destroy(mesh);
             foreach (Material material in renderMaterials.Values) Destroy(material);
+            if (cordonMesh != null) Destroy(cordonMesh);
             DisposeDepot();
         }
 
@@ -272,13 +282,17 @@ namespace CargoClash
 
         private void BuildDoors(Transform model)
         {
+            const int sweepSteps = 16;
             doors = new Door[data.doors.Length];
             for (int i = 0; i < doors.Length; i++)
             {
                 DoorSpec spec = data.doors[i];
-                var door = new Door { Hinges = new Transform[2], Leaves = new Transform[2], Boxes = new BoxCollider[2], Open = new Quaternion[2], Closed = new Quaternion[2],
-                    Sweep = new Bounds(spec.center + new Vector3(0, spec.height*.5f, -.78f),
-                                       new Vector3(spec.width+.45f, spec.height, 2.65f)) };
+                var door = new Door
+                {
+                    Hinges = new Transform[2], Leaves = new Transform[2], Boxes = new BoxCollider[2],
+                    Open = new Quaternion[2], Closed = new Quaternion[2],
+                    SweptLeaves = new DoorLeafPose[2 * (sweepSteps + 1)]
+                };
                 for (int j = 0; j < 2; j++)
                 {
                     Transform hinge = Find(model, spec.hinges[j]);
@@ -297,17 +311,37 @@ namespace CargoClash
                     float closeBy = Vector3.SignedAngle(toLeaf, toCentre, Vector3.up);
                     if (orientation < 0) closeBy = -closeBy;
                     door.Closed[j] = Quaternion.AngleAxis(closeBy, axis) * door.Open[j];
+                    // Overlap the leaf colliders slightly at the seam so tools cannot reach through it.
                     BoxCollider box = AddBox(spec.id + " leaf Blocker",
-                        new Bounds(leaf.position, new Vector3(spec.width*.5f, spec.height*.88f, .28f)));
+                        new Bounds(leaf.position, new Vector3(spec.width * .5f + .14f, spec.height * .88f, .28f)));
                     NavMeshObstacle obstacle = box.gameObject.AddComponent<NavMeshObstacle>();
                     obstacle.shape = NavMeshObstacleShape.Box;
                     obstacle.size = box.size;
                     obstacle.carving = true;
                     box.enabled = false;
                     door.Boxes[j] = box;
+                    // Pad successive samples by half the far tip's travel to cover the space between them.
+                    float margin = spec.width * .25f * Mathf.Abs(closeBy) * Mathf.Deg2Rad / sweepSteps + .03f;
+                    for (int step = 0; step <= sweepSteps; step++)
+                    {
+                        hinge.localRotation = Quaternion.Slerp(door.Closed[j], door.Open[j], step / (float)sweepSteps);
+                        AlignDoorCollider(door, j);
+                        var pose = new DoorLeafPose(box, margin);
+                        door.SweptLeaves[j * (sweepSteps + 1) + step] = pose;
+                        if (j == 0 && step == 0) door.Sweep = pose.Bounds;
+                        else door.Sweep.Encapsulate(pose.Bounds);
+                    }
                 }
                 doors[i] = door;
             }
+        }
+
+        private static void AlignDoorCollider(Door door, int index)
+        {
+            Vector3 along = door.Leaves[index].position - door.Hinges[index].position;
+            along.y = 0f;
+            door.Boxes[index].transform.SetPositionAndRotation(door.Leaves[index].position,
+                Quaternion.LookRotation(Vector3.Cross(along, Vector3.up)));
         }
 
         private void BuildVines(Transform environment, Transform orientation)

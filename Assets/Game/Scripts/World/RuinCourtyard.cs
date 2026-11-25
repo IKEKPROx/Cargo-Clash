@@ -30,6 +30,7 @@ namespace CargoClash
         public const string SceneName = "LevelRuinCourtyard";
         // Twelve two-bit wall states, then two doors, three pickups and the ladder.
         private const int DoorBit = 24;
+        private const uint ClosedDoorBits = 3u << DoorBit;
         private const int PickupBit = 26;
         private const uint LadderBit = 1u << 29;
         private const int MaxPatches = 12;
@@ -76,7 +77,31 @@ namespace CargoClash
             public BoxCollider[] Boxes;
             public Quaternion[] Open, Closed;
             public Bounds Sweep;
+            public DoorLeafPose[] SweptLeaves;
             public double LockedUntil;
+        }
+
+        private readonly struct DoorLeafPose
+        {
+            public readonly Bounds Bounds;
+            private readonly Vector3 right, forward, half;
+
+            public DoorLeafPose(BoxCollider box, float motionMargin)
+            {
+                right = box.transform.right;
+                forward = box.transform.forward;
+                half = box.size * .5f + new Vector3(motionMargin, 0, motionMargin);
+                Vector3 extents = Abs(right) * half.x + Vector3.up * half.y + Abs(forward) * half.z;
+                Bounds = new Bounds(box.transform.position, extents * 2f);
+            }
+
+            public bool Intersects(Bounds other)
+            {
+                if (!Bounds.Intersects(other)) return false;
+                Vector3 offset = other.center - Bounds.center;
+                return Mathf.Abs(Vector3.Dot(right, offset)) <= half.x + Vector3.Dot(Abs(right), other.extents) &&
+                       Mathf.Abs(Vector3.Dot(forward, offset)) <= half.z + Vector3.Dot(Abs(forward), other.extents);
+            }
         }
 
         private MapData data;
@@ -106,7 +131,7 @@ namespace CargoClash
         }
 
         private MatchDirector Director => MatchDirector.Instance;
-        private uint Bits => Director != null ? Director.RuinBits.Value : 0;
+        private uint Bits => Director != null && Director.IsSpawned ? Director.RuinBits.Value : ClosedDoorBits;
         private double Now => Director.Now;
         private bool Playing => Director != null && Director.IsSpawned && Director.Phase.Value == MatchPhase.Playing;
         private int WallState(int index) => (int)(Bits >> (index * 2) & 3);
@@ -146,9 +171,14 @@ namespace CargoClash
                 uint previous = shownBits;
                 ShowState();
                 if (previous != uint.MaxValue && Playing)
+                {
                     for (int i = 0; i < walls.Length; i++)
                         if ((previous >> (i*2) & 3) != WallState(i))
                             PlayWallFeedback(i, WallState(i));
+                    for (int i = 0; i < doors.Length; i++)
+                        if (((previous ^ Bits) & (1u << (DoorBit + i))) != 0)
+                            PlayDoorFeedback(i);
+                }
             }
             if (Director.RuinPatches.Count != shownPatchCount || shownPatchCount > 0) ShowPatches();
         }
@@ -174,6 +204,8 @@ namespace CargoClash
             if (state == 2) FxBurst.PlayPuff(centre, new Color(.68f, .61f, .46f), 8);
         }
 
+        private void PlayDoorFeedback(int index) => GameAudio.PlayAt("clunk", data.doors[index].center + Vector3.up);
+
         private void ShowState()
         {
             shownBits = Bits;
@@ -194,10 +226,7 @@ namespace CargoClash
                 for (int j = 0; j < door.Hinges.Length; j++)
                 {
                     door.Hinges[j].localRotation = rotations[j];
-                    Vector3 along = door.Leaves[j].position - door.Hinges[j].position;
-                    along.y = 0f;
-                    door.Boxes[j].transform.SetPositionAndRotation(door.Leaves[j].position,
-                        Quaternion.LookRotation(Vector3.Cross(along, Vector3.up)));
+                    AlignDoorCollider(door, j);
                     door.Boxes[j].enabled = true;
                 }
             }
@@ -222,7 +251,7 @@ namespace CargoClash
 
         internal void ServerReset()
         {
-            Director.RuinBits.Value = 0;
+            Director.RuinBits.Value = ClosedDoorBits;
             Director.RuinPatches.Clear();
             Array.Clear(pickupReadyAt, 0, pickupReadyAt.Length);
             foreach (Wall wall in walls)
@@ -423,12 +452,12 @@ namespace CargoClash
             return true;
         }
 
-        private static bool Occupied(Bounds area, PlayerAvatar ignored = null)
+        private static bool Occupied(Bounds area, PlayerAvatar ignored = null, DoorLeafPose[] leaves = null)
         {
             foreach (PlayerAvatar player in PlayerAvatar.All)
             {
                 if (player == ignored) continue;
-                if (area.Intersects(player.BodyBoundsAt(player.transform.position))) return true;
+                if (OverlapsArea(area, player.BodyBoundsAt(player.transform.position), leaves)) return true;
             }
             foreach (CargoItem cargo in CargoItem.All)
             {
@@ -436,8 +465,17 @@ namespace CargoClash
                 Vector3 extents = cargo.HalfExtents;
                 Vector3 right = cargo.transform.right * extents.x, up = cargo.transform.up * extents.y, forward = cargo.transform.forward * extents.z;
                 Vector3 aabb = Abs(right) + Abs(up) + Abs(forward);
-                if (area.Intersects(new Bounds(cargo.transform.position, aabb * 2f))) return true;
+                if (OverlapsArea(area, new Bounds(cargo.transform.position, aabb * 2f), leaves)) return true;
             }
+            return false;
+        }
+
+        private static bool OverlapsArea(Bounds area, Bounds occupant, DoorLeafPose[] leaves)
+        {
+            if (!area.Intersects(occupant)) return false;
+            if (leaves == null) return true;
+            foreach (DoorLeafPose leaf in leaves)
+                if (leaf.Intersects(occupant)) return true;
             return false;
         }
 
@@ -470,15 +508,13 @@ namespace CargoClash
             for (int i = 0; i < doors.Length; i++)
             {
                 if (!DoorClosed(i)) continue;
-                Door door = doors[i];
                 Vector3 feet = player.transform.position;
-                if (Mathf.Abs(goal.z - door.Sweep.center.z) < .3f ||
-                    (goal.z - door.Sweep.center.z) * (feet.z - door.Sweep.center.z) >= 0f) continue;
+                float centreZ = data.doors[i].center.z;
+                if (Mathf.Abs(goal.z - centreZ) < .3f ||
+                    (goal.z - centreZ) * (feet.z - centreZ) >= 0f) continue;
                 Vector3 target = DoorHandlePoint(i, player);
                 Vector3 direction = (target - player.EyePosition).normalized;
-                if (!IsAimed(player, direction, target, config.ruinUseRange + .5f, door.Boxes[0], door.Boxes[1])) continue;
-                TrySetDoor(i, false);
-                return true;
+                if (CanReachDoor(i, player, direction) && TrySetDoor(i, false)) return true;
             }
             return false;
         }
@@ -491,18 +527,23 @@ namespace CargoClash
 
         private Vector3 DoorHandlePoint(int index, PlayerAvatar player)
         {
-            Vector3 point = data.doors[index].center + Vector3.up;
-            bool outside = player.transform.position.z < point.z;
-            if (DoorClosed(index)) point.z += outside ? -.19f : .19f;
-            else if (outside) point.z -= .15f;
+            Vector3 point = data.doors[index].center + Vector3.up * 1.12f;
+            point.z += player.transform.position.z < point.z ? -.2f : .2f;
             return point;
+        }
+
+        private bool CanReachDoor(int index, PlayerAvatar player, Vector3 direction)
+        {
+            Door door = doors[index];
+            return IsAimed(player, direction, DoorHandlePoint(index, player), config.ruinUseRange + .9f,
+                door.Boxes[0], door.Boxes[1]);
         }
 
         internal int FindUse(PlayerAvatar player, Vector3 aim, bool allowThrow = true)
         {
             if (!Playing || player.RuinClimbing.Value || player.CarriedCargo != null) return 0;
             for (int i = 0; i < doors.Length; i++)
-                if (IsAimed(player, aim, DoorHandlePoint(i, player), config.ruinUseRange + .5f, doors[i].Boxes[0], doors[i].Boxes[1])) return FirstDoor + i;
+                if (CanReachDoor(i, player, aim)) return FirstDoor + i;
             if (IsAimed(player, aim, data.ladderStart + Vector3.up * .85f, config.ruinUseRange) &&
                 (LadderInstalled || player.HasRuinVine.Value)) return Climb;
             if (ReadyToBoost(player) && IsAimed(player, aim, data.boostStart + Vector3.up, config.ruinUseRange)) return Boost;
@@ -538,19 +579,25 @@ namespace CargoClash
             else if (action == ThrowVine) DeployVine(player, aim);
         }
 
-        private void TrySetDoor(int index, bool closed)
+        private bool TrySetDoor(int index, bool closed)
         {
             Door door = doors[index];
-            if (Now < door.LockedUntil || Occupied(door.Sweep)) return;
+            if (Now < door.LockedUntil || Occupied(door.Sweep, leaves: door.SweptLeaves)) return false;
             door.LockedUntil = Now + config.ruinDoorCooldown;
             SetBit(1u << (DoorBit+index), closed);
+            PlayDoorFeedback(index);
+            return true;
         }
 
         internal string UsePrompt(PlayerAvatar player, int action)
         {
             if (action >= FirstDoor && action < FirstDoor + doors.Length)
-                return Occupied(doors[action-FirstDoor].Sweep) ? GameText.RuinDoorBlocked :
-                    DoorClosed(action-FirstDoor) ? GameText.RuinOpenDoor : GameText.RuinCloseDoor;
+            {
+                int index = action - FirstDoor;
+                Door door = doors[index];
+                if (Occupied(door.Sweep, leaves: door.SweptLeaves)) return GameText.RuinDoorBlocked;
+                return DoorClosed(index) ? GameText.RuinOpenDoor : GameText.RuinCloseDoor;
+            }
             if (action == Climb) return LadderInstalled ? GameText.RuinClimb : GameText.RuinAttachVine;
             if (action == Boost)
                 return player.RuinBoostReadyUntil.Value >= Now ? GameText.RuinBoostReady : GameText.RuinBoost;
@@ -563,21 +610,28 @@ namespace CargoClash
         {
             int best = -1;
             float bestDistance = float.PositiveInfinity;
+            bool bestRayHit = false;
             float range = restore ? config.suckRange : config.smashRange + config.reachTolerance;
+            Ray ray = new Ray(player.EyePosition, aim);
             for (int i = 0; i < walls.Length; i++)
             {
                 int state = WallState(i);
                 if (restore ? state == 0 : state == 2) continue;
                 Wall wall = walls[i];
-                Ray ray = new Ray(player.EyePosition, aim);
                 bool rayHit = wall.Bounds.IntersectRay(ray, out float t) && t <= range;
+                if (bestRayHit && !rayHit) continue;
                 Vector3 point = rayHit ? ray.GetPoint(t+.015f) : wall.Bounds.ClosestPoint(player.EyePosition);
                 Vector3 offset = point - player.EyePosition;
                 float aimCone = restore ? config.suckAimDegrees : config.hitAimDegrees;
                 if (!rayHit && offset.sqrMagnitude > .01f && Vector3.Angle(aim, offset) > aimCone) continue;
                 if (!IsAimed(player, aim, point, range, wall.Collider)) continue;
                 float distance = Vector3.Distance(point, player.EyePosition);
-                if (distance < bestDistance) { bestDistance = distance; best = i; }
+                if ((rayHit && !bestRayHit) || distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    bestRayHit = rayHit;
+                    best = i;
+                }
             }
             return best;
         }
@@ -598,26 +652,26 @@ namespace CargoClash
             }
         }
 
-        internal void ServerRestoreWall(PlayerAvatar player, float delta, Vector3 aim)
+        internal bool ServerRestoreWall(PlayerAvatar player, float delta, Vector3 aim)
         {
-            if (!Playing || player.Side != Side.Collector) return;
-            if (!ValidAim(player, aim)) return;
+            if (!Playing || player.Side != Side.Collector || !ValidAim(player, aim)) return false;
             int index = FindWall(player, aim, true);
-            if (index < 0) return;
+            if (index < 0) return false;
             Wall wall = walls[index];
-            if (Now < wall.LockedUntil) return;
+            if (Now < wall.LockedUntil) return true;
             if (Now - wall.LastPullAt > .18) wall.Restore = 0;
             // Apply at most one frame of work, even if several collectors aim at the wall.
-            if (wall.LastPullFrame == Time.frameCount) return;
+            if (wall.LastPullFrame == Time.frameCount) return true;
             wall.LastPullFrame = Time.frameCount;
             wall.LastPullAt = Now;
             wall.Restore = Mathf.Min(config.ruinRestoreSeconds, wall.Restore + delta);
             Bounds sweep = wall.Bounds;
             sweep.Expand(wall.Cracked != null ? new Vector3(.25f, 1.1f, .25f) : Vector3.one * .15f);
-            if (wall.Restore < config.ruinRestoreSeconds || Occupied(sweep)) return;
+            if (wall.Restore < config.ruinRestoreSeconds || Occupied(sweep)) return true;
             wall.Restore = 0;
             wall.LockedUntil = Now + config.ruinWallSwitchCooldown;
             SetWall(index, 0);
+            return true;
         }
 
         internal static bool CargoReach(PlayerAvatar player, CargoItem cargo)

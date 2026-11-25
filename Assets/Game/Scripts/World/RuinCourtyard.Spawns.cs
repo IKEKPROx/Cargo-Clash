@@ -90,8 +90,8 @@ namespace CargoClash
                 new Vector3(0, 3.22f, 0), new Vector3(3.3f, .24f, .37f), teamColor);
             string title = collectors ? GameText.RuinCollectorBaseEnglish : GameText.RuinInterrupterBaseEnglish;
             string hint = collectors ? GameText.RuinCollectorAssemblyEnglish : GameText.RuinInterrupterAssemblyEnglish;
-            BuildSpawnSignFace(banner, true, title, hint, teamColor.color);
-            BuildSpawnSignFace(banner, false, title, hint, teamColor.color);
+            BuildSignFace(banner, true, title, hint, teamColor.color);
+            BuildSignFace(banner, false, title, hint, teamColor.color);
             SpawnBannerCount++;
         }
 
@@ -120,7 +120,7 @@ namespace CargoClash
             return item.transform;
         }
 
-        private static void BuildSpawnSignFace(Transform banner, bool front, string title, string hint, Color color)
+        private static void BuildSignFace(Transform banner, bool front, string title, string hint, Color color)
         {
             GameObject face = new GameObject(front ? "Front localized sign" : "Back localized sign", typeof(RectTransform), typeof(Canvas));
             face.SetActive(false);

@@ -27275,7 +27275,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4678b00ca0ae6494da15bb431a9a26a8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: CargoClash::CargoClash.LevelLayout
-  halfSeconds: 0
+  halfSeconds: 120
   collectorSpawns: []
   interrupterSpawns: []
   smallSpots: []
@@ -29177,6 +29177,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: abd3638416a6e005f42b93642c5fc35e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: CargoClash::CargoClash.RuinCourtyard
+  cordonTape: {fileID: 2800000, guid: 99b99ed1a6dff4f2c9e5d779215e8f1c, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

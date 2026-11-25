@@ -13,14 +13,14 @@ namespace CargoClash
             // Ruin Courtyard.
             ["OPEN GATE"] = "打开遗迹门",
             ["CLOSE GATE"] = "关闭遗迹门",
-            ["GATE BLOCKED"] = "门口被挡住了",
+            ["CLEAR THE GATE SWING"] = "请让开门扇范围",
             ["TAKE VINE"] = "拾取藤蔓",
             ["THROW VINE"] = "投掷藤蔓",
             ["ATTACH VINE"] = "挂上藤蔓",
             ["CLIMB"] = "攀爬",
             ["TEAM BOOST"] = "合作托举",
             ["BREAK WALL"] = "破坏墙体",
-            ["RESTORE WALL"] = "吸回复原",
+            ["HOLD TO RESTORE WALL"] = "按住复原墙体",
             ["PULL UP TEAMMATE"] = "拉队友上来",
             ["READY TO BOOST"] = "准备托举",
             ["RUIN COURTYARD"] = "藤坠石庭",
@@ -28,6 +28,8 @@ namespace CargoClash
             ["INTERRUPTER BASE"] = "阻拦方出生区",
             ["3 CREW / CARRY TO TRUCK"] = "三人集合 · 运货回车",
             ["3 CREW / BLOCK THE CARGO"] = "三人集合 · 拦人砸货",
+            ["SITE CLOSED"] = "现场封锁",
+            ["DO NOT CROSS"] = "请勿跨越警戒线",
 
             // Rooms.
             ["The host left the game."] = "主机离开了游戏。",

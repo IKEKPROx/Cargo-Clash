@@ -14,7 +14,7 @@ namespace CargoClash
         {
             public Vector4[] pits;
             public Vector3[] pitReturns, vinePickups;
-            public Vector3 boostStart, boostExit, ladderStart, ladderExit;
+            public Vector3 boostStart, boostExit, ladderStart, ladderExit, truckZone;
         }
 
         private IEnumerator TestTheRuins()
@@ -33,6 +33,8 @@ namespace CargoClash
             double cargoDeadline = MatchDirector.Instance.Now + 5;
             while (CargoItem.All.Count < 15 && MatchDirector.Instance.Now < cargoDeadline) yield return null;
             CheckRuinCargo(config, layout);
+            if (HalfSecondsOverride <= 0)
+                Expect(Mathf.Approximately(config.EffectiveHalfSeconds, 120f), "RUIN defaults to two minutes per half");
             Expect(layout.collectorSpawns.Length == layout.interrupterSpawns.Length &&
                    ruins.SpawnMarkerCount == layout.collectorSpawns.Length + layout.interrupterSpawns.Length &&
                    ruins.SpawnBannerCount == 2 && ruins.SpawnMarkersRoot != null &&
@@ -42,19 +44,20 @@ namespace CargoClash
             {
                 // The client must not deliver unrelated cargo during the host's score-isolation checks.
                 BotsIdle = true;
-                bool door = false, wall = false, pad = false, ladder = false, coCarry = false;
+                uint openedGates = 0;
+                bool wall = false, pad = false, ladder = false, coCarry = false;
                 int half = MatchDirector.Instance.Half.Value;
                 while (MatchDirector.Instance.Half.Value == half && MatchDirector.Instance.Phase.Value == MatchPhase.Playing)
                 {
                     uint bits = MatchDirector.Instance.RuinBits.Value;
-                    door |= (bits & (1u << 24)) != 0;
+                    openedGates |= (~bits >> 24) & 3u;
                     wall |= (bits & 3u) == 2u;
                     pad |= MatchDirector.Instance.RuinPatches.Count > 0;
                     ladder |= (bits & (1u << 29)) != 0;
                     coCarry |= CargoItem.All.Any(c => c.Definition.value == 100 && !c.HasFreeSlot && c.State.Value == CargoState.Carried);
                     yield return null;
                 }
-                Expect(door && wall, "RUIN client observes replicated gate and broken wall states");
+                Expect(openedGates == 3u && wall, "RUIN client observes both gates open and the wall break");
                 Expect(pad && ladder, "RUIN client observes replicated vine pad and ladder states");
                 Expect(coCarry, "RUIN client observes two carriers on a 100 crate");
                 BotsIdle = false;
@@ -78,6 +81,13 @@ namespace CargoClash
                 Expect(layout.collectorSpawns.Concat(layout.interrupterSpawns).All(spot =>
                     Physics.Raycast(spot.position + Vector3.up * .3f, Vector3.down, .6f, GameLayers.LevelMask)),
                     "RUIN ground collider supports both teams' spawn points");
+                Vector3 road = new Vector3(map.truckZone.x - 3.4f, .05f, -8f);
+                Vector3 apron = road + Vector3.forward * 10f;
+                NavMeshPath deliveryPath = new NavMeshPath();
+                Expect(!Physics.Linecast(road + Vector3.up, apron + Vector3.up, GameLayers.LevelMask) &&
+                       NavMesh.CalculatePath(road, apron, NavMesh.AllAreas, deliveryPath) &&
+                       deliveryPath.status == NavMeshPathStatus.PathComplete,
+                    "RUIN cargo opening connects the road and truck apron for players and bots");
                 foreach (Vector4 rect in map.pits)
                 {
                     Vector3 pit = RuinPitCenter(rect, .1f);
@@ -85,19 +95,33 @@ namespace CargoClash
                     Expect(!NavMesh.SamplePosition(pit, out _, .25f, NavMesh.AllAreas), "RUIN navigation does not bridge a pit");
                 }
 
-                // Use the ordinary validated scene rules, with actors outside the door sweep.
-                Vector3 handle = new Vector3(44.5f, 1, 32.97f);
-                yield return StandRuin(a, new Vector3(44.5f, 0, 30.35f), handle);
-                UseRuinTest(ruins, a, handle);
-                Expect((director.RuinBits.Value & (1u << 24)) != 0, "RUIN gate closes from outside its sweep");
-                yield return new WaitForSeconds(config.ruinDoorCooldown + .1f);
-                UseRuinTest(ruins, a, handle);
-                Expect((director.RuinBits.Value & (1u << 24)) == 0, "RUIN gate reopens");
-                yield return StandRuin(b, new Vector3(44.5f, 0, 32.5f), handle);
-                yield return new WaitForSeconds(config.ruinDoorCooldown + .1f);
-                UseRuinTest(ruins, a, handle);
-                Expect((director.RuinBits.Value & (1u << 24)) == 0, "RUIN occupied gate refuses to close");
-                yield return StandRuin(b, starts[1], starts[1] + Vector3.forward);
+                Vector3[] entrances = { new Vector3(44.5f, 0f, 33.12f), new Vector3(82f, 0f, 34.12f) };
+                for (int i = 0; i < entrances.Length; i++)
+                {
+                    Vector3 entry = entrances[i], handle = entry + Vector3.up * 1.12f;
+                    uint gate = 1u << (24 + i);
+                    Vector3 front = entry - Vector3.forward * 2f;
+                    Vector3 inside = entry + Vector3.forward * 1.6f;
+                    Expect((director.RuinBits.Value & gate) != 0 &&
+                        Physics.Linecast(front + Vector3.up, inside + Vector3.up, GameLayers.LevelMask),
+                        $"RUIN gate {i + 1} starts closed with a sealed collision seam");
+                    yield return StandRuin(a, front, handle);
+                    UseRuinTest(ruins, a, handle);
+                    Expect((director.RuinBits.Value & gate) == 0 &&
+                        !Physics.Linecast(front + Vector3.up, inside + Vector3.up, GameLayers.LevelMask),
+                        $"RUIN gate {i + 1} opens from the clear centre approach at two metres");
+                    yield return StandRuin(b, entry - Vector3.forward * .3f, handle);
+                    yield return new WaitForSeconds(config.ruinDoorCooldown + .1f);
+                    UseRuinTest(ruins, a, handle);
+                    Expect((director.RuinBits.Value & gate) == 0, $"RUIN gate {i + 1} refuses to swing through a player");
+                    yield return StandRuin(b, starts[1], starts[1] + Vector3.forward);
+                    yield return StandRuin(a, inside, handle);
+                    UseRuinTest(ruins, a, handle);
+                    Expect((director.RuinBits.Value & gate) != 0, $"RUIN gate {i + 1} closes from inside");
+                    yield return new WaitForSeconds(config.ruinDoorCooldown + .1f);
+                    UseRuinTest(ruins, a, handle);
+                    Expect((director.RuinBits.Value & gate) == 0, $"RUIN gate {i + 1} reopens from inside");
+                }
 
                 Vector3 wall = new Vector3(36.5f, 1.1f, 33.6f);
                 yield return StandRuin(interrupter, new Vector3(36.5f, 0, 32), wall);

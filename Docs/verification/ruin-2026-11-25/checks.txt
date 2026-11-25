@@ -1,0 +1,77 @@
+Unity 6000.6.1f1, macOS, Editor Play Mode
+
+Actual input and co-carry at the two gates and the road opening
+[RuinCheck] PASS warning ribbons run around the ruin and down both shoulders
+[RuinCheck] PASS warning tape uses the yellow striped texture
+[RuinCheck] PASS ground supports the lane all the way to the paved road
+[RuinCheck] PASS bots have a connected NavMesh between road and the truck apron
+[RuinCheck] PASS the west shoulder still stops crossing the rest of the perimeter
+[RuinCheck] PASS W walks out through the actual cargo opening
+[RuinCheck] PASS W walks back from the road through the cargo opening
+[RuinCheck] PASS two carriers grab the 100 cargo on the road apron
+[RuinCheck] PASS two carriers move the 100 cargo from the road through the opening to score at the truck
+[RuinCheck] PASS gate 1 has a blocking closed seam
+[RuinCheck] PASS W cannot walk through closed gate 1
+[RuinCheck] PASS E opens gate 1 from the marked centre approach (2 m)
+[RuinCheck] PASS W crosses the open gate 1
+[RuinCheck] PASS gate 1 waits while a box occupies the actual sweep
+[RuinCheck] PASS E closes gate 1 from inside after the box leaves
+[RuinCheck] PASS E reopens gate 1 from inside
+[RuinCheck] PASS gate 2 has a blocking closed seam
+[RuinCheck] PASS W cannot walk through closed gate 2
+[RuinCheck] PASS E opens gate 2 from the marked centre approach (2 m)
+[RuinCheck] PASS W crosses the open gate 2
+[RuinCheck] PASS gate 2 waits while a box occupies the actual sweep
+[RuinCheck] PASS E closes gate 2 from inside after the box leaves
+[RuinCheck] PASS E reopens gate 2 from inside
+[RuinCheck] PASS right mouse waits for the box in the rubble opening
+
+All 12 walls using the left and right mouse buttons
+[RuinCheck] PASS left mouse breaks R1 and clears its collider
+[RuinCheck] PASS left mouse breaks R2 and clears its collider
+[RuinCheck] PASS left mouse breaks R3 and clears its collider
+[RuinCheck] PASS left mouse breaks R4 and clears its collider
+[RuinCheck] PASS left mouse breaks R5 and clears its collider
+[RuinCheck] PASS left mouse breaks R6 and clears its collider
+[RuinCheck] PASS left mouse breaks R7 and clears its collider
+[RuinCheck] PASS left mouse breaks R8 and clears its collider
+[RuinCheck] PASS left mouse breaks R9 and clears its collider
+[RuinCheck] PASS left mouse breaks R10 and clears its collider
+[RuinCheck] PASS left mouse breaks R11 and clears its collider
+[RuinCheck] PASS left mouse breaks R12 and clears its collider
+[RuinCheck] PASS right mouse restores R1 and its collider
+[RuinCheck] PASS right mouse restores R2 and its collider
+[RuinCheck] PASS right mouse restores R3 and its collider
+[RuinCheck] PASS right mouse restores R4 and its collider
+[RuinCheck] PASS right mouse restores R5 and its collider
+[RuinCheck] PASS right mouse restores R6 and its collider
+[RuinCheck] PASS right mouse restores R7 and its collider
+[RuinCheck] PASS right mouse restores R8 and its collider
+[RuinCheck] PASS right mouse restores R9 and its collider
+[RuinCheck] PASS right mouse restores R10 and its collider
+[RuinCheck] PASS right mouse restores R11 and its collider
+[RuinCheck] PASS right mouse restores R12 and its collider
+[RuinCheck] PASS first hammer click cracks R7 and keeps its collider
+
+Unshortened practice match
+[RuinCheck] PASS default half 1 begins at 2:00
+[RuinCheck] PASS default half 1 runs to its 120-second deadline
+[RuinCheck] PASS default half 2 begins at 2:00
+[RuinCheck] PASS default half 2 runs to its 120-second deadline
+[CCTEST] RESULT orange=10 blue=0 titles=1
+[CCTEST] DONE errors=0 timedOut=False
+[CCTEST] 103 ruin regression checks passed
+
+Local LAN host
+[RuinLAN] PASS host accepted the remote player's E and opened the gate
+[RuinLAN] PASS host accepted the remote hammer blow and broke R1
+[RuinLAN] PASS host held right mouse and restored R1
+[CCTEST] DONE errors=0 timedOut=False
+
+Local LAN client
+[RuinLAN] PASS client was at the clear gate approach
+[RuinLAN] PASS client saw the open gate replicate
+[RuinLAN] PASS client moved to R1
+[RuinLAN] PASS client saw the broken wall and its open passage replicate
+[RuinLAN] PASS client saw the restored wall replicate
+[CCTEST] DONE errors=0 timedOut=False

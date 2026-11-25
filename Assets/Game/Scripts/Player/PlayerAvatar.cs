@@ -928,8 +928,8 @@ namespace CargoClash
         private void ServerSuck(float deltaTime)
         {
             Vector3 forward = transform.forward;
-            if (Now - ruinSuckAimReceived < .25)
-                RuinCourtyard.Instance?.ServerRestoreWall(this, deltaTime, ruinSuckAim);
+            if (Now - ruinSuckAimReceived < .25 &&
+                RuinCourtyard.Instance?.ServerRestoreWall(this, deltaTime, ruinSuckAim) == true) return;
             Vector3 mouth = transform.position + forward * 0.7f + Vector3.up * 0.9f;
             foreach (CargoItem cargo in CargoItem.All)
             {
