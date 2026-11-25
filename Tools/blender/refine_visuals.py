@@ -12,6 +12,12 @@ import cargo_actions
 def main():
     cargo_actions.bind(crew)
     source = crew.ROOT.parent / "独立建模"
+    if "--crew" not in sys.argv:
+        # Since step 22 the Crew_*_Visual.fbx files are Astra's own (独立建模/三体型人物精修_v23/FBX), copied in as they
+        # are and put on the game by Tools > Cargo Clash > Apply Crew Appearance. Exporting them from her old v05/v06
+        # files here would overwrite her work, so this only does the fleet unless asked with -- --crew.
+        export_fleet(source)
+        return
     crew.KEEP.update({
         "Char_Team": 0.21, "Porter_Shirt": 0.21, "Wrecker_Jacket": 0.24, "Wrecker_Shirt": 0.28,
         "Crew_Skin": 0.28, "Crew_SkinShade": 0.34, "Crew_Hair": 0.30,
@@ -41,7 +47,10 @@ def main():
             axis_forward="-Z", axis_up="Y", bake_space_transform=False, path_mode="STRIP",
         )
         print(f"[Refine] {body} appearance:", report, flush=True)
+    export_fleet(source)
 
+
+def export_fleet(source):
     for master, name in (("Truck_07", "TitleTruck"), ("TruckCrashed_07", "Truck"), ("Helicopter_07", "Helicopter")):
         bpy.ops.wm.open_mainfile(filepath=str(source / f"运输载具_v07/模型/{master}/{master}.blend"))
         for obj in list(bpy.context.scene.objects):

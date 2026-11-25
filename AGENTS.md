@@ -16,7 +16,7 @@
 | 内容 | 由谁控制 | 在哪里 |
 |---|---|---|
 | 角色移动 | 角色的拥有者（NetworkTransform 设为 Owner 权限） | `PlayerAvatar.TickOwner` |
-| 机器人 | 主机拥有，走和玩家一样的代码 | `BotBrain` 实现 `ICharacterInput` |
+| 机器人 | 主机拥有，走和玩家一样的代码。强度（速度、反应、多常找人打、对真人打折扣、重砸）在 `GameConfig` 的 Bots 一栏 | `BotBrain` 实现 `ICharacterInput` |
 | 冲撞判定、倒地、掉货 | 主机 | `PlayerAvatar.ServerCheckRamHit`、`ServerKnockDown` |
 | 打人、喷气、重锤 | 拥有者把准星对着的敌人的 ID 发给主机；主机查距离、数这是第几下，再判定推开或倒地 | `PlayerAvatar.UpdateTools`、`ServerSwing`、`ServerSlam`、`ServerTakeHit` |
 | 血量、击败、重生 | 主机。血量是 `NetworkVariable`，击败时通知所有人出战报，到时间把人传回出生点 | `PlayerAvatar.ServerKnockOut`、`ServerRespawn`、`MatchDirector.ServerOnKnockedOut` |
@@ -89,6 +89,9 @@
 
 人物、锤子和收集器的原件是 Astra 的 Blender 文件，在仓库外面的 `game design/独立建模/`，不进 Git。`make_crew.py` 从那里读（不在旁边就加 `-- --source 文件夹`），写出 `Crew_Short.fbx`、`Crew_Medium.fbx`、`Crew_Tall.fbx`。她的原件每人约 45 万个三角面，脚本去掉缝线和拉链齿，按颜色分开减面到每人约 2 万（帽子和眼镜另算，全部加起来约 2.7 万），把她的 35 种颜色并成游戏的二十来种（`COLOURS`），`ClothPrimary` 换成队伍颜色。
 
+- **画出来的外观是另一套文件。** `Crew_Short.fbx` 这三个只管骨架、动作和挂点；游戏里看到的网格是 `Crew_*_Visual.fbx`，现在是 Astra 自己精修后给的（`独立建模/三体型人物精修_v23/FBX`，每人身体约 13–17 万个三角面，带布料的 UV）。她出了新版本：原样复制进 `Assets/Game/Models`，保留 `.meta`，再运行 `Tools > Cargo Clash > Apply Crew Appearance`（`CargoClashVisualRefinement.ApplyCrew`）。它先逐根骨骼核对绑定矩阵和捏脸形状键，对不上就停下；再把网格、骨骼列表和材质换到 `Avatar.prefab`、开始场景（CREW 页和主菜单车上的三个人）和两关的第一人称检视手臂上。不要运行 `refine_visuals.py -- --crew`，它会用她的旧原件把这些文件盖掉。
+  - **布料：** 她的衣服用了帆布斜纹和棉针织两张法线贴图（`Assets/Game/Textures/Crew_*_Normal.png`，强度照她的节点）。只有身体有 UV，所以贴图只放在身体专用的材质上（`Crew_Fabric_Orange`/`Blue`、`Porter_Shirt_Fabric`、`Wrecker_Shirt_Fabric`、`Wrecker_Jacket_Fabric`）；帽子、收集器和第一人称的袖子没有 UV，还用原来的材质，放上法线贴图会整片偏色。蓝队换色时 `GameConfig.orangeFabric` 跟着换成 `blueFabric`。
+  - **捏脸形状键：** 有了 UV，Unity 给每个形状键都重算切线，全身几乎每个顶点都存了一点切线差，形状键大了 20 倍，帧率掉了一半。`CrewBlendShapeCleanup`（导入后处理）把位移不到 0.01 毫米、法线几乎不变的顶点从形状键里去掉，真正会动的顶点原样保留，导入日志里有 `[Crew]` 的统计。
 - **三种体型，两套衣服。** 同一身高的搬运工（v05，运输公司的人）和破坏者（v06，对手公司的人）骨架一样，所以每种体型一个文件、一套动作，里面有 `Porter` 和 `Wrecker` 两套衣服。正方穿搬运工的，反方穿破坏者的，中场换边时 `CharacterVisual` 换衣服。手套用 v06 的（她在 v06 改正了手的绑定方向），两套衣服共用。
 - **玩家自己搭配。** 开局前在 CREW 页（`TitleFlow` 的 `Page.Crew`）选体型、帽子（6 顶或不戴）、眼镜（3 副或不戴），再拉她的 10 个捏脸滑块。主菜单和大厅各有一个 CREW 按钮，练习模式选完关卡也会先到这一页。选的结果是一个 `CrewLook`（每个滑块 6 位，十个挤在一个 `ulong` 里），存在本机（`GameSettings.Look`），加入房间时发给主机，开局时主机放进 `PlayerAvatar.LookVar`。机器人的体型按 `GameConfig.bodyOrder` 轮流（中、矮、高），帽子、眼镜和脸随机（`CrewLook.Random`）。
 - **体型各有打法。** 矮胖的血厚、打得重、跑得慢，高瘦的跑得快、血少、打得轻，中等的都在中间。数值在 `GameConfig` 的 `shortBody`、`mediumBody`、`tallBody`（`BodyStats`：血量、速度倍数、伤害倍数）。伤害倍数乘在锤子、喷气、重锤和冲撞上，速度倍数乘在 `runSpeed` 上。碰撞和视线高度三种一样。
@@ -104,6 +107,9 @@
 
 - **躯干轮廓。** `Body.measure_torso` 从衣服量出躯干每 3 厘米一层、36 个方向的轮廓。矮胖的肚子比肩膀宽，手臂要绕着走。
 - **手肘绕开身体。** 每一帧算完手臂后，手肘可以绕“肩—腕”连线转，先转到手臂整个在躯干外面（`place_elbow`），空手的手再往外张开（`clear_hand`）。
+- **肩膀凹陷：锁骨跟着上臂（只有高个子），抱箱子的手肘放低。** Astra v19 以后的模型把肩膀顶部的一部分权重给了 `Shoulder`（锁骨）骨骼，还有一大块给了胸。上臂抬得高、锁骨不动时，肩膀和手臂交界处会凹进去一块。`make_crew.py` 先从不动的肩膀把手臂摆一次，看上臂抬多高，再让锁骨跟着转一部分（`CLAVICLE_SHARE`、`CLAVICLE_FROM`、`CLAVICLE_MAX`）；跑步（`STILL_COLLARBONES`）和检视货物不跟。单靠它压不掉胸的那份权重，所以高个子和中等身材抱钱箱、金条时手肘改成向外向下（`cargo_actions.HUG_ELBOW_BY_BODY`），上臂分别从 74°、65° 降到约 50°、43°；矮个子抱箱子时手臂几乎伸直，手肘方向不起作用。这种凹陷 `check_crew.py`、`check_cargo.py` 查不出来，要渲染肩膀特写看（交接说明第 3 节第 24 步）。
+- **放松的手臂（`Pose.relaxed`）。** 轮廓比她的衣服圆，矮胖的连她自己建模时的站姿（骨架的静止姿势）都算插进轮廓 14 厘米，空手就被推到和肩膀一样平。设了 `relaxed=1` 的姿势，空手可以和她的站姿一样贴着身体，不能更深（`CrewRig.rest_overlap`，烘焙日志里有这个数）。现在只有待机设了它；拿工具和货的手不受影响。
+- **检查看的是游戏里的样子。** 动作仍按 v05/v06 的衣服量和导出，但 `--check` 存的 .blend 和 `--sheet` 的图里，身体、手套、帽子和眼镜换成了她最新的外观（`LOOK_FILE`，现在是 `三体型人物精修_v23`），`check_crew.py`、`check_cargo.py` 查的就是游戏里看到的网格。她出新版本就改这个路径。
 - **工具挪出身体。** 工具或握着它的手在身体里时，把工具整体往前或往上挪，前提是两只手还够得着（`clear_tool`）。挥锤这种快动作用 `clear=0.1` 限制挪动，不然会挪得很怪。
 - **手在把手上转。** 锤柄和收集器的竖把手是圆的，手会绕它转到顺着前臂的方向，手肘也转到让手腕弯得最少的位置（`EASY_WRIST`）。锤子跟着右手转，锤面始终在前臂和锤柄的平面里；收集器不能跟着转（会改变朝向），所以只有左手转。
 - 砸下那一帧的手的位置是按体型试出来的（`STRIKE`），矮胖的收集器端法也是（`READY_VACUUM`）。改了体型或这些动作，用 `-- --only Short --no-export --check 文件夹 --clips Smash,Slam` 只烘焙这几个动作存成 .blend，再检查穿模和手腕（交接说明第 3 节第 13 步）。
@@ -148,7 +154,7 @@ Astra 的四种货物（`独立建模/互动货物_v08`）：烟盒、现金箱�
 
 **两台相机。** 主相机不画 `ViewModel` 层。它上面叠了一台 Overlay 相机，只画 `ViewModel` 层：手、锤子和自己手里的货。这台相机会先清深度，所以手和货不会插进墙里。自己手里的货由 `CargoItem.SetOnViewLayer` 换层。两台相机的视野一样，货从地上进到手里时才不会跳。
 
-**手是代码摆的，不是 Animator。** `make_hands.py` 输出 `FirstPersonHands.fbx`，上臂、前臂、四种手型（放松、张开、握拳、握把手）、锤子和收集器都是不变形的物体，长度要和 `FirstPersonRig` 开头的常量一致。手套、锤子和收集器是 Astra 的：她的第一人称手套有指骨，每种手型是摆好她的一种手势后定住的网格。握把手的手里，把手在手腕前 0.13 米、往掌心偏 0.061 米（`GripToHandle`）。袖子是 `FP_Sleeve`，`FirstPersonRig` 按自己穿的衣服换成搬运工的衬衫或破坏者的外套（`CharacterVisual.SleeveMaterial`）。`FirstPersonRig` 每帧算它们的位置，因为手要跟着货物的大小走。要让动作看着协调，守住这几条：
+**手是代码摆的，不是 Animator。** `make_hands.py` 输出 `FirstPersonHands.fbx`，上臂、前臂、四种手型（放松、张开、握拳、握把手）、锤子和收集器都是不变形的物体，长度要和 `FirstPersonRig` 开头的常量一致。现在用的是 Astra 重新贴合过手腕和袖口的版本（`独立建模/三体型人物精修_v18/直接替换/FirstPersonHands.fbx`，原样复制），物体名字、轴心和长度和脚本写的一样；所以 `make_hands.py` 默认只写一份临时副本，加 `-- --overwrite` 才会覆盖她的。手套、锤子和收集器是 Astra 的：她的第一人称手套有指骨，每种手型是摆好她的一种手势后定住的网格。握把手的手里，把手在手腕前 0.13 米、往掌心偏 0.061 米（`GripToHandle`）。袖子是 `FP_Sleeve`，`FirstPersonRig` 按自己穿的衣服换成搬运工的衬衫或破坏者的外套（`CharacterVisual.SleeveMaterial`）。`FirstPersonRig` 每帧算它们的位置，因为手要跟着货物的大小走。要让动作看着协调，守住这几条：
 
 - 手臂是两段的 IK（`PlaceArm`、`FindElbow`）：动作只说手腕放哪里，手肘和手的朝向是算出来的。
 - 根节点是上半身，绕胸口转（`torso` 弹簧）。一个动作要带上身体，不要只动手。

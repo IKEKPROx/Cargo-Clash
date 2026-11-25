@@ -78,6 +78,14 @@ HUG_GAP = 0.095
 HUG_ALONG = 0.012
 HUG_PRESS = 0.014
 HUG_FINGERS = {"Open": 0.85, "Relaxed": 0.15}
+# Which way the elbows go from the line between shoulder and hand (the body's space: out, back, down). With the
+# plain hint the tall body's long arms winged their elbows out at shoulder height (upper arms 74 degrees off
+# hanging), and the tops of its shoulders, weighted partly to the chest, sank in where they met the raised arms.
+# Out, back and down they come to about 50 degrees, which still spans the 68 cm case; the medium body's, which
+# sank in less at 65 degrees, come to 43. The short body holds the case with its arms almost straight, so a hint
+# makes no difference there.
+HUG_ELBOW = (1.0, 0.2, -0.6)
+HUG_ELBOW_BY_BODY = {"Tall": (0.7, 0.4, -1.0), "Medium": (0.7, 0.4, -1.0)}
 # Which hold each body uses for the cases.
 # The tobacco box's handles take up most of its short sides, so it's carried on the palms.
 HOLD = {"Tobacco": "tray"}
@@ -170,12 +178,12 @@ def rig_class():
                 self.previous_elbows = {s: self.arm.pose.bones[prefix + "LowerArm"].head.copy() for s, prefix, _ in crew.SIDES}
             return result
 
-        def clear_hand(self, shoulder, wrist, rest_of):
+        def clear_hand(self, shoulder, wrist, rest_of, allow=0.0):
             if getattr(self, "keep_contact", False) or ("L" if shoulder.x > 0 else "R") in getattr(self, "contact_sides", ()):
                 return wrist
-            return super().clear_hand(shoulder, wrist, rest_of)
+            return super().clear_hand(shoulder, wrist, rest_of, allow)
 
-        def place_elbow(self, shoulder, elbow, wrist, rest_of, wrist_bend=None):
+        def place_elbow(self, shoulder, elbow, wrist, rest_of, wrist_bend=None, allow=0.0):
             pose = getattr(self, "interaction_pose", None)
             if pose and wrist_bend is None:
                 palm = pose.palm_l if shoulder.x > 0 else pose.palm_r
@@ -183,15 +191,15 @@ def rig_class():
                     fingers = Vector(palm[0]).normalized()
                     wrist_bend = lambda forearm: math.degrees(forearm.angle(fingers))
             if not pose or wrist_bend is None:
-                return super().place_elbow(shoulder, elbow, wrist, rest_of, wrist_bend)
+                return super().place_elbow(shoulder, elbow, wrist, rest_of, wrist_bend, allow)
             axis = wrist - shoulder
             if axis.length < 1e-5:
-                return super().place_elbow(shoulder, elbow, wrist, rest_of, wrist_bend)
+                return super().place_elbow(shoulder, elbow, wrist, rest_of, wrist_bend, allow)
             axis.normalize()
             center = shoulder + axis * (elbow - shoulder).dot(axis)
             spoke = elbow - center
             if spoke.length < 1e-5:
-                return super().place_elbow(shoulder, elbow, wrist, rest_of, wrist_bend)
+                return super().place_elbow(shoulder, elbow, wrist, rest_of, wrist_bend, allow)
             old = self.previous_elbows.get("L" if shoulder.x > 0 else "R")
             previous = None if old is None else old - center - axis * (old - center).dot(axis)
             if previous is not None and previous.length < 1e-5:
@@ -201,7 +209,7 @@ def rig_class():
                 angle = step * 2.5
                 offset = Quaternion(axis, math.radians(angle)) @ spoke
                 candidate = center + offset
-                cost = self.arm_inside(shoulder, candidate, wrist, rest_of) * 400 + abs(angle) * 0.015
+                cost = self.arm_inside(shoulder, candidate, wrist, rest_of, allow) * 400 + abs(angle) * 0.015
                 cost += max(0, wrist_bend((wrist - candidate).normalized()) - 30) * 0.2
                 # An elbow up near the shoulder, out to the side, reads as a flapping wing: the long arms took
                 # it for the straighter wrist whenever the hand came in close (smoking, pinching notes).
@@ -222,12 +230,18 @@ def rig_class():
             self.arm.animation_data.action = action
             self.previous = {}
             self.misses = []
+            # Looking into a case, the hands work close in front of the face with the palms set by the clip, and a
+            # raised collarbone (crew.CLAVICLE_SHARE) bent the tall body's wrist to 70 degrees fanning the cash, so
+            # the inspections keep their collarbones still. The carries keep the lift: that's where the shoulder
+            # showed sinking in.
+            self.still_collarbones = not isinstance(clip, CarryClip)
             frames = max(int(round(clip.seconds * FPS)), 1)
             for number in range(frames + 1):
                 u = number / frames
                 self.apply(clip.pose(self.b, u), number)
                 bpy.context.view_layer.update()
                 key_props(self.arm, clip.props(self.b, u, self.arm), number)
+            self.still_collarbones = False
             if self.misses:
                 worst = max(self.misses, key=lambda m: m[2])
                 print(f"[crew] {self.b.name} {name}: a hand falls short in {len(self.misses)} frames, worst {worst}")
@@ -566,10 +580,11 @@ def hug(b, kind, u=0.0):
     palm_r = ((0.0, -1.0, -0.12), (-1.0, 0.0, 0.0))
     side_l = (w / 2 + HUG_PRESS, near - HUG_ALONG, hands + bob)
     side_r = (-(w / 2 + HUG_PRESS), near - HUG_ALONG, hands + bob)
+    out, back, down = HUG_ELBOW_BY_BODY.get(b.name, HUG_ELBOW)
     pose = crew.pose(
         b, hands_in_body=1.0,
         hand_l=wrist_for(b, "L", side_l, palm_l), hand_r=wrist_for(b, "R", side_r, palm_r),
-        palm_l=palm_l, palm_r=palm_r, elbow_l=(1.0, 0.2, -0.6), elbow_r=(-1.0, 0.2, -0.6),
+        palm_l=palm_l, palm_r=palm_r, elbow_l=(out, back, down), elbow_r=(-out, back, down),
         spine=(0.0, 1.0 * math.sin(a), 0), chest=(1.0, 1.0 * math.sin(a + 0.6), 0), head=(5.0, -1.5 * math.sin(a + 1.0), 0),
         fingers_l=HUG_FINGERS, fingers_r=HUG_FINGERS,
     )

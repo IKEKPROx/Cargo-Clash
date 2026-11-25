@@ -153,6 +153,10 @@ def main():
     build_tools(options["source"])
 
     output = crew.ROOT / "Assets/Game/Models/FirstPersonHands.fbx"
+    if "--overwrite" not in sys.argv:
+        # Since step 22 the game uses Astra's own refit of this file (独立建模/三体型人物精修_v18/直接替换), copied in as it
+        # is. Writing ours would replace her wrists and sleeves; write a copy to look at instead, or pass -- --overwrite.
+        output = Path(bpy.app.tempdir or "/tmp") / "FirstPersonHands_generated.fbx"
     modeling.export_fbx(output)
     print("Wrote", output)
     for obj in bpy.data.objects:

@@ -210,9 +210,11 @@ def free_hand(solver, pose, side, wrist, fingers, back, follow):
         return Vector(wrist), Vector(fingers).normalized(), Vector(back).normalized(), hint
     shoulder = shoulder_of(solver, pose, side)
     rest_of = body_space(solver, pose)
-    wrist = solver.clear_hand(shoulder, Vector(wrist), rest_of)
+    # Resting on a thigh or the belly, an arm may lie as close to the body as her own stance does (Pose.relaxed).
+    allow = solver.rest_overlap * pose.relaxed
+    wrist = solver.clear_hand(shoulder, Vector(wrist), rest_of, allow)
     joint, end, _ = crew.solve(shoulder, wrist, b.upper, b.lower, hint)
-    joint, _ = solver.place_elbow(shoulder, joint, end, rest_of)
+    joint, _ = solver.place_elbow(shoulder, joint, end, rest_of, allow=allow)
     forearm = (end - joint).normalized()
     fingers = (Vector(fingers).normalized() * (1.0 - follow) + forearm * follow).normalized()
     back = Vector(back) - fingers * Vector(back).dot(fingers)
@@ -289,7 +291,7 @@ def driver(solver, t):
     glare = keys(t, [(12.6, 0.0), (13.0, 1.0), (14.3, 1.0), (14.9, 0.0)])
     lean = wheel_turn(t) * 0.35 * tug
     pose = crew.pose(
-        b, **seated(b, drop),
+        b, **seated(b, drop), relaxed=1.0,
         hips=(0.0, 0.0, 0.0),
         spine=(2.0 + dozing * 4.0, 0.0, 0.0),
         chest=(3.0 + dozing * 7.0 - startled * 6.0 + road * 0.3, -lean * 0.6, -glare * 6.0),
@@ -313,6 +315,9 @@ def driver(solver, t):
 
 # ---- The passenger ----
 
+ELBOW_TUCKED_L = (0.3, 0.8, -0.5)
+
+
 def passenger(solver, t):
     b = solver.b
     drop = b.thigh * 0.56
@@ -324,18 +329,23 @@ def passenger(solver, t):
     pulled = wheel_turn(t) * keys(t, [(10.35, 0.0), (10.5, 1.0), (12.4, 1.0), (12.6, 0.0)])
     flop = keys(t, [(12.55, 0.0), (12.85, 1.0), (13.2, 0.4), (13.6, 0.0)])
     sulk = keys(t, [(12.8, 0.0), (13.3, 1.0), (16.2, 1.0), (17.4, 0.0)])
+    # How far the left hand is off its thigh (its track below): the elbow turns out for the wheel and back again.
+    away = keys(t, [(9.95, 0.0), (10.18, 1.0), (12.7, 1.0), (13.15, 0.0)])
     window = 1.0 - max(notice, reach)
     # Holding on, he goes where the wheel takes his hand: in when the driver turns it away from him.
     follow = -wheel_turn(t) * keys(t, [(10.36, 0.0), (10.5, 1.0), (12.4, 1.0), (12.6, 0.0)])
     pose = crew.pose(
-        b, hands_in_body=1,
+        b, hands_in_body=1, relaxed=1.0,
         hips_loc=(0.19 * reach + 0.007 * follow, -0.05 * reach, -drop + 0.06 * reach - 0.03 * flop),
         hips=(0.0, 3.0 * reach, 14.0 * reach),
         spine=(8.0 * reach - 4.0 * flop, 10.0 * reach + 0.25 * follow, 6.0 * reach),
         chest=(12.0 * reach + 2.0 * sulk, 18.0 * reach + 0.35 * follow - 3.0 * flop, 8.0 * reach),
         head=(bob + 4.0 * reach - 10.0 * sulk + 6.0 * flop, 6.0 * window * music - 6.0 * sulk - 8.0 * reach,
               -38.0 * window * (1.0 - sulk) - 52.0 * sulk + 30.0 * notice + 18.0 * reach),
-        elbow_l=(0.6, 0.2, -1.0), elbow_r=(-1.0, 0.2, -0.6),
+        # With the hands on his thighs the elbows go back along his sides; pointing out, the right upper arm stood
+        # out sideways like a wing. The left turns out to the wheel's side for the lunge, as it was.
+        elbow_l=tuple(Vector(ELBOW_TUCKED_L).lerp(Vector((0.6, 0.2, -1.0)), away)),
+        elbow_r=(-ELBOW_TUCKED_L[0], ELBOW_TUCKED_L[1], ELBOW_TUCKED_L[2]),
         foot_l=(b.hip["L"].x + 0.03, -0.33, 0.28), foot_r=(b.hip["R"].x - 0.03, -0.33, 0.28),
         knee_l=(0.15, -1.0, 0.1), knee_r=(-0.15, -1.0, 0.1),
     )
@@ -367,7 +377,7 @@ def napper(solver, t):
     breath = math.sin(math.tau * t / 4.0)
     scratch = keys(t, [(5.6, 0.0), (5.9, 1.0), (6.9, 1.0), (7.3, 0.0)])
     pose = crew.pose(
-        b, hands_in_body=1,
+        b, hands_in_body=1, relaxed=1.0,
         hips_loc=(0.006 * sway, 0.0, -drop + 0.12 * max(jolt, 0.0)),
         hips=(-38.0, -0.25 * sway, 0.0),
         spine=(-4.0 + breath, 0.0, 0.0),
@@ -546,7 +556,10 @@ def main():
     models = crew.ROOT / "Assets/Game/Models"
     for name in only:
         rig, hands, meshes, _, _ = crew.load_body(source, name)
-        body = crew.Body(name, rig, [meshes["Porter"]])
+        # The menu's crew wear her current porter clothes, so the arms keep clear of those: the v05 short porter's belly
+        # was much bigger, and sitting with his hands on his thighs held his elbows out like wings.
+        look = crew.load_look(source, name, rig)
+        body = crew.Body(name, rig, [look["Porter"] if look else meshes["Porter"]])
         solver = crew.CrewRig(rig, body, hands, crew.capture_fingers(rig, source))
         solver.continuous_hand_twist = True
         solver.continuous_twists = {}
@@ -562,6 +575,14 @@ def main():
         for old in list(bpy.data.actions):
             if old != action:
                 bpy.data.actions.remove(old)
+        if "--check" in sys.argv:
+            # Her current meshes on the rig in place of the v05/v06 ones, so check_crew.py sees what the menu shows.
+            folder = Path(sys.argv[sys.argv.index("--check") + 1])
+            folder.mkdir(parents=True, exist_ok=True)
+            if look:
+                crew.show_look(look, meshes)
+            rig.animation_data.action = action
+            bpy.ops.wm.save_as_mainfile(filepath=str(folder / f"menu_{name}.blend"))
         for obj in list(bpy.context.scene.objects):
             if obj != rig:
                 bpy.data.objects.remove(obj, do_unlink=True)

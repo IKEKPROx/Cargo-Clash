@@ -58,6 +58,10 @@ BODIES = {
     "Medium": ("摧毁方与收集器_v06/模型/D_M/D_M.blend", "搬运工_v05_可动手部/模型/M_C/M_C.blend"),
     "Tall": ("摧毁方与收集器_v06/模型/D_T/D_T.blend", "搬运工_v05_可动手部/模型/T_A/T_A.blend"),
 }
+# Her own finish of each body, which is what the game shows (Crew_*_Visual.fbx comes from these files). The clips are
+# still made and exported with the v05/v06 clothes above; these stand in for them in the --check file and the
+# --sheet pictures, so the checks see what the game shows.
+LOOK_FILE = "三体型人物精修_v23/Blender源文件/Crew_{}.blend"
 HAMMER_FILE = "摧毁方与收集器_v06/道具/Hammer/Hammer.blend"
 VACUUM_FILE = "摧毁方与收集器_v06/道具/Vacuum/Vacuum.blend"
 HAND_POSES_FILE = "摧毁方与收集器_v06/hand_pose_core.py"
@@ -170,6 +174,18 @@ HAND_RADIUS = 0.055
 EASY_WRIST = 30.0
 # The sleeves are measured to most of their thickness; this covers the rest, and the folds.
 ARM_MARGIN = 0.015
+# The collarbone (the Shoulder bone) takes a share of a raised upper arm, as a real shoulder does. From Astra's v19
+# on, the top of each shoulder is weighted to it, so with it still the shoulder sank in where it meets a raised arm
+# (the tall body carrying cash or gold, elbows out at shoulder height, showed it worst). From CLAVICLE_FROM degrees off
+# hanging straight down it eases in to CLAVICLE_SHARE of the upper arm's swing by horizontal, never past CLAVICLE_MAX
+# degrees. Per body; a body not listed keeps its collarbones still.
+CLAVICLE_SHARE = {"Tall": 0.45}
+CLAVICLE_FROM = 30.0
+CLAVICLE_MAX = 35.0
+# Clips whose collarbones stay still all the same: the run swings each elbow far back with every stride, and a
+# collarbone following it shrugged one shoulder after the other. (The cargo inspections keep theirs still too, in
+# cargo_actions.bake_cargo.)
+STILL_COLLARBONES = {"Run"}
 
 
 def arguments():
@@ -846,6 +862,8 @@ class Pose:
         foot_pitch_l=0.0, foot_pitch_r=0.0, fingers_l=None, fingers_r=None,
         tool=None, grip=None, axis=None, up=(0.0, 0.0, 1.0), back_l=(1.0, 0.0, 0.0), back_r=(-1.0, 0.0, 0.0),
         clear=0.3, left_grip=HAMMER_LEFT_GRIP,
+        # How relaxed the empty arms are, 0 to 1: at 1 they may lie as close to the body as her own stance does.
+        relaxed=0.0,
     )
 
     def __init__(self, **values):
@@ -1008,6 +1026,12 @@ class CrewRig:
         self.misses = []
         bpy.context.view_layer.update()
         self.tool_balls = {name: self.sample_tool(name, hands) for name in ("Hammer", "Vacuum") if name in bpy.data.objects}
+        # How deep her own stance, the arms hanging at rest as she modelled them, is in the torso outline. The
+        # outline is rounder than her clothes, so on the short body even that counts as 14 cm in, and its idle arms
+        # were pushed out level with the shoulders until they cleared. A relaxed pose (Pose.relaxed) may go this deep.
+        self.rest_overlap = max(self.arm_inside(self.rest[f"{p}UpperArm"], self.rest[f"{p}LowerArm"], self.rest[f"{p}Hand"],
+                                                lambda point: point) for _, p, _ in SIDES)
+        print(f"[crew] {body.name}: her rest-pose arms sit {self.rest_overlap:.3f} into the torso outline", flush=True)
 
     @staticmethod
     def sample_tool(name, hands):
@@ -1049,9 +1073,9 @@ class CrewRig:
         rest_of.back = back_to_pose
         return rest_of
 
-    def arm_inside(self, shoulder, elbow, wrist, rest_of):
-        """How deep the deepest part of an arm is in the torso. The top of the upper arm always meets the
-        shoulder, so it starts partway down."""
+    def arm_inside(self, shoulder, elbow, wrist, rest_of, allow=0.0):
+        """How deep the deepest part of an arm is in the torso, beyond `allow`. The top of the upper arm always
+        meets the shoulder, so it starts partway down."""
         b = self.b
         upper, lower = (r + ARM_MARGIN for r in b.arm_radius)
         worst = 0.0
@@ -1059,9 +1083,9 @@ class CrewRig:
             worst = max(worst, b.inside(rest_of(shoulder.lerp(elbow, t)), upper))
         for t in (0.0, 0.25, 0.5, 0.75, 1.0):
             worst = max(worst, b.inside(rest_of(elbow.lerp(wrist, t)), lower))
-        return worst
+        return max(0.0, worst - allow)
 
-    def place_elbow(self, shoulder, elbow, wrist, rest_of, wrist_bend=None):
+    def place_elbow(self, shoulder, elbow, wrist, rest_of, wrist_bend=None, allow=0.0):
         """Turns the elbow round the line from the shoulder to the wrist, which leaves the hand where it is:
         out of the torso first, then, with a hand on a handle, round to where the wrist needn't bend past
         EASY_WRIST. Otherwise it stays as close to the pose's own elbow as it can. Returns the elbow and
@@ -1072,7 +1096,7 @@ class CrewRig:
         side = spoke.normalized() if spoke.length > 1e-4 else Vector((0.0, 1.0, 0.0))
 
         def cost(candidate, turned):
-            value = self.arm_inside(shoulder, candidate, wrist, rest_of) * 400.0 + abs(turned) * 0.02
+            value = self.arm_inside(shoulder, candidate, wrist, rest_of, allow) * 400.0 + abs(turned) * 0.02
             if wrist_bend is not None:
                 value += max(0.0, wrist_bend((wrist - candidate).normalized()) - EASY_WRIST) * 0.2
             return value
@@ -1090,25 +1114,52 @@ class CrewRig:
         joint = best[1]
         return joint, (joint - centre).normalized()
 
-    def clear_hand(self, shoulder, wrist, rest_of):
+    def clear_hand(self, shoulder, wrist, rest_of, allow=0.0):
         """A hand that isn't holding anything, moved out of the torso, and then swung outward round the
-        shoulder until an elbow can go round the belly between them."""
+        shoulder until an elbow can go round the belly between them. With `allow` (a relaxed pose) an arm may
+        go that deep, and a hand whose arm already does stays where the pose put it."""
+        outward = Vector((1.0 if shoulder.x > 0 else -1.0, 0.0, 0.0))
+        if allow > 0.0:
+            joint, end, _ = solve(shoulder, wrist, self.b.upper, self.b.lower, outward)
+            joint, _ = self.place_elbow(shoulder, joint, end, rest_of, allow=allow)
+            if self.arm_inside(shoulder, joint, end, rest_of, allow) <= 0.0:
+                return wrist
         rested = rest_of(wrist)
         bone = self.b.torso_bone(rested.z)
         wrist = rest_of.back(self.b.pushed_out(rested, HAND_RADIUS), bone)
-        outward = Vector((1.0 if shoulder.x > 0 else -1.0, 0.0, 0.0))
         forward = Vector((0.0, -1.0, 0.0))
         best = None
         for step in range(0, 31):
             turned = shoulder + Quaternion(forward, math.radians(2.0 * step) * (1.0 if outward.x > 0 else -1.0)) @ (wrist - shoulder)
             joint, end, _ = solve(shoulder, turned, self.b.upper, self.b.lower, outward)
-            joint, _ = self.place_elbow(shoulder, joint, end, rest_of)
-            depth = self.arm_inside(shoulder, joint, end, rest_of)
+            joint, _ = self.place_elbow(shoulder, joint, end, rest_of, allow=allow)
+            depth = self.arm_inside(shoulder, joint, end, rest_of, allow)
             if depth <= 0.0:
                 return turned
             if best is None or depth < best[0] - 0.002:
                 best = (depth, turned)
         return best[1]
+
+    def lifts_collarbones(self):
+        """Whether this body's collarbones follow its arms in what is being baked (CLAVICLE_SHARE)."""
+        return CLAVICLE_SHARE.get(self.b.name, 0.0) > 0.0 and not getattr(self, "still_collarbones", False)
+
+    def clavicle(self, prefix, shoulder, elbow, delta):
+        """The collarbone's turn, relative to the chest, for an upper arm from `shoulder` to `elbow`
+        (CLAVICLE_SHARE), or None when it stays still: the way the upper arm swings from hanging at rest, a share
+        of it."""
+        share = CLAVICLE_SHARE.get(self.b.name, 0.0)
+        upper = delta["Chest"].inverted() @ (elbow - shoulder)
+        if share <= 0.0 or upper.length < 1e-4:
+            return None
+        upper.normalize()
+        lift = math.degrees(upper.angle(Vector((0.0, 0.0, -1.0))))
+        share *= smooth((lift - CLAVICLE_FROM) / (90.0 - CLAVICLE_FROM))
+        if share <= 0.0:
+            return None
+        rest = (self.rest[f"{prefix}LowerArm"] - self.rest[f"{prefix}UpperArm"]).normalized()
+        axis, angle = rest.rotation_difference(upper).to_axis_angle()
+        return Quaternion(axis, min(angle * share, math.radians(CLAVICLE_MAX)))
 
     def clear_tool(self, pose, grips, delta, rest_of, shoulders):
         """The tool moved, both grips together, by as little as gets the hands and the tool out of the body
@@ -1209,6 +1260,7 @@ class CrewRig:
             transform, unturn, wrist_rest = self.hand[s]
             turn = None
             wrist_bend = None
+            allow = 0.0
             rolls = False
             if grips is not None:
                 point, canon, handle = grips[s]
@@ -1224,26 +1276,42 @@ class CrewRig:
                 wrist = Vector(pose.hand_l if s == "L" else pose.hand_r)
                 if not in_body:
                     wrist = shoulder + delta["Chest"] @ wrist
-                wrist = self.clear_hand(shoulder, wrist, rest_of)
+                allow = self.rest_overlap * pose.relaxed
+                wrist = self.clear_hand(shoulder, wrist, rest_of, allow)
                 palm = pose.palm_l if s == "L" else pose.palm_r
                 if palm is not None:
                     fingers, back = Vector(palm[0]), Vector(palm[1])
                     if not in_body:
                         fingers, back = delta["Chest"] @ fingers, delta["Chest"] @ back
                     turn = canonical(s, fingers, back) @ unturn
-            # A hand on a handle turns on it to follow the forearm, which moves the wrist a little, so the
-            # arm is solved again until they agree, with the elbow kept on the side it was first put.
-            for attempt in range(4):
-                if grips is not None:
-                    turn = canon @ unturn
-                    wrist = point - turn @ (transform @ GRIP_CENTER - wrist_rest)
-                joint, end, side = solve(shoulder, wrist, b.upper, b.lower, hint)
-                if attempt == 0:
-                    joint, side = self.place_elbow(shoulder, joint, end, rest_of, wrist_bend)
-                    hint = side
-                if not rolls or attempt == 3:
-                    break
-                canon = roll_on_handle(canon, (end - joint).normalized(), handle)
+            def place_arm(shoulder, wrist, hint, canon, turn):
+                # A hand on a handle turns on it to follow the forearm, which moves the wrist a little, so the
+                # arm is solved again until they agree, with the elbow kept on the side it was first put.
+                for attempt in range(4):
+                    if grips is not None:
+                        turn = canon @ unturn
+                        wrist = point - turn @ (transform @ GRIP_CENTER - wrist_rest)
+                    joint, end, side = solve(shoulder, wrist, b.upper, b.lower, hint)
+                    if attempt == 0:
+                        joint, side = self.place_elbow(shoulder, joint, end, rest_of, wrist_bend, allow)
+                        hint = side
+                    if not rolls or attempt == 3:
+                        break
+                    canon = roll_on_handle(canon, (end - joint).normalized(), handle)
+                return wrist, joint, end, side, turn
+
+            start = (wrist if grips is None else None, hint, canon if grips is not None else None, turn)
+            wrist, joint, end, side, turn = place_arm(shoulder, *start)
+            # The collarbone comes up with a raised upper arm (CLAVICLE_SHARE), which moves the shoulder the arm hangs
+            # from, so then the arm is put in place again from there. It goes by the elbow where the arm ended up, not
+            # by the hand: carrying, the hands can be low in front with the elbows out at shoulder height; on a handle,
+            # the elbow moves as the hand turns.
+            lift = self.clavicle(prefix, shoulder, joint, delta) if self.lifts_collarbones() else None
+            if lift is not None:
+                chain(f"{prefix}Shoulder", "Chest", lift)
+                chain(f"{prefix}UpperArm", f"{prefix}Shoulder")
+                shoulder = place[f"{prefix}UpperArm"]
+                wrist, joint, end, side, turn = place_arm(shoulder, *start)
             if (end - wrist).length > 0.02:
                 self.misses.append((frame_number, s, round((end - wrist).length, 3)))
             upper = (joint - shoulder).normalized()
@@ -1339,9 +1407,11 @@ class CrewRig:
         self.arm.animation_data.action = action
         self.previous = {}
         self.misses = []
+        self.still_collarbones = name in STILL_COLLARBONES
         frames = max(int(round(seconds * FPS)), 1)
         for number in range(frames + 1):
             self.apply(function(self.b, number / frames), number)
+        self.still_collarbones = False
         if self.misses:
             worst = max(self.misses, key=lambda m: m[2])
             print(f"[crew] {self.b.name} {name}: a hand falls short in {len(self.misses)} frames, worst {worst}")
@@ -1382,6 +1452,8 @@ def idle(b, u):
         head=(1.5 - 1.5 * math.sin(a + 1.0), 0, 3.0 * math.sin(a)),
         hand_l=b.hang("L", up=0.012 * breathe),
         hand_r=b.hang("R", up=0.012 * breathe),
+        # Hanging down the sides as she modelled them, not held clear of the short body's belly like wings.
+        relaxed=1.0,
     )
 
 
@@ -1888,6 +1960,46 @@ def render_sheet(rig, crew_rig, actions, folder, body):
                 bpy.ops.render.render(write_still=True)
 
 
+def load_look(source, body, rig):
+    """Her finished meshes of this body (LOOK_FILE), bound to our skeleton, which is the same as hers. Only her
+    skinned parts: the clothes, gloves, hats and glasses, under their own names in a dict. None without the file."""
+    path = source / LOOK_FILE.format(body)
+    if not path.exists():
+        print(f"[crew] {body}: no {path}, measuring the v05/v06 clothes")
+        return None
+    with bpy.data.libraries.load(str(path), link=False) as (src, dst):
+        wanted = [n for n in src.objects if n in ("Porter", "Wrecker", "Gloves") or "_Hat_" in n or "_Glasses_" in n]
+        dst.objects = list(wanted)
+    # They stay out of the scene while the clips bake and export: measuring needs only their data.
+    look = {}
+    for name, obj in zip(wanted, dst.objects):
+        for modifier in obj.modifiers:
+            if modifier.type == "ARMATURE":
+                modifier.object = rig
+        obj.parent = rig
+        obj.matrix_parent_inverse.identity()
+        obj.name = "Look_" + name
+        look[name] = obj
+    # Her skeleton came along with them; ours is the same, so it goes.
+    for obj in list(bpy.data.objects):
+        if obj.type == "ARMATURE" and obj != rig:
+            bpy.data.objects.remove(obj)
+    return look
+
+
+def show_look(look, meshes):
+    """Puts her meshes in place of the v05/v06 ones under the same names, for the check file and the sheet,
+    once the clips have gone out with the old ones."""
+    for name, obj in look.items():
+        old = bpy.data.objects.get(name)
+        if old is not None and old is not obj:
+            bpy.data.objects.remove(old)
+        obj.name = name
+        link(obj)
+        if name in meshes:
+            meshes[name] = obj
+
+
 def export(body):
     """Like modeling.export_rigged_fbx, but without applying modifiers: that would drop the face and
     glasses sliders. The only modifiers here are the skeleton's, which go out as skin weights anyway."""
@@ -1927,6 +2039,7 @@ def main():
         report["Hammer"] = triangles(hammer_mesh)
         report["Vacuum"] = triangles(vacuum_mesh)
         print(f"[crew] {body}: triangles {report}, top {top:.3f}")
+        look = load_look(options["source"], body, rig)
         measured = Body(body, rig, [meshes["Wrecker"], meshes["Porter"]])
         # Her cargo props, their bones and the finger poses her interactions use (cargo_actions.py).
         fingers = cargo_actions.setup(rig, options["source"], hands, body, meshes, measured)
@@ -1954,12 +2067,15 @@ def main():
         for action in list(bpy.data.actions):
             if action not in keep:
                 bpy.data.actions.remove(action)
+        if options["export"] and not options["clips"]:
+            export(body)
+        # From here on her meshes stand in for the old ones, so the checks and the sheet see what the game shows.
+        if look:
+            show_look(look, meshes)
         if "--check" in sys.argv:
             folder = Path(sys.argv[sys.argv.index("--check") + 1])
             folder.mkdir(parents=True, exist_ok=True)
             bpy.ops.wm.save_as_mainfile(filepath=str(folder / f"crew_{body}.blend"))
-        if options["export"] and not options["clips"]:
-            export(body)
         if options["sheet"]:
             render_sheet(rig, crew_rig, actions, options["sheet"], body)
 

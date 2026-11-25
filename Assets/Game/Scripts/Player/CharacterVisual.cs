@@ -479,6 +479,7 @@ namespace CargoClash
                     for (int i = 0; i < slots.Length; i++)
                     {
                         if (slots[i] == config.orangeMaterial) slots[i] = config.blueMaterial;
+                        else if (slots[i] == config.orangeFabric && config.orangeFabric != null) slots[i] = config.blueFabric;
                     }
                     part.sharedMaterials = slots;
                 }

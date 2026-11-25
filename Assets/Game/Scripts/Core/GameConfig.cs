@@ -85,6 +85,19 @@ namespace CargoClash
         [Tooltip("The bodies bots take on each team, in the order they're added.")]
         public BodyType[] bodyOrder = { BodyType.Medium, BodyType.Short, BodyType.Tall };
 
+        [Header("Bots")]
+        [Tooltip("How fast bots move, as a share of a person's speed. At full speed, with no hesitation and fighting every chance they got, they left a person little to do.")]
+        [Range(0.5f, 1f)] public float botSpeed = 0.88f;
+        [Tooltip("Seconds between a bot's decisions, at least and at most: how long it takes to notice things.")]
+        public Vector2 botThinkSeconds = new Vector2(0.3f, 0.55f);
+        [Tooltip("The chance that a bot that could go after someone (ram, hammer, blast, slam) does, decided afresh every few seconds for each enemy. Otherwise it gets on with the cargo.")]
+        [Range(0f, 1f)] public float botAggression = 0.6f;
+        [Tooltip("How much of botAggression applies to people, compared with other bots, so the player isn't everyone's target.")]
+        [Range(0f, 1f)] public float botHumanTargeting = 0.6f;
+        [Tooltip("Seconds between a bot's chances to charge a slam at someone close, at least and at most, and the chance it takes one.")]
+        public Vector2 botSlamEverySeconds = new Vector2(8f, 15f);
+        [Range(0f, 1f)] public float botSlamChance = 0.35f;
+
         [Header("Looking around")]
         public float eyeHeight = 1.28f;
         [Tooltip("Degrees the view turns for each pixel the mouse moves. Each player scales this in the pause menu.")]
@@ -222,6 +235,9 @@ namespace CargoClash
         [Header("Art")]
         public Material orangeMaterial;
         public Material blueMaterial;
+        [Tooltip("The team colour with Astra's canvas weave, only on the clothes' bodies (they have the UVs for it). Swapped like the plain ones.")]
+        public Material orangeFabric;
+        public Material blueFabric;
         public Material particleMaterial;
         public Material puffMaterial;
         public Material flashMaterial;

@@ -42,6 +42,9 @@ namespace CargoClash
         private float stuckCheckAt;
         private float ignoreTargetUntil;
 
+        /// <summary>For each enemy, whether it's going after them, and until when that holds (WillFight).</summary>
+        private readonly Dictionary<PlayerAvatar, (float until, bool fight)> moods = new Dictionary<PlayerAvatar, (float, bool)>();
+
         public BotBrain(PlayerAvatar self)
         {
             this.self = self;
@@ -79,10 +82,10 @@ namespace CargoClash
 
             if (Time.time >= thinkAt)
             {
-                thinkAt = Time.time + 0.18f + Random.value * 0.14f;
+                thinkAt = Time.time + Random.Range(config.botThinkSeconds.x, config.botThinkSeconds.y);
                 Think();
             }
-            move = Steer();
+            move = Steer() * config.botSpeed;
         }
 
         private void Think()
@@ -143,7 +146,7 @@ namespace CargoClash
         {
             attack = false;
             secondary = false;
-            PlayerAvatar smasher = NearestEnemy(9f, enemy => enemy.Swinging.Value);
+            PlayerAvatar smasher = NearestEnemy(9f, enemy => enemy.Swinging.Value && WillFight(enemy));
             if (smasher != null && self.RamReady)
             {
                 ChaseAndRam(smasher);
@@ -158,7 +161,8 @@ namespace CargoClash
             }
 
             // No ram ready, but someone's busy swinging or carrying within reach: give them a blast.
-            PlayerAvatar busy = NearestEnemy(config.blastRange, enemy => !enemy.IsImmune && (enemy.Swinging.Value || enemy.IsCharging || enemy.CarriedCargoId.Value != NetIds.None));
+            PlayerAvatar busy = NearestEnemy(config.blastRange, enemy => !enemy.IsImmune && WillFight(enemy) &&
+                (enemy.Swinging.Value || enemy.IsCharging || enemy.CarriedCargoId.Value != NetIds.None));
             if (busy != null)
             {
                 attack = true;
@@ -219,7 +223,7 @@ namespace CargoClash
             secondary = false;
             if (ThinkSlam()) return;
 
-            PlayerAvatar carrier = NearestEnemy(14f, enemy => enemy.CarriedCargoId.Value != NetIds.None && !enemy.IsImmune);
+            PlayerAvatar carrier = NearestEnemy(14f, enemy => enemy.CarriedCargoId.Value != NetIds.None && !enemy.IsImmune && WillFight(enemy));
             if (carrier != null && self.RamReady)
             {
                 attack = false;
@@ -227,7 +231,7 @@ namespace CargoClash
                 return;
             }
 
-            PlayerAvatar attacker = NearestEnemy(3.5f, enemy => !enemy.IsImmune);
+            PlayerAvatar attacker = NearestEnemy(3.5f, enemy => !enemy.IsImmune && WillFight(enemy));
             if (attacker != null && self.RamReady)
             {
                 attack = false;
@@ -236,7 +240,7 @@ namespace CargoClash
             }
 
             // The ram is recharging, but the hammer works on people too. It just takes two hits.
-            PlayerAvatar closeCarrier = NearestEnemy(HammerChaseRange, enemy => !enemy.IsImmune && enemy.CarriedCargoId.Value != NetIds.None);
+            PlayerAvatar closeCarrier = NearestEnemy(HammerChaseRange, enemy => !enemy.IsImmune && enemy.CarriedCargoId.Value != NetIds.None && WillFight(enemy));
             if (closeCarrier != null)
             {
                 target = null;
@@ -244,7 +248,7 @@ namespace CargoClash
                 SetGoal(closeCarrier.transform.position, 1f);
                 return;
             }
-            PlayerAvatar withinReach = NearestEnemy(config.hitRange, enemy => !enemy.IsImmune);
+            PlayerAvatar withinReach = NearestEnemy(config.hitRange, enemy => !enemy.IsImmune && WillFight(enemy));
             if (withinReach != null)
             {
                 attack = true;
@@ -270,7 +274,7 @@ namespace CargoClash
         /// <summary>Now and then, with someone close, it charges up a slam and walks at them. Returns true while it's doing that.</summary>
         private bool ThinkSlam()
         {
-            PlayerAvatar enemy = NearestEnemy(5f, other => !other.IsImmune);
+            PlayerAvatar enemy = NearestEnemy(5f, other => !other.IsImmune && WillFight(other));
             if (self.IsCharging)
             {
                 attack = false;
@@ -283,8 +287,8 @@ namespace CargoClash
             }
 
             if (enemy == null || Time.time < nextSlamAt) return false;
-            nextSlamAt = Time.time + Random.Range(5f, 10f);
-            if (Random.value > 0.6f) return false;
+            nextSlamAt = Time.time + Random.Range(config.botSlamEverySeconds.x, config.botSlamEverySeconds.y);
+            if (Random.value > config.botSlamChance) return false;
             attack = false;
             secondary = true;
             SetGoal(enemy.transform.position, 1f);
@@ -348,9 +352,23 @@ namespace CargoClash
                 if (carried == null || carried.Definition.size == CargoSize.Small) continue;
                 if (Vector3.Distance(mate.transform.position, self.transform.position) > 16f) continue;
                 PlayerAvatar enemy = NearestEnemyTo(mate.transform.position, 8f);
-                if (enemy != null && !enemy.IsImmune && !enemy.IsKnockedDown) return enemy;
+                if (enemy != null && !enemy.IsImmune && !enemy.IsKnockedDown && WillFight(enemy)) return enemy;
             }
             return null;
+        }
+
+        /// <summary>
+        /// Whether it bothers going after this enemy now. Decided afresh every few seconds for each enemy, so a bot
+        /// sometimes leaves someone be and gets on with the cargo, and people are picked less often than bots
+        /// (GameConfig.botAggression, botHumanTargeting).
+        /// </summary>
+        private bool WillFight(PlayerAvatar enemy)
+        {
+            if (moods.TryGetValue(enemy, out var mood) && Time.time < mood.until) return mood.fight;
+            float chance = config.botAggression * (enemy.IsBotVar.Value ? 1f : config.botHumanTargeting);
+            bool fight = Random.value < chance;
+            moods[enemy] = (Time.time + Random.Range(3f, 6f), fight);
+            return fight;
         }
 
         private PlayerAvatar NearestEnemyTo(Vector3 position, float range)
