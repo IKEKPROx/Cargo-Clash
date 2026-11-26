@@ -3,11 +3,13 @@ using UnityEngine.UI;
 
 namespace CargoClash
 {
-    /// <summary>A pill with a keycap and what the key does, sized to fit its words.</summary>
+    /// <summary>A plate with a key cap and what the key does, sized to fit its words.</summary>
     public sealed class HudPrompt : MonoBehaviour
     {
         private const float Height = 56f;
         private const float Padding = 20f;
+        // The key cap sits inside the plate's navy panel, with a little room above and below (step 30).
+        private const float KeyHeight = Height - 18f;
 
         public RectTransform back;
         public RectTransform keyBack;
@@ -25,8 +27,8 @@ namespace CargoClash
             if (hasKey)
             {
                 keyText.text = key;
-                keyWidth = Mathf.Max(Height - 14f, keyText.preferredWidth + 22f);
-                keyBack.sizeDelta = new Vector2(keyWidth, Height - 14f);
+                keyWidth = Mathf.Max(KeyHeight, keyText.preferredWidth + 22f);
+                keyBack.sizeDelta = new Vector2(keyWidth, KeyHeight);
             }
 
             label.text = words;

@@ -173,6 +173,46 @@ public static class CargoClashMenuPresentation
         Debug.Log("[Menu] The truck's cab, the crew's loop and the main menu are in the start scene.");
     }
 
+    /// <summary>
+    /// Builds again the pages that are painted like the truck (CargoClashBuilder's livery plates), after a change to how they
+    /// look: in the start scene the main menu (step 25), the level select (26), the crew page (27), the lobby and the settings
+    /// page (28); and in every level's scene the whole match interface (30), with the results and pause cards (29) and the
+    /// settings page (28). The truck, the crew and the loop stay as they are. Add each page here as it is repainted.
+    /// </summary>
+    [MenuItem("Tools/Cargo Clash/Apply Menu Pages")]
+    public static void ApplyMenuPages()
+    {
+        var scene = EditorSceneManager.OpenScene(TitleScene);
+        var flow = Object.FindAnyObjectByType<TitleFlow>();
+        CargoClashBuilder.RebuildMainMenu(flow);
+        CargoClashBuilder.RebuildLevelPage(flow);
+        CargoClashBuilder.RebuildCrewPage(flow);
+        CargoClashBuilder.RebuildLobbyPage(flow);
+        flow.settings = CargoClashBuilder.RebuildSettingsPage(flow.settings, CargoClashBuilder.MenuSettingsDim);
+        EditorUtility.SetDirty(flow);
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+
+        foreach (var level in GameConfig.Get().levels.Where(level => level.IsReady))
+        {
+            var path = EditorBuildSettings.scenes.Select(entry => entry.path)
+                .FirstOrDefault(entry => System.IO.Path.GetFileNameWithoutExtension(entry) == level.scene);
+            if (path == null)
+            {
+                Debug.LogError($"[Menu] {level.scene} isn't in Build Settings.");
+                continue;
+            }
+            var levelScene = EditorSceneManager.OpenScene(path);
+            var hud = Object.FindAnyObjectByType<MatchHud>(FindObjectsInactive.Include);
+            CargoClashBuilder.RebuildMatchHud(hud);
+            EditorSceneManager.MarkSceneDirty(levelScene);
+            EditorSceneManager.SaveScene(levelScene);
+            Debug.Log($"[Menu] The whole match interface in {level.scene} is built again.");
+        }
+        AssetDatabase.SaveAssets();
+        Debug.Log("[Menu] The main menu, level select, crew page, lobby and settings page are built again in the start scene.");
+    }
+
     private static Material[] Materials(Renderer renderer) => renderer.sharedMaterials.Select(material =>
         AssetDatabase.LoadAssetAtPath<Material>($"Assets/Game/Materials/{material.name}.mat")).ToArray();
 

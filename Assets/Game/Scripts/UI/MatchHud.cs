@@ -19,6 +19,11 @@ namespace CargoClash
         private static readonly Color AimSmash = new Color(1f, 0.32f, 0.22f);
         private static readonly Color TruckGreen = new Color(0.4f, 1f, 0.5f);
         private static readonly Color CatcherBlue = new Color(0.55f, 0.85f, 1f);
+        // The painted plates' colours (the menus' truck livery, step 30): the clock's words, the bars' green, and the goal
+        // plate in your team's colour, a little deeper than Team.ToColor, which the words over people use.
+        private static readonly Color PlateCream = new Color(1f, 0.957f, 0.871f);
+        private static readonly Color BarGreen = new Color(0.365f, 0.733f, 0.388f);
+        private static Color PlateColor(Team team) => team == Team.Orange ? new Color(0.933f, 0.463f, 0.157f) : new Color(0.231f, 0.482f, 0.878f);
 
         private const float CargoLabelRange = 20f;
         private const float NameLabelRange = 38f;
@@ -79,6 +84,8 @@ namespace CargoClash
         [Header("Bottom")]
         [Tooltip("The ram bar and everything else that's hidden while the helicopter sequence plays.")]
         public GameObject playHud;
+        [Tooltip("The scores and the clock at the top, hidden with the rest while the settings page is open.")]
+        public GameObject scoreboard;
         public Image ramFill;
         public Text ramLabel;
         public Image healthFill;
@@ -210,7 +217,14 @@ namespace CargoClash
             UpdateHitEffects();
 
             bool inPlay = director.Phase.Value == MatchPhase.Playing || director.Phase.Value == MatchPhase.HalfIntro;
-            if (playHud.activeSelf != inPlay) playHud.SetActive(inPlay);
+            // The settings page covers the whole screen, and the scores, the clock, the map and the prompts showed through
+            // its dim, so they hide while it's open.
+            bool covered = settings.IsOpen;
+            bool showPlay = inPlay && !covered;
+            if (playHud.activeSelf != showPlay) playHud.SetActive(showPlay);
+            if (scoreboard != null && scoreboard.activeSelf == covered) scoreboard.SetActive(!covered);
+            if (bannerText.gameObject.activeSelf == covered) bannerText.gameObject.SetActive(!covered);
+            if (overlayRoot.gameObject.activeSelf == covered) overlayRoot.gameObject.SetActive(!covered);
             UpdateCrosshair(director);
 
             BeginOverlays();
@@ -242,7 +256,7 @@ namespace CargoClash
             int whole = Mathf.CeilToInt(seconds);
             timerText.text = $"{whole / 60}:{whole % 60:00}";
             bool hurry = seconds <= GameConfig.Get().finalStretchSeconds && phase == MatchPhase.Playing;
-            timerText.color = hurry ? new Color(1f, 0.42f, 0.3f) : Color.white;
+            timerText.color = hurry ? new Color(1f, 0.42f, 0.3f) : PlateCream;
 
             halfText.text = GameText.HalfLabel(director.Half.Value);
             orangeScoreText.text = director.OrangeScore.Value.ToString();
@@ -258,7 +272,7 @@ namespace CargoClash
             if (blueYou.activeSelf == orange) blueYou.SetActive(!orange);
             bool collector = local.Side == Side.Collector;
             roleChip.text = collector ? GameText.CollectorGoal : GameText.InterrupterGoal;
-            roleChipBack.color = local.Team.ToColor();
+            roleChipBack.color = PlateColor(local.Team);
         }
 
         private void UpdateBanner(MatchDirector director)
@@ -315,7 +329,7 @@ namespace CargoClash
 
         private void UpdateIntroCard(MatchDirector director)
         {
-            bool show = director.Phase.Value == MatchPhase.HalfIntro && PlayerAvatar.Local != null;
+            bool show = director.Phase.Value == MatchPhase.HalfIntro && PlayerAvatar.Local != null && !settings.IsOpen;
             if (introCard.activeSelf != show) introCard.SetActive(show);
             if (!show) return;
 
@@ -358,7 +372,7 @@ namespace CargoClash
             float cooldown = local.RamCooldown01;
             // The sliced picture needs some width, or its rounded ends turn inside out.
             ramFill.rectTransform.anchorMax = new Vector2(Mathf.Lerp(0.09f, 1f, 1f - cooldown), 1f);
-            ramFill.color = cooldown <= 0f ? new Color(0.35f, 0.85f, 0.42f) : new Color(0.6f, 0.65f, 0.75f);
+            ramFill.color = cooldown <= 0f ? BarGreen : new Color(0.6f, 0.65f, 0.75f);
             ramLabel.text = cooldown <= 0f ? GameText.RamReady : GameText.RamCooling;
         }
 
@@ -368,7 +382,7 @@ namespace CargoClash
             if (local == null) return;
             float health = local.Health01;
             healthFill.rectTransform.anchorMax = new Vector2(Mathf.Lerp(0.09f, 1f, health), 1f);
-            Color color = Color.Lerp(new Color(0.95f, 0.22f, 0.18f), new Color(0.35f, 0.85f, 0.42f), Mathf.Clamp01(health * 1.6f - 0.2f));
+            Color color = Color.Lerp(new Color(0.95f, 0.22f, 0.18f), BarGreen, Mathf.Clamp01(health * 1.6f - 0.2f));
             // It throbs when you're nearly out.
             if (health <= 0.34f) color = Color.Lerp(color, Color.white, 0.25f + Mathf.Sin(Time.time * 9f) * 0.25f);
             healthFill.color = color;
@@ -587,7 +601,7 @@ namespace CargoClash
             {
                 float fraction = personBar ? local.AimedEnemy.Health01 : target.Durability.Value;
                 targetFill.rectTransform.anchorMax = new Vector2(Mathf.Lerp(0.05f, 1f, fraction), 1f);
-                targetFill.color = Color.Lerp(new Color(1f, 0.25f, 0.2f), new Color(0.35f, 0.85f, 0.42f), fraction);
+                targetFill.color = Color.Lerp(new Color(1f, 0.25f, 0.2f), BarGreen, fraction);
             }
         }
 

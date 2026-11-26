@@ -1720,7 +1720,7 @@ public static partial class CargoClashBuilder
 
         BuildScoreboard(root, hud);
 
-        hud.bannerText = UiText(root, "Banner", "", 54, UiCream, 3.5f);
+        hud.bannerText = HudWords(root, "Banner", 54, LiveryText, 2.5f, 5f);
         Rect(hud.bannerText.gameObject, root, AnchorCentre, new Vector2(0f, 330f), new Vector2(1500f, 90f));
 
         RectTransform play = UiPanelRoot(root, "PlayHud");
@@ -1730,7 +1730,7 @@ public static partial class CargoClashBuilder
         BuildHealthChip(play, hud);
         // To the left of the map, where it's clear of the scoreboard.
         hud.feedRoot = UiGroup(play, "Feed", Vector2.one, new Vector2(-226f, -56f), new Vector2(10f, 10f));
-        hud.streakText = UiText(play, "Streak", "", 72, new Color(1f, 0.82f, 0.25f), 4f);
+        hud.streakText = HudWords(play, "Streak", 72, new Color(1f, 0.82f, 0.25f), 3f, 6f);
         Rect(hud.streakText.gameObject, play, AnchorCentre, new Vector2(0f, 220f), new Vector2(1200f, 100f));
         BuildMiniMap(play);
         BuildRoleChip(play, hud);
@@ -1765,41 +1765,98 @@ public static partial class CargoClashBuilder
         return image;
     }
 
+    // ---- The match interface, painted like the menus (step 30) ----
+    // The same places and sizes as before. Things that only show something are plates without a button: a navy rim, a cream
+    // trim and a coloured panel on a thin hard shadow, like the menus' cards; keys are small cream caps with a navy edge.
+
+    /// <summary>A plate's layers inside `parent`, which it fills. Returns the panel, whose colour MatchHud may set.</summary>
+    private static Image HudPlate(Transform parent, Color panelColor, float corner, float rim = 5f, float trim = 5f, float drop = CardDrop)
+    {
+        if (drop > 0f)
+        {
+            Image under = UiImage(parent, "Drop", uiPlate, LiveryShadow, Corner(corner));
+            Fill(under.rectTransform, 0f, -drop, 0f, drop);
+        }
+        Image edge = UiImage(parent, "Rim", uiPlate, LiveryRim, Corner(corner));
+        Fill(edge.rectTransform);
+        Image band = UiImage(parent, "Trim", uiPlate, LiveryCream, Corner(corner - rim));
+        Fill(band.rectTransform, rim, rim, rim, rim);
+        float inset = rim + trim;
+        Image panel = UiImage(parent, "Panel", uiPlate, panelColor, Corner(corner - inset));
+        Fill(panel.rectTransform, inset, inset, inset, inset);
+        Image shade = UiImage(parent, "Shade", uiPlateShade, Color.white, Corner(corner - inset));
+        Fill(shade.rectTransform, inset, inset, inset, inset);
+        return panel;
+    }
+
+    /// <summary>Words over the game: an outline keeps them readable on the sky, the hard shadow is the plates'.</summary>
+    private static Text HudWords(Transform parent, string name, int size, Color color, float outline, float drop)
+    {
+        Text words = UiText(parent, name, "", size, color, outline);
+        words.GetComponent<Outline>().effectColor = LiveryRim;
+        Shadow cast = words.gameObject.AddComponent<Shadow>();
+        cast.effectColor = LiveryRim;
+        cast.effectDistance = new Vector2(0f, -drop);
+        return words;
+    }
+
+    /// <summary>Words on a plate, with the plates' hard shadow under them.</summary>
+    private static Text PlateWords(Transform parent, string name, string content, int size, Color color, float drop)
+    {
+        Text words = UiText(parent, name, content, size, color);
+        Shadow cast = words.gameObject.AddComponent<Shadow>();
+        cast.effectColor = LiveryRim;
+        cast.effectDistance = new Vector2(0f, -drop);
+        return words;
+    }
+
+    /// <summary>A key cap's layers inside `key`, which they fill: a cream cap with a navy edge on a thin shadow. Returns the word.</summary>
+    private static Text HudKeyCap(RectTransform key, string content, int size)
+    {
+        Image under = UiImage(key, "Drop", uiPlate, LiveryShadow, Corner(10f));
+        Fill(under.rectTransform, 0f, -3f, 0f, 3f);
+        Image edge = UiImage(key, "Rim", uiPlate, LiveryRim, Corner(10f));
+        Fill(edge.rectTransform);
+        Image face = UiImage(key, "Face", uiPlate, LiveryCream, Corner(7f));
+        Fill(face.rectTransform, 3f, 3f, 3f, 3f);
+        Text word = UiText(key, "KeyText", content, size, LiveryRim);
+        Fill(word.rectTransform, 0f, 1f, 0f, 0f);
+        return word;
+    }
+
     private static void BuildScoreboard(Transform root, MatchHud hud)
     {
         RectTransform board = UiGroup(root, "Scoreboard", AnchorTop, new Vector2(0f, -72f), new Vector2(860f, 124f));
-        hud.orangeScoreText = ScorePlate(board, "Orange", UiOrange, -286f, out hud.orangeRoleText, out hud.orangeYou);
-        hud.blueScoreText = ScorePlate(board, "Blue", UiBlue, 286f, out hud.blueRoleText, out hud.blueYou);
+        hud.scoreboard = board.gameObject;
+        hud.orangeScoreText = ScorePlate(board, "Orange", LiveryOrange, -286f, out hud.orangeRoleText, out hud.orangeYou);
+        hud.blueScoreText = ScorePlate(board, "Blue", LiveryTeamBlue, 286f, out hud.blueRoleText, out hud.blueYou);
 
+        // The clock between them, a navy plate a little taller than the scores.
         RectTransform timer = UiGroup(board, "Timer", AnchorCentre, new Vector2(0f, 0f), new Vector2(280f, 124f));
         AddSoftShadow(timer, 0.4f);
-        Image back = UiImage(timer, "Back", uiRound, UiNavy, 1.5f);
-        Fill(back.rectTransform);
-        hud.halfText = UiText(timer, "Half", "", 26, UiYellow);
-        Rect(hud.halfText.gameObject, timer, AnchorTop, new Vector2(0f, -27f), new Vector2(260f, 30f));
-        hud.timerText = UiText(timer, "Time", "", 74, Color.white);
-        Rect(hud.timerText.gameObject, timer, AnchorCentre, new Vector2(0f, -15f), new Vector2(270f, 84f));
+        HudPlate(timer, LiveryNavy, 24f);
+        hud.halfText = UiText(timer, "Half", "", 26, LiveryGold);
+        Rect(hud.halfText.gameObject, timer, AnchorTop, new Vector2(0f, -29f), new Vector2(240f, 30f));
+        hud.timerText = PlateWords(timer, "Time", "", 74, LiveryText, 4f);
+        Rect(hud.timerText.gameObject, timer, AnchorCentre, new Vector2(0f, -15f), new Vector2(250f, 84f));
     }
 
     private static Text ScorePlate(Transform board, string name, Color color, float x, out Text role, out GameObject you)
     {
         RectTransform plate = UiGroup(board, name, AnchorCentre, new Vector2(x, 4f), new Vector2(320f, 106f));
         AddSoftShadow(plate, 0.4f);
-        Image edge = UiImage(plate, "Edge", uiRound, UiNavy, 1.6f);
-        Fill(edge.rectTransform);
-        Image face = UiImage(edge.transform, "Face", uiFace, color, 1.6f);
-        Fill(face.rectTransform, 6f, 6f, 6f, 6f);
+        HudPlate(plate, color, 22f);
 
-        Text score = UiText(face.transform, "Score", "0", 66, Color.white, 3f);
-        Rect(score.gameObject, face.transform, AnchorCentre, new Vector2(0f, 12f), new Vector2(300f, 70f));
-        role = UiText(face.transform, "Role", "", 23, Color.white, 2f);
-        Rect(role.gameObject, face.transform, AnchorBottom, new Vector2(0f, 19f), new Vector2(300f, 28f));
+        Text score = PlateWords(plate, "Score", "0", 66, LiveryText, 4f);
+        Rect(score.gameObject, plate, AnchorCentre, new Vector2(0f, 12f), new Vector2(280f, 70f));
+        role = PlateWords(plate, "Role", "", 23, LiveryText, 2f);
+        Rect(role.gameObject, plate, AnchorBottom, new Vector2(0f, 27f), new Vector2(280f, 28f));
 
+        // YOU hangs under your team's plate, gold like JOIN.
         RectTransform tag = UiGroup(board, name + "You", AnchorCentre, new Vector2(x, -66f), new Vector2(84f, 36f));
-        Image tagBack = UiImage(tag, "Back", uiRound, UiNavy, 3f);
-        Fill(tagBack.rectTransform);
-        Text tagText = UiText(tag, "Text", GameText.You, 24, UiYellow);
-        Fill(tagText.rectTransform);
+        HudPlate(tag, LiveryGold, 12f, 4f, 0f, 3f);
+        Text tagText = UiText(tag, "Text", GameText.You, 24, LiveryRim);
+        Fill(tagText.rectTransform, 0f, 1f, 0f, 0f);
         you = tag.gameObject;
         you.SetActive(false);
         return score;
@@ -1813,30 +1870,30 @@ public static partial class CargoClashBuilder
         hud.crosshairDot = UiImage(parent, "Dot", UiSprite("UI_Dot"), Color.white);
         Rect(hud.crosshairDot.gameObject, parent, AnchorCentre, Vector2.zero, new Vector2(26f, 26f));
 
+        // The cargo's strength under the crosshair: a navy track with the fill inside, like the crew page's bars.
         RectTransform bar = UiGroup(parent, "TargetBar", AnchorCentre, new Vector2(0f, -68f), new Vector2(236f, 24f));
         hud.targetBar = bar.gameObject;
-        Image track = UiImage(bar, "Track", uiRound, UiNavy, 5f);
+        Image track = UiImage(bar, "Track", uiPlate, LiveryRim, Corner(12f));
         Fill(track.rectTransform);
-        hud.targetFill = UiImage(bar, "Fill", uiRound, UiGreen, 7f);
-        Fill(hud.targetFill.rectTransform, 5f, 5f, 5f, 5f);
+        hud.targetFill = UiImage(bar, "Fill", uiPlate, LiveryHealth, Corner(8f));
+        Fill(hud.targetFill.rectTransform, 4f, 4f, 4f, 4f);
 
         hud.promptA = BuildPrompt(parent, "PromptA", new Vector2(0f, -118f));
         hud.promptB = BuildPrompt(parent, "PromptB", new Vector2(0f, -182f));
     }
 
+    /// <summary>A navy plate with a key cap and what the key does. HudPrompt sizes the plate and the cap to fit the words.</summary>
     private static HudPrompt BuildPrompt(Transform parent, string name, Vector2 position)
     {
         RectTransform slot = UiGroup(parent, name, AnchorCentre, position, new Vector2(300f, 56f));
         HudPrompt prompt = slot.gameObject.AddComponent<HudPrompt>();
-        Image back = UiImage(slot, "Back", uiRound, new Color(UiNavy.r, UiNavy.g, UiNavy.b, 0.88f), 2.4f);
-        Rect(back.gameObject, slot, AnchorCentre, Vector2.zero, new Vector2(300f, 56f));
-        prompt.back = back.rectTransform;
-        Image key = UiImage(slot, "Key", uiFace, UiCream, 3f);
-        Rect(key.gameObject, slot, AnchorCentre, Vector2.zero, new Vector2(42f, 42f));
-        prompt.keyBack = key.rectTransform;
-        prompt.keyText = UiText(key.transform, "KeyText", "", 26, UiNavy);
-        Fill(prompt.keyText.rectTransform);
-        prompt.label = UiText(slot, "Label", "", 28, UiCream);
+        RectTransform back = UiGroup(slot, "Back", AnchorCentre, Vector2.zero, new Vector2(300f, 56f));
+        HudPlate(back, LiveryNavy, 20f, 3f, 3f, 3f);
+        prompt.back = back;
+        RectTransform key = UiGroup(slot, "Key", AnchorCentre, Vector2.zero, new Vector2(38f, 38f));
+        prompt.keyBack = key;
+        prompt.keyText = HudKeyCap(key, "", 26);
+        prompt.label = PlateWords(slot, "Label", "", 28, LiveryText, 2f);
         Rect(prompt.label.gameObject, slot, AnchorCentre, Vector2.zero, new Vector2(200f, 56f));
         return prompt;
     }
@@ -1845,40 +1902,42 @@ public static partial class CargoClashBuilder
     {
         Vector2 size = new Vector2(330f, 74f);
         RectTransform chip = UiGroup(parent, "Ram", Vector2.zero, new Vector2(30f + size.x * 0.5f, 30f + size.y * 0.5f), size);
-        AddSoftShadow(chip, 0.4f);
-        Image edge = UiImage(chip, "Edge", uiRound, UiNavy, 2f);
-        Fill(edge.rectTransform);
-        Image track = UiImage(edge.transform, "Track", uiRound, new Color(0.2f, 0.24f, 0.38f), 2.4f);
-        Fill(track.rectTransform, 7f, 7f, 7f, 7f);
-        hud.ramFill = UiImage(track.transform, "Fill", uiFace, UiGreen, 2.4f);
-        Fill(hud.ramFill.rectTransform);
-
-        Image key = UiImage(chip, "Key", uiFace, UiCream, 3f);
-        Rect(key.gameObject, chip, new Vector2(0f, 0.5f), new Vector2(68f, 1f), new Vector2(104f, 48f));
-        Text keyText = UiText(key.transform, "KeyText", GameText.KeyRam, 25, UiNavy);
-        Fill(keyText.rectTransform);
-        hud.ramLabel = UiText(chip, "Label", "", 32, Color.white, 2.5f);
-        Rect(hud.ramLabel.gameObject, chip, AnchorCentre, new Vector2(56f, 0f), new Vector2(200f, 50f));
+        hud.ramFill = MeterPlate(chip, out hud.ramLabel, 56f);
+        RectTransform key = UiGroup(chip, "Key", new Vector2(0f, 0.5f), new Vector2(68f, 1f), new Vector2(104f, 46f));
+        HudKeyCap(key, GameText.KeyRam, 25);
     }
 
     private static void BuildHealthChip(Transform parent, MatchHud hud)
     {
         Vector2 size = new Vector2(330f, 60f);
         RectTransform chip = UiGroup(parent, "Health", Vector2.zero, new Vector2(30f + size.x * 0.5f, 30f + 74f + 12f + size.y * 0.5f), size);
-        AddSoftShadow(chip, 0.4f);
-        Image edge = UiImage(chip, "Edge", uiRound, UiNavy, 2f);
-        Fill(edge.rectTransform);
-        Image track = UiImage(edge.transform, "Track", uiRound, new Color(0.2f, 0.24f, 0.38f), 2.4f);
-        Fill(track.rectTransform, 7f, 7f, 7f, 7f);
-        hud.healthFill = UiImage(track.transform, "Fill", uiFace, UiGreen, 2.4f);
-        Fill(hud.healthFill.rectTransform);
+        hud.healthFill = MeterPlate(chip, out hud.healthLabel, 30f);
+        RectTransform key = UiGroup(chip, "Key", new Vector2(0f, 0.5f), new Vector2(50f, 1f), new Vector2(68f, 38f));
+        HudKeyCap(key, GameText.HealthLabel, 25);
+    }
 
-        Image key = UiImage(chip, "Key", uiFace, UiCream, 3f);
-        Rect(key.gameObject, chip, new Vector2(0f, 0.5f), new Vector2(50f, 1f), new Vector2(68f, 40f));
-        Text keyText = UiText(key.transform, "KeyText", GameText.HealthLabel, 25, UiNavy);
-        Fill(keyText.rectTransform);
-        hud.healthLabel = UiText(chip, "Label", "", 32, Color.white, 2.5f);
-        Rect(hud.healthLabel.gameObject, chip, AnchorCentre, new Vector2(30f, 0f), new Vector2(200f, 50f));
+    /// <summary>
+    /// A bar at the bottom left: a navy rim and cream trim round a dark track, the fill inside it (MatchHud sets its length
+    /// and colour) and the words over it. The key cap goes on top at the left.
+    /// </summary>
+    private static Image MeterPlate(RectTransform chip, out Text label, float labelX)
+    {
+        AddSoftShadow(chip, 0.4f);
+        Image under = UiImage(chip, "Drop", uiPlate, LiveryShadow, Corner(20f));
+        Fill(under.rectTransform, 0f, -CardDrop, 0f, CardDrop);
+        Image edge = UiImage(chip, "Rim", uiPlate, LiveryRim, Corner(20f));
+        Fill(edge.rectTransform);
+        Image band = UiImage(chip, "Trim", uiPlate, LiveryCream, Corner(16f));
+        Fill(band.rectTransform, 4f, 4f, 4f, 4f);
+        Image track = UiImage(chip, "Track", uiPlate, LiveryRim, Corner(12f));
+        Fill(track.rectTransform, 8f, 8f, 8f, 8f);
+        Image fill = UiImage(track.transform, "Fill", uiPlate, LiveryHealth, Corner(9f));
+        Fill(fill.rectTransform, 3f, 3f, 3f, 3f);
+        Image shade = UiImage(track.transform, "Shade", uiPlateShade, Color.white, Corner(12f));
+        Fill(shade.rectTransform);
+        label = PlateWords(chip, "Label", "", 32, LiveryText, 3f);
+        Rect(label.gameObject, chip, AnchorCentre, new Vector2(labelX, 0f), new Vector2(200f, 50f));
+        return fill;
     }
 
     // The same shape as the tutorial: 46 metres across and 98 long. A level of another shape sets its own while its HUD is built.
@@ -1891,6 +1950,13 @@ public static partial class CargoClashBuilder
         Vector2 size = miniMapSize;
         RectTransform map = UiGroup(parent, "Map", Vector2.one, new Vector2(-30f - size.x * 0.5f, -30f - size.y * 0.5f), size);
         AddSoftShadow(map, 0.4f);
+        // Framed like the crew page's picture: a navy rim and a cream trim, whose corners round off the map's.
+        Image under = UiImage(map, "Drop", uiPlate, LiveryShadow, Corner(24f));
+        Fill(under.rectTransform, 0f, -CardDrop, 0f, CardDrop);
+        Image edge = UiImage(map, "Rim", uiPlate, LiveryRim, Corner(24f));
+        Fill(edge.rectTransform);
+        Image band = UiImage(map, "Trim", uiPlate, LiveryCream, Corner(19f));
+        Fill(band.rectTransform, 5f, 5f, 5f, 5f);
 
         GameObject pictureObject = new GameObject("Picture", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
         pictureObject.transform.SetParent(map, false);
@@ -1901,8 +1967,8 @@ public static partial class CargoClashBuilder
         RectTransform dots = UiGroup(map, "Dots", AnchorCentre, Vector2.zero, Vector2.zero);
         Fill(dots, inset, inset, inset, inset);
 
-        Image rim = UiImage(map, "Rim", uiFrame, UiNavy, 2f);
-        Fill(rim.rectTransform);
+        Image corners = UiImage(map, "Corners", uiFrame, LiveryCream, 2.4f);
+        Fill(corners.rectTransform, 5f, 5f, 5f, 5f);
 
         MiniMap miniMap = map.gameObject.AddComponent<MiniMap>();
         miniMap.picture = picture;
@@ -1916,115 +1982,149 @@ public static partial class CargoClashBuilder
         Vector2 size = new Vector2(462f, 54f);
         RectTransform chip = UiGroup(parent, "RoleChip", new Vector2(0f, 1f), new Vector2(30f + size.x * 0.5f, -30f - size.y * 0.5f), size);
         AddSoftShadow(chip, 0.35f);
-        Image edge = UiImage(chip, "Edge", uiRound, UiNavy, 2.4f);
-        Fill(edge.rectTransform);
-        hud.roleChipBack = UiImage(edge.transform, "Face", uiFace, UiOrange, 2.8f);
-        Fill(hud.roleChipBack.rectTransform, 5f, 5f, 5f, 5f);
-        hud.roleChip = UiText(chip, "Text", "", 25, Color.white, 2f);
-        Fill(hud.roleChip.rectTransform, 12f, 2f, 12f, 2f);
+        hud.roleChipBack = HudPlate(chip, LiveryOrange, 18f, 4f, 4f);
+        hud.roleChip = PlateWords(chip, "Text", "", 25, LiveryText, 2f);
+        // "Knock carriers down and smash the cargo!" is wider than the panel at 25, so it gets smaller; one line only.
+        hud.roleChip.resizeTextForBestFit = true;
+        hud.roleChip.resizeTextMinSize = 16;
+        hud.roleChip.resizeTextMaxSize = 25;
+        hud.roleChip.horizontalOverflow = HorizontalWrapMode.Wrap;
+        hud.roleChip.verticalOverflow = VerticalWrapMode.Truncate;
+        OneLine(hud.roleChip, 16f, 16f, 1f);
     }
 
+    /// <summary>
+    /// The card at the start of each half (step 30): a cream card like the lobby's, the side you're on in your team's colour
+    /// with the results' outline and shadow, and the count on a headlight like a level card's number.
+    /// </summary>
     private static void BuildIntroCard(Transform root, MatchHud hud)
     {
         RectTransform card = UiGroup(root, "IntroCard", AnchorCentre, new Vector2(0f, 60f), new Vector2(1180f, 380f));
         card.gameObject.AddComponent<UiPopIn>();
         hud.introCard = card.gameObject;
         AddSoftShadow(card, 0.5f);
-        Image edge = UiImage(card, "Edge", uiRound, UiNavy, 1.4f);
+        Image under = UiImage(card, "Drop", uiPlate, LiveryShadow, Corner(28f));
+        Fill(under.rectTransform, 0f, -CardDrop, 0f, CardDrop);
+        Image edge = UiImage(card, "Rim", uiPlate, LiveryRim, Corner(28f));
         Fill(edge.rectTransform);
-        Image inside = UiImage(edge.transform, "Inside", uiRound, UiCream, 1.7f);
-        Fill(inside.rectTransform, 8f, 8f, 8f, 8f);
+        Image face = UiImage(card, "Face", uiPlate, LiveryCream, Corner(23f));
+        Fill(face.rectTransform, 5f, 5f, 5f, 5f);
+        Image line = UiImage(card, "Pinstripe", uiPinstripe, Faded(LiveryRim, 0.3f), PinstripeCorner(17f));
+        Fill(line.rectTransform, 11f, 11f, 11f, 11f);
 
-        hud.introSwap = UiText(card, "Swap", GameText.SidesSwapped, 32, new Color(0.86f, 0.42f, 0.05f));
+        hud.introSwap = UiText(card, "Swap", GameText.SidesSwapped, 32, LiverySection);
         Rect(hud.introSwap.gameObject, card, AnchorTop, new Vector2(0f, -40f), new Vector2(1100f, 40f));
-        hud.introHeading = UiText(card, "Heading", "", 82, UiOrange, 3.5f);
+        hud.introHeading = UiText(card, "Heading", "", 82, LiveryOrange, 2.5f);
+        hud.introHeading.GetComponent<Outline>().effectColor = LiveryRim;
+        Shadow cast = hud.introHeading.gameObject.AddComponent<Shadow>();
+        cast.effectColor = LiveryRim;
+        cast.effectDistance = new Vector2(0f, -6f);
         Rect(hud.introHeading.gameObject, card, AnchorTop, new Vector2(0f, -106f), new Vector2(1100f, 90f));
-        hud.introGoal = UiText(card, "Goal", "", 44, UiNavy);
+        hud.introGoal = UiText(card, "Goal", "", 44, LiveryRim);
         Rect(hud.introGoal.gameObject, card, AnchorTop, new Vector2(0f, -182f), new Vector2(1100f, 56f));
-        Text keys = UiText(card, "Keys", GameText.KeysHint, 23, new Color(0.34f, 0.37f, 0.48f));
+        Text keys = UiText(card, "Keys", GameText.KeysHint, 23, UiHint);
         Rect(keys.gameObject, card, AnchorBottom, new Vector2(0f, 42f), new Vector2(1140f, 34f));
 
         RectTransform count = UiGroup(card, "Count", AnchorTop, new Vector2(0f, -272f), new Vector2(84f, 84f));
-        Image countBack = UiImage(count, "Back", uiCircle, UiNavy);
-        Fill(countBack.rectTransform);
-        hud.introCount = UiText(count, "Number", "", 56, UiYellow);
+        Image countShadow = UiImage(count, "LampShadow", uiCircle, LiveryRim);
+        Fill(countShadow.rectTransform, 0f, -4f, 0f, 4f);
+        Image lamp = UiImage(count, "Lamp", uiHeadlight, Color.white);
+        Fill(lamp.rectTransform);
+        hud.introCount = UiText(count, "Number", "", 50, LiveryRim);
         Fill(hud.introCount.rectTransform, 0f, 2f);
     }
 
+    /// <summary>
+    /// The results at the end of a match, painted like the menus (step 29): a cream card, the winner in its team's colour with
+    /// a hard navy shadow (MatchHud sets the colour), and the two buttons as plates. Same places and sizes as before.
+    /// </summary>
     private static void BuildResults(Transform root, MatchHud hud)
     {
         RectTransform panel = UiPanelRoot(root, "Results");
         hud.resultsPanel = panel.gameObject;
-        Image dim = UiImage(panel, "Dim", null, new Color(UiNavy.r, UiNavy.g, UiNavy.b, 0.5f));
+        Image dim = UiImage(panel, "Dim", null, Faded(LiveryRim, 0.5f));
         Fill(dim.rectTransform);
         dim.raycastTarget = true;
 
-        RectTransform inside = UiPanel(panel, "Card", AnchorCentre, Vector2.zero, new Vector2(1160f, 780f), UiCream, 0f);
-        hud.resultsHeading = UiText(inside, "Heading", "", 96, UiOrange, 4f);
+        RectTransform inside = LiveryCard(panel, "Card", AnchorCentre, Vector2.zero, new Vector2(1160f, 780f), 0f, 28f);
+        // A thin outline keeps the light team colours readable on the cream; the shadow is the plates' words'.
+        hud.resultsHeading = UiText(inside, "Heading", "", 96, LiveryOrange, 2.5f);
+        hud.resultsHeading.GetComponent<Outline>().effectColor = LiveryRim;
+        Shadow cast = hud.resultsHeading.gameObject.AddComponent<Shadow>();
+        cast.effectColor = LiveryRim;
+        cast.effectDistance = new Vector2(0f, -6f);
         Rect(hud.resultsHeading.gameObject, inside, AnchorTop, new Vector2(0f, -100f), new Vector2(1080f, 110f));
-        hud.resultsScore = UiText(inside, "Score", "", 78, UiNavy);
+        hud.resultsScore = UiText(inside, "Score", "", 78, LiveryRim);
         Rect(hud.resultsScore.gameObject, inside, AnchorTop, new Vector2(0f, -212f), new Vector2(1080f, 90f));
-        hud.resultsTitles = UiText(inside, "Titles", "", 32, new Color(0.34f, 0.37f, 0.48f));
+        hud.resultsTitles = UiText(inside, "Titles", "", 32, UiHint);
         Rect(hud.resultsTitles.gameObject, inside, AnchorCentre, new Vector2(0f, -30f), new Vector2(1080f, 220f));
 
-        hud.resultsWaiting = UiText(inside, "Waiting", GameText.WaitingForHost, 34, new Color(0.34f, 0.37f, 0.48f));
+        hud.resultsWaiting = UiText(inside, "Waiting", GameText.WaitingForHost, 34, UiHint);
         Rect(hud.resultsWaiting.gameObject, inside, AnchorBottom, new Vector2(-270f, 92f), new Vector2(480f, 60f));
-        hud.againButton = UiButton(inside, "Again", GameText.PlayAgain, AnchorBottom, new Vector2(-270f, 92f), new Vector2(500f, 112f), UiOrange, 44, 0.1f, out hud.againLabel);
-        hud.leaveButton = UiButton(inside, "Leave", GameText.MainMenu, AnchorBottom, new Vector2(270f, 92f), new Vector2(500f, 112f), UiGray, 44, 0.15f, out _);
+        hud.againButton = LiveryTextButton(inside, "Again", GameText.PlayAgain, AnchorBottom, new Vector2(-270f, 92f), new Vector2(500f, 112f),
+            LiveryOrange, 44, 0.1f, out hud.againLabel);
+        hud.leaveButton = LiveryTextButton(inside, "Leave", GameText.MainMenu, AnchorBottom, new Vector2(270f, 92f), new Vector2(500f, 112f),
+            LiveryNavy, 44, 0.15f, out _);
     }
 
     private static void BuildPause(Transform root, MatchHud hud)
     {
+        BuildPauseCard(root, hud);
+        // Over the pause card, which it hides while it's open.
+        hud.settings = BuildSettingsPanel(root, MatchSettingsDim);
+    }
+
+    /// <summary>
+    /// Esc's card in a match, painted like the lobby (step 29): a cream card with KEEP PLAYING as an orange plate, SETTINGS and
+    /// LEAVE MATCH as navy ones. Same places and sizes as before.
+    /// </summary>
+    private static void BuildPauseCard(Transform root, MatchHud hud)
+    {
         RectTransform panel = UiPanelRoot(root, "Pause");
         hud.pausePanel = panel.gameObject;
-        Image dim = UiImage(panel, "Dim", null, new Color(UiNavy.r, UiNavy.g, UiNavy.b, 0.5f));
+        Image dim = UiImage(panel, "Dim", null, Faded(LiveryRim, 0.5f));
         Fill(dim.rectTransform);
         dim.raycastTarget = true;
 
-        RectTransform inside = UiPanel(panel, "Card", AnchorCentre, Vector2.zero, new Vector2(820f, 640f), UiCream, 0f);
-        Text heading = UiText(inside, "Heading", GameText.Paused, 76, UiNavy);
+        RectTransform inside = LiveryCard(panel, "Card", AnchorCentre, Vector2.zero, new Vector2(820f, 640f), 0f, 26f);
+        Text heading = UiText(inside, "Heading", GameText.Paused, 76, LiveryRim);
         Rect(heading.gameObject, inside, AnchorTop, new Vector2(0f, -68f), new Vector2(760f, 90f));
 
-        hud.pauseResumeButton = UiButton(inside, "Resume", GameText.KeepPlaying, AnchorCentre, new Vector2(0f, 102f), new Vector2(560f, 104f), UiOrange, 42, 0.05f, out _);
-        hud.pauseSettingsButton = UiButton(inside, "Settings", GameText.Settings, AnchorCentre, new Vector2(0f, -16f), new Vector2(560f, 92f), UiBlue, 38, 0.08f, out _);
-        hud.pauseLeaveButton = UiButton(inside, "LeaveMatch", GameText.LeaveMatch, AnchorCentre, new Vector2(0f, -128f), new Vector2(560f, 92f), UiGray, 38, 0.1f, out _);
-        Text hint = UiText(inside, "Hint", GameText.ViewHint, 26, new Color(0.34f, 0.37f, 0.48f));
+        hud.pauseResumeButton = LiveryTextButton(inside, "Resume", GameText.KeepPlaying, AnchorCentre, new Vector2(0f, 102f), new Vector2(560f, 104f),
+            LiveryOrange, 42, 0.05f, out _);
+        hud.pauseSettingsButton = LiveryTextButton(inside, "Settings", GameText.Settings, AnchorCentre, new Vector2(0f, -16f), new Vector2(560f, 92f),
+            LiveryNavy, 38, 0.08f, out _);
+        hud.pauseLeaveButton = LiveryTextButton(inside, "LeaveMatch", GameText.LeaveMatch, AnchorCentre, new Vector2(0f, -128f), new Vector2(560f, 92f),
+            LiveryNavy, 38, 0.1f, out _);
+        Text hint = UiText(inside, "Hint", GameText.ViewHint, 26, UiHint);
         Rect(hint.gameObject, inside, AnchorBottom, new Vector2(0f, 52f), new Vector2(780f, 36f));
         hint.horizontalOverflow = HorizontalWrapMode.Wrap;
-
-        // Over the pause card, which it hides while it's open.
-        hud.settings = BuildSettingsPanel(root, 0.9f);
     }
 
-    private static Slider UiSlider(Transform parent, string name, Vector2 anchor, Vector2 position, Vector2 size)
+    /// <summary>
+    /// Builds a level's whole match interface again in the open scene (Apply Menu Pages): the scoreboard, the bars, the prompts,
+    /// the map, the intro card, the results, the pause card and the settings page. The mini map keeps this level's shape.
+    /// Before step 30 each level's HUD was checked against a fresh BuildHud, object by object, and matched. Returns the new HUD.
+    /// </summary>
+    public static MatchHud RebuildMatchHud(MatchHud old)
     {
-        float trackInset = size.y * 0.27f;
-        RectTransform root = UiGroup(parent, name, anchor, position, size);
-        Image track = UiImage(root, "Track", uiRound, UiNavy, 4f);
-        Fill(track.rectTransform, 0f, trackInset, 0f, trackInset);
-        track.raycastTarget = true;
-
-        RectTransform fillArea = UiGroup(root, "FillArea", AnchorCentre, Vector2.zero, Vector2.zero);
-        Fill(fillArea, 6f, trackInset + 5f, 6f, trackInset + 5f);
-        Image fill = UiImage(fillArea, "Fill", uiRound, UiOrange, 6f);
-        Fill(fill.rectTransform);
-
-        RectTransform handleArea = UiGroup(root, "HandleArea", AnchorCentre, Vector2.zero, Vector2.zero);
-        Fill(handleArea, size.y * 0.5f, 0f, size.y * 0.5f, 0f);
-        Image handleEdge = UiImage(handleArea, "Handle", uiCircle, UiNavy);
-        handleEdge.raycastTarget = true;
-        Fill(handleEdge.rectTransform);
-        handleEdge.rectTransform.sizeDelta = new Vector2(size.y, 0f);
-        Image handleFace = UiImage(handleEdge.transform, "Face", uiCircle, UiYellow);
-        Fill(handleFace.rectTransform, 7f, 7f, 7f, 7f);
-
-        Slider slider = root.gameObject.AddComponent<Slider>();
-        slider.fillRect = fill.rectTransform;
-        slider.handleRect = handleEdge.rectTransform;
-        slider.targetGraphic = handleEdge;
-        slider.direction = Slider.Direction.LeftToRight;
-        slider.transition = Selectable.Transition.None;
-        slider.navigation = new Navigation { mode = Navigation.Mode.None };
-        return slider;
+        LoadUiAssets();
+        Vector2 mapSize = ((RectTransform)old.transform.Find("PlayHud/Map")).sizeDelta;
+        int order = old.transform.GetSiblingIndex();
+        Object.DestroyImmediate(old.gameObject);
+        miniMapSize = mapSize;
+        try
+        {
+            BuildHud();
+        }
+        finally
+        {
+            miniMapSize = DefaultMiniMapSize;
+        }
+        MatchHud hud = Object.FindAnyObjectByType<MatchHud>(FindObjectsInactive.Include);
+        hud.transform.SetSiblingIndex(order);
+        EditorUtility.SetDirty(hud);
+        return hud;
     }
+
 }

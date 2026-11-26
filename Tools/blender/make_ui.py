@@ -4,8 +4,9 @@ Run from the repository root:
 
     /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup --python Tools/blender/make_ui.py
 
-Add `-- --only logo`, `-- --only icons`, `-- --only appicon`, `-- --only sprites`, `-- --only cards` or `-- --only menu`
-(the main menu's button face and its small buttons' icons) to make one group.
+Add `-- --only logo`, `-- --only icons`, `-- --only appicon`, `-- --only sprites`, `-- --only cards`, `-- --only menu`
+(the main menu's small buttons' icons) or `-- --only livery` (the main menu's plates, painted like the truck) to make one
+group.
 
 Sprites and level cards are painted with numpy. The logo is too, from the shapes of the letters in
 the font Lilita One (see ASSETS.md), with each letter tilted a little. The cargo on the logo, the Practice
@@ -117,21 +118,6 @@ def make_soft():
     return image
 
 
-def make_button_face():
-    """The top of a button, tinted by the game: a bright upper half, then a darker lower half."""
-    size = 128
-    xs, ys = grid(size, size)
-    shape = box(xs, ys, 64, 64, 64, 64, 36)
-    image = blank(size, size)
-    shade = np.where(ys < 64, 1.0, 0.86)
-    # A lighter band follows the top edge, and the bottom edge is a little darker still.
-    shade = np.where(shape > -5.0, shade * 0.96, shade)
-    shade = np.where((ys > 110) & (shape > -8.0), shade * 0.94, shade)
-    image[..., :3] = shade[..., None]
-    image[..., 3] = cover(shape)
-    return image
-
-
 def make_lock():
     size = 192
     xs, ys = grid(size, size)
@@ -158,26 +144,6 @@ def make_back_arrow():
     lower = segment(xs, ys, 30, 64, 62, 96, 11)
     image[..., 3] = cover(np.minimum(np.minimum(shaft, upper), lower))
     return image
-
-
-def make_hazard():
-    """Warning tape, which tiles sideways."""
-    width, height = 128, 56
-    xs, ys = grid(width, height)
-    stripes = np.mod(xs + ys, 64.0)
-    amount = np.clip(np.minimum(stripes, 32.0 - stripes) + 0.5, 0.0, 1.0) + np.clip(stripes - 63.5, 0.0, 1.0)
-    image = blank(width, height, NAVY)
-    image[..., 3] = 1.0
-    image[..., :3] = np.array(NAVY, np.float32) + (np.array(YELLOW, np.float32) - np.array(NAVY, np.float32)) * amount[..., None]
-    edge = (ys < 5) | (ys > height - 5)
-    image[edge, :3] = NAVY
-    return image
-
-
-# ---- Level cards. These stand in until a real picture of each level exists. ----
-
-CARD_WIDTH = 928
-CARD_HEIGHT = 500
 
 
 def sky(top, bottom):
@@ -1094,25 +1060,72 @@ def make_sprites():
     write_png(FOLDER / "UI_Circle.png", make_circle())
     write_png(FOLDER / "UI_Frame.png", make_frame())
     write_png(FOLDER / "UI_Soft.png", make_soft())
-    write_png(FOLDER / "UI_ButtonFace.png", make_button_face())
     write_png(FOLDER / "UI_Lock.png", make_lock())
     write_png(FOLDER / "UI_Back.png", make_back_arrow())
-    write_png(FOLDER / "UI_Hazard.png", make_hazard())
 
 
 # ---- The main menu (Assets/Game/Editor/CargoClashBuilder.Title.cs, BuildMenuPanel) ----
 
-def make_button_gloss():
-    """A main-menu button's top, tinted by the game: brightest under a soft shine along the top, a little darker toward
-    the bottom edge, so a flat colour looks like a rounded slab. Nine-sliced with a border of 96."""
+# ---- The truck's livery: the main menu's buttons are painted like the truck behind them (step 25) ----
+
+GOLD = (0.886, 0.663, 0.227)
+BRASS = (0.706, 0.498, 0.133)
+LENS = (1.0, 0.945, 0.847)
+
+
+def make_plate():
+    """UI_Round's corner again, imported with mip maps: a plate's rim, trim and panel shrink it to 24, 19 and 15 pixels
+    round, and without mip maps such small corners come out jagged."""
+    return make_round()
+
+
+def make_plate_shade():
+    """Laid over a plate's panel with the same corners: a light line along the top and a darker band along the bottom
+    (12 and 20 of its pixels), so a flat panel reads as a slightly rounded one."""
+    size = 128
+    xs, ys = grid(size, size)
+    inside = cover(box(xs, ys, 64, 64, 64, 64, 44))
+    top = inside * (1.0 - cover(box(xs, ys - 12.0, 64, 64, 64, 64, 44)))
+    bottom = inside * (1.0 - cover(box(xs, ys + 20.0, 64, 64, 64, 64, 44)))
+    image = blank(size, size)
+    image[..., :3] = np.where(bottom[..., None] > top[..., None], 0.0, 1.0)
+    image[..., 3] = top * 0.22 + bottom * 0.18
+    return image
+
+
+def make_pinstripe():
+    """The thin cream line inside a panel: 20 pixels round and 4 thick, nine-sliced with a border of 24, so at a corner
+    multiplier of about 2 it is a 2-pixel line round a 9-pixel corner."""
+    size = 64
+    xs, ys = grid(size, size)
+    shape = box(xs, ys, 32, 32, 32, 32, 20)
+    image = blank(size, size)
+    image[..., 3] = cover(shape) * (1.0 - cover(shape + 4.0))
+    return image
+
+
+def make_headlight():
+    """The truck's headlight, which holds a button's picture: a gold ring with a darker inner edge round a cream lens,
+    brightest up and to the left."""
     size = 256
     xs, ys = grid(size, size)
-    image = blank(size, size)
-    shade = 0.94 - 0.16 * smoothstep(60.0, 252.0, ys)
-    shade = shade + smoothstep(10.0, -14.0, box(xs, ys, 128, 54, 100, 26, 26)) * 0.06
-    image[..., :3] = np.clip(shade, 0.0, 1.0)[..., None]
-    image[..., 3] = cover(box(xs, ys, 128, 128, 128, 128, 80))
+    radius = np.hypot(xs - 128.0, ys - 128.0)
+    image = blank(size, size, GOLD)
+    image[..., 3] = cover(radius - 126.0)
+    brass = cover(radius - 109.0)[..., None]
+    image[..., :3] = image[..., :3] * (1.0 - brass) + np.asarray(BRASS, np.float32) * brass
+    lens = cover(radius - 102.0)[..., None]
+    t = np.clip(np.hypot(xs - 108.0, ys - 97.0) / 112.0, 0.0, 1.0)[..., None]
+    glass = np.asarray(WHITE, np.float32) * (1.0 - t) + np.asarray(LENS, np.float32) * t
+    image[..., :3] = image[..., :3] * (1.0 - lens) + glass * lens
     return image
+
+
+def make_livery():
+    write_png(FOLDER / "UI_Plate.png", make_plate())
+    write_png(FOLDER / "UI_PlateShade.png", make_plate_shade())
+    write_png(FOLDER / "UI_Pinstripe.png", make_pinstripe())
+    write_png(FOLDER / "UI_Headlight.png", make_headlight())
 
 
 def render_crew_hat(size, folder):
@@ -1223,7 +1236,6 @@ def paint_one(material, colour, roughness, metallic):
 
 
 def make_menu():
-    write_png(FOLDER / "UI_ButtonGloss.png", make_button_gloss())
     with tempfile.TemporaryDirectory() as folder:
         write_png(FOLDER / "Icon_Hat.png", with_outline(render_crew_hat(512, folder), 6))
         write_png(FOLDER / "Icon_Gear.png", with_outline(render_gear(512, folder), 6))
@@ -1241,7 +1253,7 @@ def make_cards():
 def main():
     only = sys.argv[sys.argv.index("--only") + 1] if "--only" in sys.argv else None
     groups = {"sprites": make_sprites, "cards": make_cards, "logo": make_logo, "icons": make_icons, "appicon": make_app_icon,
-              "menu": make_menu}
+              "menu": make_menu, "livery": make_livery}
     for name, make in groups.items():
         if only is None or only == name:
             make()

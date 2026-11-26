@@ -1,15 +1,15 @@
 fileFormatVersion: 2
-guid: 721dbe4235fd942acb78fa418a38c3cb
+guid: 486e5d8fc3dee475dbdb563059f8fd64
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -9012076902558857838
-    second: UI_ButtonFace_0
+      213: -4692582373420943840
+    second: UI_PlateShade_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
     mipMapMode: 0
-    enableMipMap: 0
+    enableMipMap: 1
     sRGBTexture: 1
     linearTexture: 0
     fadeOut: 0
@@ -37,7 +37,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 1
+    filterMode: 2
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -115,7 +115,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: UI_ButtonFace_0
+      name: UI_PlateShade_0
       rect:
         serializedVersion: 2
         x: 0
@@ -130,8 +130,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 2950a7e1ecbaee280800000000000000
-      internalID: -9012076902558857838
+      spriteID: 0263cf8913990eeb0800000000000000
+      internalID: -4692582373420943840
       vertices: []
       indices: 
       edges: []

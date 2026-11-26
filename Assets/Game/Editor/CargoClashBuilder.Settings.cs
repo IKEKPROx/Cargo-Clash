@@ -11,35 +11,37 @@ using UnityEngine.UI;
 /// </summary>
 public static partial class CargoClashBuilder
 {
-    private static readonly Color UiSection = new Color(0.86f, 0.42f, 0.05f);
     private static readonly Color UiHint = new Color(0.34f, 0.37f, 0.48f);
+
+    // How dark it is behind the columns: over the start scene's truck, and over a match, which is brighter. The project blends
+    // in linear colour space, so a dim looks lighter than its alpha. In a match the scores, the clock, the map and the prompts
+    // hide while the page is open (MatchHud); before step 29 they showed through it even at 0.97.
+    public const float MenuSettingsDim = 0.72f;
+    public const float MatchSettingsDim = 0.9f;
 
     /// <summary>
     /// Two cream columns under a heading: the game and sound on the left, the display on the right. Laid out within
-    /// 1600 wide, so it fits the match interface in a 4:3 window too. Starts hidden; SettingsPanel.Open shows it. In a
-    /// match the background is darker, so the scoreboard and the map don't show through around the heading.
+    /// 1600 wide, so it fits the match interface in a 4:3 window too. Starts hidden; SettingsPanel.Open shows it. Painted
+    /// like the menus (step 28): the columns are cream cards, the arrows navy plates, the sliders end in a headlight.
     /// </summary>
-    private static SettingsPanel BuildSettingsPanel(Transform canvas, float dimAlpha = 0.72f)
+    private static SettingsPanel BuildSettingsPanel(Transform canvas, float dimAlpha = MenuSettingsDim)
     {
         RectTransform holder = UiPanelRoot(canvas, "Settings");
         SettingsPanel settings = holder.gameObject.AddComponent<SettingsPanel>();
         RectTransform page = UiPanelRoot(holder, "Page");
         settings.panel = page.gameObject;
 
-        Image dim = UiImage(page, "Dim", null, new Color(UiNavy.r, UiNavy.g, UiNavy.b, dimAlpha));
+        Image dim = UiImage(page, "Dim", null, Faded(LiveryRim, dimAlpha));
         Fill(dim.rectTransform);
         dim.raycastTarget = true;
-        AddTape(page, "TapeTop", true);
-        AddTape(page, "TapeBottom", false);
 
         RectTransform headingSlot = PopSlot(page, "Heading", AnchorTop, new Vector2(0f, -116f), new Vector2(1100f, 110f), 0f);
-        Text heading = UiText(headingSlot, "Text", GameText.Settings, 88, UiYellow, 4f);
+        Text heading = LiveryHeading(headingSlot, GameText.Settings, 88);
         Fill(heading.rectTransform);
-        settings.backButton = UiButton(page, "Back", GameText.Back, new Vector2(0f, 1f), new Vector2(170f, -116f), new Vector2(250f, 96f), UiBlue, 38, 0f,
-            out _, UiSprite("UI_Back"));
+        settings.backButton = LiveryBackButton(page, new Vector2(170f, -116f), new Vector2(250f, 96f), 0f);
 
         Vector2 columnSize = new Vector2(760f, 700f);
-        RectTransform left = UiPanel(page, "Left", AnchorCentre, new Vector2(-400f, -26f), columnSize, UiCream, 0.05f, 1.6f);
+        RectTransform left = LiveryCard(page, "Left", AnchorCentre, new Vector2(-400f, -26f), columnSize, 0.05f, 24f);
         SettingsHeading(left, "Game", GameText.SettingsGame, 300f);
         settings.language = SettingsChoiceRow(left, "Language", GameText.SettingLanguage, 238f, 0.08f);
         settings.view = SettingsChoiceRow(left, "View", GameText.SettingCamera, 168f, 0.1f);
@@ -50,11 +52,12 @@ public static partial class CargoClashBuilder
         settings.musicVolume = SettingsSliderRow(left, "Music", GameText.SettingMusic, -182f, out settings.musicValue);
         settings.effectsVolume = SettingsSliderRow(left, "Effects", GameText.SettingEffects, -252f, out settings.effectsValue);
 
-        RectTransform right = UiPanel(page, "Right", AnchorCentre, new Vector2(400f, -26f), columnSize, UiCream, 0.1f, 1.6f);
+        RectTransform right = LiveryCard(page, "Right", AnchorCentre, new Vector2(400f, -26f), columnSize, 0.1f, 24f);
         SettingsHeading(right, "Display", GameText.SettingsDisplay, 300f);
         settings.window = SettingsChoiceRow(right, "Window", GameText.SettingWindow, 238f, 0.13f);
         settings.resolution = SettingsChoiceRow(right, "Resolution", GameText.SettingResolution, 168f, 0.15f);
-        settings.applyButton = UiButton(right, "Apply", GameText.Apply, AnchorCentre, new Vector2(150f, 98f), new Vector2(248f, 60f), UiOrange, 32, 0.17f, out _);
+        settings.applyButton = LiveryTextButton(right, "Apply", GameText.Apply, AnchorCentre, new Vector2(150f, 98f), new Vector2(248f, 60f),
+            LiveryOrange, 32, 0.17f, out _);
         settings.applyGroup = settings.applyButton.transform.parent.gameObject.AddComponent<CanvasGroup>();
         settings.vSync = SettingsChoiceRow(right, "VSync", GameText.SettingVSync, 28f, 0.19f);
         settings.maxFps = SettingsChoiceRow(right, "MaxFps", GameText.SettingMaxFps, -42f, 0.21f);
@@ -71,21 +74,27 @@ public static partial class CargoClashBuilder
 
     private static void SettingsHeading(RectTransform column, string name, string text, float y)
     {
-        Text heading = UiText(column, name + "Heading", text, 36, UiSection);
+        Text heading = UiText(column, name + "Heading", text, 36, LiverySection);
         heading.alignment = TextAnchor.MiddleLeft;
         Rect(heading.gameObject, column, AnchorCentre, new Vector2(0f, y), new Vector2(700f, 50f));
     }
 
-    /// <summary>A label, then the value between a back and a next arrow.</summary>
+    /// <summary>A label, then the value between two arrow plates.</summary>
     private static SettingChoice SettingsChoiceRow(RectTransform column, string name, string label, float y, float delay)
     {
         RectTransform row = UiGroup(column, name, AnchorCentre, new Vector2(0f, y), new Vector2(720f, 64f));
         SettingChoice choice = new SettingChoice { group = row.gameObject.AddComponent<CanvasGroup>() };
         SettingsLabel(row, label);
-        choice.back = UiButton(row, "Back", "<", AnchorCentre, new Vector2(-20f, 0f), new Vector2(72f, 56f), UiBlue, 36, delay, out _);
-        choice.value = UiText(row, "Value", "", 28, UiNavy);
-        Rect(choice.value.gameObject, row, AnchorCentre, new Vector2(150f, 0f), new Vector2(252f, 56f));
-        choice.next = UiButton(row, "Next", ">", AnchorCentre, new Vector2(320f, 0f), new Vector2(72f, 56f), UiBlue, 36, delay, out _);
+        choice.back = LiveryArrowButton(row, "Back", false, new Vector2(-20f, 0f), new Vector2(72f, 56f), delay);
+        choice.value = UiText(row, "Value", "", 28, LiveryRim);
+        // A long value (OVER THE SHOULDER) gets smaller rather than touching the arrows; too low for two lines, so it never wraps.
+        choice.value.resizeTextForBestFit = true;
+        choice.value.resizeTextMinSize = 20;
+        choice.value.resizeTextMaxSize = 28;
+        choice.value.horizontalOverflow = HorizontalWrapMode.Wrap;
+        choice.value.verticalOverflow = VerticalWrapMode.Truncate;
+        Rect(choice.value.gameObject, row, AnchorCentre, new Vector2(150f, 0f), new Vector2(228f, 42f));
+        choice.next = LiveryArrowButton(row, "Next", true, new Vector2(320f, 0f), new Vector2(72f, 56f), delay);
         return choice;
     }
 
@@ -94,10 +103,10 @@ public static partial class CargoClashBuilder
     {
         RectTransform row = UiGroup(column, name, AnchorCentre, new Vector2(0f, y), new Vector2(720f, 64f));
         SettingsLabel(row, label);
-        Slider slider = UiSlider(row, "Slider", AnchorCentre, new Vector2(102f, 0f), new Vector2(300f, 44f));
+        Slider slider = LiverySlider(row, "Slider", AnchorCentre, new Vector2(102f, 0f), new Vector2(300f, 44f));
         slider.minValue = 0f;
         slider.maxValue = 1f;
-        value = UiText(row, "Value", "", 28, UiNavy);
+        value = UiText(row, "Value", "", 28, LiveryRim);
         value.alignment = TextAnchor.MiddleRight;
         Rect(value.gameObject, row, AnchorCentre, new Vector2(312f, 0f), new Vector2(96f, 56f));
         return slider;
@@ -105,7 +114,7 @@ public static partial class CargoClashBuilder
 
     private static void SettingsLabel(RectTransform row, string label)
     {
-        Text text = UiText(row, "Label", label, 30, UiNavy);
+        Text text = UiText(row, "Label", label, 30, LiveryRim);
         text.alignment = TextAnchor.MiddleLeft;
         Rect(text.gameObject, row, AnchorCentre, new Vector2(-212f, 0f), new Vector2(276f, 56f));
     }

@@ -62,7 +62,7 @@
 /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup --python Tools/blender/make_scenery.py
 ```
 
-其他模型把脚本换成 `make_crew.py`、`make_hands.py`、`make_cone.py`、`make_astra_cargo.py`，开始页面的 Logo、按钮、卡片图、比赛界面的图标和应用图标用 `make_ui.py`（`-- --only logo|icons|appicon|sprites|cards` 只做一组）。Logo 上的货物、PRACTICE 按钮的图标和应用图标用的是 `Assets/Game/Models` 里 Astra 的 FBX，颜色在脚本的 `CARGO_PALETTE`、`TOOL_PALETTE`，要和生成脚本里的材质一致。末尾加 `-- --sheet 文件夹` 可以同时渲染检查图。运行之后，还要运行上面的生成脚本才会进入游戏。
+其他模型把脚本换成 `make_crew.py`、`make_hands.py`、`make_cone.py`、`make_astra_cargo.py`，开始页面的 Logo、按钮、卡片图、比赛界面的图标和应用图标用 `make_ui.py`（`-- --only logo|icons|appicon|sprites|cards|menu|livery` 只做一组）。Logo 上的货物、PRACTICE 按钮的图标和应用图标用的是 `Assets/Game/Models` 里 Astra 的 FBX，颜色在脚本的 `CARGO_PALETTE`、`TOOL_PALETTE`，要和生成脚本里的材质一致。末尾加 `-- --sheet 文件夹` 可以同时渲染检查图。运行之后，还要运行上面的生成脚本才会进入游戏。
 
 场景的每个模型是一个 FBX，`make_scenery.py` 加 `-- --only Rock_A,Barn` 只重做这几个。生成脚本把它们做成 `Assets/Game/Prefabs/Scenery` 里的预制体，再摆进关卡（`CargoClashBuilder` 的 `AddTrees` 到 `AddOutskirts`）。模型本身没有碰撞，挡人的是单独的 `Blocker` 子物体，所以换模型不影响玩法和寻路。放进可玩区域的新东西，要么加 `Blocker`，要么矮到走过去也不奇怪（比如草和花）。
 
@@ -176,7 +176,7 @@ Astra 的四种货物（`独立建模/互动货物_v08`）：烟盒、现金箱�
 
 **检视货物时的第一人称。** 不用代码摆的手，换成人物模型里的 `FP_Arms`（中等体型真正的手臂，播和身体同一个检视动作，带着手指和手里的东西），挂在镜头下面、往上翘 `inspectPitch` 度，手才在视野里。在地上的鹅箱前检视时，它留在身体的位置，手才碰得到盖子（`FirstPersonRig.UpdateCargoInspect`）。
 
-**界面。** 比赛界面在 `BuildHud`，用的是开始页面那套控件。小地图是 `MiniMap`，地图范围和底图在 `LevelLayout.mapArea`、`mapPicture`，做新关卡要填这两个。`MatchHud` 里的距离和大小都是屏幕上的固定值，改的时候在 1600×900 和别的窗口比例下都看一看。
+**界面。** 比赛界面在 `BuildHud`，用的是开始页面那套“车身涂装”控件（`HudPlate`、`HudKeyCap`），改了它运行 `Apply Menu Pages`。设置页打开时，`MatchHud` 把比分栏（`scoreboard`）、横幅、`playHud`、标记（`overlayRoot`）和开场卡片藏起来，不然它们会从压暗的背后透出来；新加到比赛界面上的东西，要放进其中一个，或者也在那里藏起来。小地图是 `MiniMap`，地图范围和底图在 `LevelLayout.mapArea`、`mapPicture`，做新关卡要填这两个。`MatchHud` 里的距离和大小都是屏幕上的固定值，改的时候在 1600×900 和别的窗口比例下都看一看。
 
 **别把 SSAO 加回渲染器。** 它在手部相机上会变成一片噪点，而且慢。也不能只把它停用：停用后打包时它的资源会被剔除，游戏每帧报错并且什么都画不出来，这时 `-ccUncapped` 测出来的帧率还特别高，看起来像变快了。要用就先解决手部相机的问题。
 
@@ -192,7 +192,7 @@ Astra 的四种货物（`独立建模/互动货物_v08`）：烟盒、现金箱�
 
 开局时主机把选的关卡放进 `SessionRoster.Level`，加载场景都从这里取，不要再写死场景名。
 
-界面的颜色和做法集中在 `CargoClashBuilder.Title.cs` 的 `UiButton`、`UiPanel`、`UiText`。一个控件放在 `PopSlot` 里，弹入的动画缩放外层，鼠标悬停的动画缩放里层，这两个不能放在同一个物体上。图片要先在 `UiSprite` 里设好导入方式。英文用 `Assets/Game/UI` 里的 Lilita One，它只有拉丁字母，中文用电脑自带的字体（见下面“设置页和语言”）。
+界面的颜色和做法集中在 `CargoClashBuilder.Title.cs`：基础的 `UiText`、`UiImage`、`PopSlot`，和下面说的 `Livery*` 那一组。所有界面（第 25–30 步：主菜单、选关页、角色页、大厅、设置页、比赛界面、暂停和结算）都是“车身涂装”风格：配色和镶边取自背景里的货车，代码是 `LiveryPlate` 那一组函数，颜色在 `Livery*`，贴图用 `make_ui.py -- --only livery` 画。能点的是深蓝或橙色牌子（`LiveryTextButton`、`LiveryArrowButton`、`LiveryBackButton`，有图的 `LiveryButton`），只展示信息的是米色板子（`LiveryCard`），图片用米色镶边框起来（`LiveryFrame`、`LiveryLevelCard`），页面标题 `LiveryHeading`，滑块 `LiverySlider`。比赛界面上只展示信息的东西用不能点的牌子（`HudPlate`），按键是 `HudKeyCap`，牌子上的字用 `PlateWords`，画在游戏画面上的字用 `HudWords`（描边加硬阴影）。旧的 `UiButton`、`UiPanel` 已经删了。改了这几页的样子，运行 `Tools > Cargo Clash > Apply Menu Pages`，它只重建已经换了风格的页面，不用重跑 Apply Menu Presentation：开始场景里的五页，再打开 `GameConfig` 里每个做好的关卡场景，把整个比赛界面删掉、用 `BuildHud` 重新生成（`RebuildMatchHud`，小地图保留每关的大小）。所以比赛界面不要在场景里手改，改 `BuildHud` 那一组函数再运行这个命令。一个控件放在 `PopSlot` 里，弹入的动画缩放外层，鼠标悬停的动画缩放里层，这两个不能放在同一个物体上。图片要先在 `UiSprite` 里设好导入方式。英文用 `Assets/Game/UI` 里的 Lilita One，它只有拉丁字母，中文用电脑自带的字体（见下面“设置页和语言”）。
 
 开始画面货车上的货是 Astra 的四种（`AddTitleLoad`），放大了 1.3 倍并堆高，因为她的货按人的尺寸做，在车斗里会被 1 米高的侧板挡住。只是摆设，没有网络和规则。
 
@@ -200,7 +200,7 @@ Astra 的四种货物（`独立建模/互动货物_v08`）：烟盒、现金箱�
 
 ## 设置页和语言
 
-**设置页**是 `SettingsPanel`，由 `CargoClashBuilder.Settings.cs` 的 `BuildSettingsPanel` 生成，开始场景（主菜单的 SETTINGS）和每一关的比赛界面（暂停菜单的 SETTINGS）各一份，一模一样。值都在 `GameSettings`，存在 PlayerPrefs：
+**设置页**是 `SettingsPanel`，由 `CargoClashBuilder.Settings.cs` 的 `BuildSettingsPanel` 生成，开始场景（主菜单的 SETTINGS）和每一关的比赛界面（暂停菜单的 SETTINGS）各一份，一模一样，只有背后压暗的程度不同（`MenuSettingsDim`、`MatchSettingsDim`；工程是线性色彩空间，压暗看起来比不透明度浅）。比赛里那份打开时，比赛界面会藏起来。值都在 `GameSettings`，存在 PlayerPrefs：
 
 - 一改就生效：语言、视角（和 V 键同一个 `FirstPerson`）、灵敏度、鼠标上下反转（`HumanInput` 里翻转）、垂直同步、帧率上限（关了垂直同步才用）、画质、三个音量（总音量是 `AudioListener.volume`，音乐和音效在 `GameAudio` 里乘）。开局时 `GameBoot` 调 `GameSettings.ApplyAtStart` 把存下的值用上。
 - 窗口模式和分辨率要按 APPLY（`Screen.SetResolution`），它们由 Unity 自己存（PlayerPrefs 里的 `Screenmanager` 那几项），`GameSettings` 不存。窗口从外面变了，页面会重新读。
