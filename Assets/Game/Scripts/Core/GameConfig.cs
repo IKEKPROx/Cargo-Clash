@@ -220,6 +220,36 @@ namespace CargoClash
         [Tooltip("The plank people carry from the huts to the catcher. It is carried like cargo but never scores.")]
         public CargoDefinition plank;
 
+        [Header("Airport level")]
+        [Tooltip("The warehouse sends its first piece out onto B03 this long into each half.")]
+        [Min(0f)] public float airportDispatchStart = 0.8f;
+        [Tooltip("The last piece leaves the warehouse by this share of the half; the rest are spread evenly before it.")]
+        [Range(0.25f, 0.85f)] public float airportDispatchFraction = 0.68f;
+        [Tooltip("Never closer together than this many seconds, however short the half.")]
+        [Min(0.2f)] public float airportDispatchMinGap = 0.9f;
+        [Tooltip("How fast B03 carries people and loose cargo, in metres per second.")]
+        public float airportBeltSpeed = 1.8f;
+        [Tooltip("How fast loose cargo on B03 catches up with it, in metres per second each second. It has to beat the " +
+                 "cases' friction on the belt (about 12 a second here), or they creep along at a fraction of its speed.")]
+        public float airportBeltPull = 40f;
+        [Tooltip("Climbing the ladder, up or down, in metres per second.")]
+        public float airportLadderSpeed = 3.2f;
+        [Tooltip("Sliding down the D1 duct, in metres per second.")]
+        public float airportDuctSpeed = 5f;
+        [Tooltip("How fast the iron door swings.")]
+        public float airportDoorDegreesPerSecond = 340f;
+        [Tooltip("Falling this far from the upper deck onto anything but the belt knocks you out.")]
+        public float airportLethalDrop = 2.65f;
+        [Tooltip("Times botAggression for Interrupter bots on the airport. They start by the warehouse mouth and the " +
+                 "ladder, the way the carriers come, and the carry to H01 is long, so at full aggression they catch nearly " +
+                 "every carrier. People aren't affected.")]
+        [Range(0f, 1f)] public float airportInterrupterAggression = 0.35f;
+        [Tooltip("The share of each two seconds Interrupter bots on the airport keep swinging at cargo; they pause the rest.")]
+        [Range(0.2f, 1f)] public float airportInterrupterSmashShare = 0.35f;
+        [Tooltip("Times how keen bots on the airport are to go for the goose crate: Collectors to start carrying it (it only " +
+                 "goes up the long parking ramp at half speed, which costs them most of a half), Interrupters to start smashing it.")]
+        [Range(0f, 1f)] public float airportLargeCargoInterest = 0.3f;
+
         [Header("Cargo")]
         public CargoDefinition[] cargo;
         [Tooltip("Cargo looks damaged once its durability falls to this.")]

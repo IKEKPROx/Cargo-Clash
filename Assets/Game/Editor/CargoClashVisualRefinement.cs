@@ -11,7 +11,8 @@ public static class CargoClashVisualRefinement
 {
     private const string AvatarPath = "Assets/Game/Prefabs/Avatar.prefab";
     private static readonly string[] CrewScenes =
-        { "Assets/CargoRover/Scenes/CargoRover.unity", "Assets/Game/Scenes/Level01.unity", "Assets/Game/Scenes/LevelRiver.unity" };
+        { "Assets/CargoRover/Scenes/CargoRover.unity", "Assets/Game/Scenes/Level01.unity", "Assets/Game/Scenes/LevelRiver.unity",
+          "Assets/Game/Scenes/LevelAirport.unity" };
 
     // Astra's cloth (her V20 on): the two bodies carry a FabricUV, and her Blender materials put a woven normal map on the
     // overalls and the jacket (canvas twill) and on the shirts (cotton knit), at the strengths of her Normal Map nodes.
@@ -70,6 +71,17 @@ public static class CargoClashVisualRefinement
         outline.SetFloat("_Width", 0.0011f);
         outline.SetColor("_Color", new Color(0.12f, 0.15f, 0.20f));
         EditorUtility.SetDirty(outline);
+        ApplyMaterialFinishes();
+        AssetDatabase.SaveAssets();
+        Debug.Log("[Refine] Applied all three crew appearances and tools. Original skeletons, clips, controllers and interaction markers retained.");
+    }
+
+    /// <summary>
+    /// The metal and gloss of the fleet's and the crew's materials. The scene builders' model materials (CargoClashBuilder.
+    /// ModelMaterials) set their own first values, so a builder that runs after this calls it again (the airport's does).
+    /// </summary>
+    public static void ApplyMaterialFinishes()
+    {
         foreach (var finish in new[] {
             ("Fleet_Navy", 0.16f, 0.62f), ("Fleet_Orange", 0.10f, 0.58f),
             ("Fleet_Cream", 0.06f, 0.54f), ("Fleet_Rubber", 0f, 0.16f),
@@ -85,7 +97,6 @@ public static class CargoClashVisualRefinement
             EditorUtility.SetDirty(material);
         }
         AssetDatabase.SaveAssets();
-        Debug.Log("[Refine] Applied all three crew appearances and tools. Original skeletons, clips, controllers and interaction markers retained.");
     }
 
     /// <summary>

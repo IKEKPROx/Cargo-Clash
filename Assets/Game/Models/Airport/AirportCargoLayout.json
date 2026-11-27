@@ -1,0 +1,243 @@
+{
+  "units": "metres",
+  "opening": [
+    {
+      "kind": "Tobacco",
+      "fbxObject": "Opening_Tobacco",
+      "environmentAnchor": "CC_AirportAnchor_Small_10",
+      "zone": "belt outlet",
+      "originBlenderXYZ": [
+        12.2,
+        3.25,
+        0.003
+      ],
+      "yawBlenderDegrees": -12,
+      "colliderCentreBlenderXYZ": [
+        12.2,
+        3.25,
+        0.09036
+      ],
+      "colliderCentreUnityXYZ": [
+        -12.2,
+        0.09036,
+        -3.25
+      ]
+    },
+    {
+      "kind": "Cash",
+      "fbxObject": "Opening_Cash",
+      "environmentAnchor": "CC_AirportAnchor_Small_11",
+      "zone": "west ladder approach",
+      "originBlenderXYZ": [
+        6.0,
+        16.0,
+        0.003
+      ],
+      "yawBlenderDegrees": 16,
+      "colliderCentreBlenderXYZ": [
+        6.0,
+        16.0,
+        0.11136
+      ],
+      "colliderCentreUnityXYZ": [
+        -6.0,
+        0.11136,
+        -16.0
+      ]
+    },
+    {
+      "kind": "Gold",
+      "fbxObject": "Opening_Gold",
+      "environmentAnchor": "CC_AirportAnchor_Medium_05",
+      "zone": "east transfer aisle",
+      "originBlenderXYZ": [
+        24.5,
+        14.6,
+        0.003
+      ],
+      "yawBlenderDegrees": -8,
+      "colliderCentreBlenderXYZ": [
+        24.5,
+        14.6,
+        0.12816
+      ],
+      "colliderCentreUnityXYZ": [
+        -24.5,
+        0.12816,
+        -14.6
+      ]
+    },
+    {
+      "kind": "Art",
+      "fbxObject": "Opening_Art",
+      "environmentAnchor": "CC_AirportAnchor_Large_01",
+      "zone": "flat team-lift bay",
+      "originBlenderXYZ": [
+        30.45,
+        9.4,
+        0.003
+      ],
+      "yawBlenderDegrees": 90,
+      "colliderCentreBlenderXYZ": [
+        30.45,
+        9.4,
+        0.32661
+      ],
+      "colliderCentreUnityXYZ": [
+        -30.45,
+        0.32661,
+        -9.4
+      ]
+    }
+  ],
+  "fullHalfCount": {
+    "Tobacco": 5,
+    "Cash": 5,
+    "Gold": 4,
+    "Art": 2
+  },
+  "dispatch": [
+    {
+      "order": 1,
+      "kind": "Tobacco",
+      "rackBlenderXYZ": [
+        14.55,
+        35.8,
+        0.691
+      ]
+    },
+    {
+      "order": 2,
+      "kind": "Cash",
+      "rackBlenderXYZ": [
+        20.4,
+        35.8,
+        0.691
+      ]
+    },
+    {
+      "order": 3,
+      "kind": "Gold",
+      "rackBlenderXYZ": [
+        14.55,
+        37.4,
+        0.691
+      ]
+    },
+    {
+      "order": 4,
+      "kind": "Cash",
+      "rackBlenderXYZ": [
+        20.4,
+        37.4,
+        0.691
+      ]
+    },
+    {
+      "order": 5,
+      "kind": "Tobacco",
+      "rackBlenderXYZ": [
+        14.55,
+        39.0,
+        0.691
+      ]
+    },
+    {
+      "order": 6,
+      "kind": "Gold",
+      "rackBlenderXYZ": [
+        20.4,
+        39.0,
+        0.691
+      ]
+    },
+    {
+      "order": 7,
+      "kind": "Art",
+      "rackBlenderXYZ": [
+        14.55,
+        40.6,
+        0.691
+      ]
+    },
+    {
+      "order": 8,
+      "kind": "Cash",
+      "rackBlenderXYZ": [
+        20.4,
+        40.6,
+        0.691
+      ]
+    },
+    {
+      "order": 9,
+      "kind": "Tobacco",
+      "rackBlenderXYZ": [
+        14.55,
+        42.2,
+        0.691
+      ]
+    },
+    {
+      "order": 10,
+      "kind": "Gold",
+      "rackBlenderXYZ": [
+        20.4,
+        42.2,
+        0.691
+      ]
+    },
+    {
+      "order": 11,
+      "kind": "Cash",
+      "rackBlenderXYZ": [
+        14.55,
+        43.8,
+        0.691
+      ]
+    },
+    {
+      "order": 12,
+      "kind": "Tobacco",
+      "rackBlenderXYZ": [
+        20.4,
+        43.8,
+        0.691
+      ]
+    }
+  ],
+  "carrierCentreDistancesToNearestStructureM": [
+    1.75,
+    3.55
+  ],
+  "beltInProgress": [
+    {
+      "order": 1,
+      "kind": "Tobacco",
+      "blenderXYZ": [
+        15.85,
+        7.2,
+        0.025
+      ]
+    },
+    {
+      "order": 2,
+      "kind": "Cash",
+      "blenderXYZ": [
+        17.65,
+        16.65,
+        0.025
+      ]
+    },
+    {
+      "order": 3,
+      "kind": "Gold",
+      "blenderXYZ": [
+        15.85,
+        25.35,
+        0.025
+      ]
+    }
+  ],
+  "layoutFbxState": "Opening: 4 in the playable area and 12 in the warehouse. Interactive cargo is supplied by the existing project prefabs."
+}

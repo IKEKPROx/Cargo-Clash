@@ -35,8 +35,8 @@ public static partial class CargoClashBuilder
     private const string RiverFlowAsset = RiverArt + "/Data/RiverFlowPath.asset";
     private const string RiverTreeLods = RiverArt + "/Data/tree_lod_bindings.json";
     private const string RiverMapPath = TextureDir + "/River_Map.png";
-    // RIVER FLATS is the fourth card on the level select.
-    private const string RiverCardName = "Level04_Card";
+    // RIVER FLATS's card on the level select.
+    private const string RiverCardName = "Card_River";
     private const float RiverHalfSeconds = 180f;
 
     /// <summary>Inside her boundary fence, whose posts stand at x ±29.6 and z -20.5 and 24.5.</summary>

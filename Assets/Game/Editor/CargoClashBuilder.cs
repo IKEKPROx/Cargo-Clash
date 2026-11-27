@@ -69,14 +69,23 @@ public static partial class CargoClashBuilder
         BuildNetworkRig();
         BuildLevelScene();
         BuildRiverScene(config.cargo);
-        // Importing her big model can unload the config, so it's loaded again. The river renders its own card, so the list
-        // picks it up now.
+        BuildAirportScene(config.cargo);
+        // Importing her big model can unload the config, so it's loaded again. The river and the airport render their own
+        // cards, so the list picks them up now.
         config = LoadOrCreate<GameConfig>(ResourcesDir + "/GameConfig.asset");
         config.levels = BuildLevelList();
         EditorUtility.SetDirty(config);
         AssetDatabase.SaveAssets();
         BuildTitleScene();
 
+        UpdateBuildScenes(config);
+        ReportNetworkHashes(config);
+        Debug.Log("Cargo Clash content built.");
+    }
+
+    /// <summary>The start scene, then every level that's ready, in the list's order.</summary>
+    private static void UpdateBuildScenes(GameConfig config)
+    {
         List<EditorBuildSettingsScene> scenes = new List<EditorBuildSettingsScene> { new EditorBuildSettingsScene(TitleScenePath, true) };
         foreach (LevelInfo level in config.levels)
         {
@@ -84,8 +93,6 @@ public static partial class CargoClashBuilder
         }
         EditorBuildSettings.scenes = scenes.ToArray();
         AssetDatabase.SaveAssets();
-        ReportNetworkHashes(config);
-        Debug.Log("Cargo Clash content built.");
     }
 
     private static void EnsureFolders()
@@ -327,6 +334,7 @@ public static partial class CargoClashBuilder
         root.AddComponent<NetworkObject>();
         root.AddComponent<MatchDirector>();
         root.AddComponent<RiverMatch>();
+        root.AddComponent<AirportMatch>();
         return SavePrefab(root, "MatchDirector");
     }
 

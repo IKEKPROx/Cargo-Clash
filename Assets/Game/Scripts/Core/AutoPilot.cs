@@ -50,6 +50,7 @@ namespace CargoClash
         private string mode;
         private int levelIndex;
         private bool riverTest;
+        private bool airportTest;
         private string address = "127.0.0.1";
         private string shotDirectory;
         private float shotEvery = 15f;
@@ -109,6 +110,7 @@ namespace CargoClash
                     case "-ccMode": mode = next; break;
                     case "-ccLevel": levelIndex = int.Parse(next); break;
                     case "-ccRiverTest": riverTest = true; break;
+                    case "-ccAirportTest": airportTest = true; break;
                     case "-ccAddress": address = next; break;
                     case "-ccHalfSeconds": HalfSecondsOverride = float.Parse(next); break;
                     case "-ccSmashScale": SmashScaleOverride = float.Parse(next); break;
@@ -172,6 +174,7 @@ namespace CargoClash
             rooms.SelectedLevel = levelIndex;
             if (!string.IsNullOrEmpty(shotDirectory) && mode != "menu") StartCoroutine(TakeScreenshots());
             if (riverTest) StartCoroutine(TestTheRiver());
+            if (airportTest) StartCoroutine(TestTheAirport());
             if (forceCoCarry) StartCoroutine(ForceCoCarry());
             if (uncapped) StartCoroutine(MeasureFrames());
             if (!string.IsNullOrEmpty(tourSpots)) StartCoroutine(TourTheLevel());
@@ -319,6 +322,8 @@ namespace CargoClash
             foreach (string spot in eyeTourSpots.Split(';'))
             {
                 string[] parts = spot.Split(',');
+                // An optional fourth number stands the eye on the floor below that height, under a deck or a roof.
+                FollowCamera.TestEyeFrom = parts.Length > 3 ? float.Parse(parts[3]) : 60f;
                 FollowCamera.TestEye = new Vector3(float.Parse(parts[0]), float.Parse(parts[1]), float.Parse(parts[2]));
                 yield return new WaitForSeconds(0.8f);
                 Shot();
@@ -1348,18 +1353,35 @@ namespace CargoClash
                 a.ServerStopActions();
                 b.ServerStopActions();
 
+                // On the airport the first half starts halfway up the parking ramp, to see the crate climb it.
+                AirportFacility airport = AirportFacility.Instance;
+                if (lastHalf == 1 && airport != null)
+                {
+                    Vector3 upper = GameObject.Find("CC_AirportAnchor_RampUpper").transform.position;
+                    Vector3 turn = GameObject.Find("CC_AirportAnchor_RampTurn").transform.position;
+                    Vector3 slope = Vector3.Lerp(upper, turn, 0.45f);
+                    float slopeFloor = CargoItem.GroundBelow(slope, out float slopeHeight) ? slopeHeight : slope.y;
+                    slope.y = slopeFloor + large.HalfExtents.y + 0.05f;
+                    large.transform.SetPositionAndRotation(slope, Quaternion.identity);
+                }
+
                 // The second half starts next to the truck, so the delivery itself gets tested every run.
                 if (lastHalf == 2)
                 {
                     LevelLayout layout = LevelLayout.Instance;
                     Vector3 nearTruck = layout.ClosestTruckZonePoint(Vector3.zero) + new Vector3(-10f, 0.55f, 0f);
+                    // The airport's truck is on the upper deck, with the deck running east of it.
+                    if (airport != null) nearTruck = layout.truckZone.position + Vector3.left * 4.8f + Vector3.up * (large.HalfExtents.y + 0.03f);
                     large.transform.SetPositionAndRotation(nearTruck, Quaternion.identity);
                 }
 
+                // The carriers stand on the crate's own floor, wherever that is.
                 Vector3 ground = large.transform.position;
-                ground.y = 0f;
-                a.TeleportRpc(ground + Vector3.left * 2f, Quaternion.identity);
-                b.TeleportRpc(ground + Vector3.right * 2f, Quaternion.identity);
+                ground.y = CargoItem.GroundBelow(ground, out float groundHeight) ? groundHeight + 0.02f : large.BottomHeight + 0.02f;
+                // On the airport two metres out puts someone over the shaft beside H01; stand at the handles instead.
+                float apart = airport != null ? large.Definition.coCarryReach + 0.1f : 2f;
+                a.TeleportRpc(ground + Vector3.left * apart, Quaternion.identity);
+                b.TeleportRpc(ground + Vector3.right * apart, Quaternion.identity);
                 yield return new WaitForSeconds(0.5f);
 
                 bool grabbedA = large.ServerTryGrab(a);
@@ -1370,6 +1392,8 @@ namespace CargoClash
                 Shot();
                 yield return new WaitForSeconds(2.5f);
                 Log($"COCARRY half={lastHalf} moved={Vector3.Distance(start, large.transform.position):0.0}m state={large.State.Value} a={a.transform.position} slotGap={Vector3.Distance(a.transform.position, b.transform.position):0.0}");
+                if (lastHalf == 1 && airport != null && large.State.Value == CargoState.Carried)
+                    Expect(Mathf.Abs(large.transform.position.y - start.y) > 0.25f, $"the crate follows the parking ramp's slope ({large.transform.position.y - start.y:+0.00;-0.00} m)");
             }
         }
 

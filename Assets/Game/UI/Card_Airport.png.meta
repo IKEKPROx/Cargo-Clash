@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 294ff343a699f41e79a9b13e11592dc4
+guid: b85c78697c07c4a499c62fc28168cadd
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 2433021419203039654
-    second: Level02_Card_0
+      213: -6151007285507215565
+    second: Card_Airport_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -115,7 +115,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Level02_Card_0
+      name: Card_Airport_0
       rect:
         serializedVersion: 2
         x: 0
@@ -130,8 +130,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 6a1938e0714d3c120800000000000000
-      internalID: 2433021419203039654
+      spriteID: 33fa088967b33aaa0800000000000000
+      internalID: -6151007285507215565
       vertices: []
       indices: 
       edges: []

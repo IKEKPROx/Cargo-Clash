@@ -18,6 +18,8 @@ namespace CargoClash
 
         /// <summary>While set, the camera stands here at eye height and looks this way (x, z, yaw). Only the automatic tests use it.</summary>
         public static Vector3? TestEye;
+        /// <summary>The test eye stands on the first floor below this height (the airport's lower floor is under its deck).</summary>
+        public static float TestEyeFrom = 60f;
 
         [Header("Parts")]
         public Camera view;
@@ -188,7 +190,7 @@ namespace CargoClash
             {
                 Vector3 eye = TestEye.Value;
                 // Standing on whatever ground is there: not every level is flat.
-                float ground = Physics.Raycast(new Vector3(eye.x, 60f, eye.y), Vector3.down, out RaycastHit floor, 120f,
+                float ground = Physics.Raycast(new Vector3(eye.x, TestEyeFrom, eye.y), Vector3.down, out RaycastHit floor, 120f,
                     GameLayers.LevelMask, QueryTriggerInteraction.Ignore) ? floor.point.y : 0f;
                 position = new Vector3(eye.x, ground + config.eyeHeight, eye.y);
                 rotation = Quaternion.Euler(4f, eye.z, 0f);

@@ -42,6 +42,17 @@ namespace CargoClash
         public float Height => halfExtents.y * 2f;
         public Vector3 HalfExtents => halfExtents;
 
+        /// <summary>The height of its lowest corner, however it lies.</summary>
+        public float BottomHeight
+        {
+            get
+            {
+                Vector3 up = transform.InverseTransformDirection(Vector3.up);
+                return transform.position.y - (Mathf.Abs(up.x) * halfExtents.x + Mathf.Abs(up.y) * halfExtents.y
+                    + Mathf.Abs(up.z) * halfExtents.z);
+            }
+        }
+
         /// <summary>From 0 when just picked up to 1 once it has come up into the carrier's hands.</summary>
         public float CarryBlend { get; private set; }
 
@@ -545,6 +556,8 @@ namespace CargoClash
             }
 
             if (definition.requiredCarriers > 1 && a != null && b != null) MoveWithCarriers(a, b, deltaTime);
+            // A carrier stepped off the airport's upper deck, and both let go.
+            if (State.Value != CargoState.Carried) return;
 
             MatchDirector director = MatchDirector.Instance;
             if (director != null && director.Phase.Value == MatchPhase.Playing) CheckDeposit(a, b);
@@ -556,6 +569,13 @@ namespace CargoClash
         /// </summary>
         private void MoveWithCarriers(PlayerAvatar a, PlayerAvatar b, float deltaTime)
         {
+            AirportFacility airport = AirportFacility.Instance;
+            if (airport != null)
+            {
+                MoveOnDecks(a, b, deltaTime, airport);
+                return;
+            }
+
             Vector2 average = (a.ServerCoCarryInput + b.ServerCoCarryInput) * 0.5f;
             if (average.sqrMagnitude < 0.0025f) return;
 
@@ -574,6 +594,54 @@ namespace CargoClash
                 if (Physics.CheckSphere(feet + Vector3.up * 0.9f, 0.3f, 1 << GameLayers.PlayerBlock, QueryTriggerInteraction.Ignore)) return;
             }
             transform.position = next;
+        }
+
+        /// <summary>
+        /// On the airport, floors stand over floors: the crate keeps its carrying height over the highest floor under its
+        /// middle and both carriers, never goes where any of the three would step off into the air (the deck's edge, the
+        /// shaft over B03), and rides the belt with its carriers. If a carrier ends up on the upper deck with nothing
+        /// underfoot anyway, both let go.
+        /// </summary>
+        private void MoveOnDecks(PlayerAvatar a, PlayerAvatar b, float deltaTime, AirportFacility airport)
+        {
+            if (airport.LostFooting(a.transform.position) || airport.LostFooting(b.transform.position))
+            {
+                ServerDropAll(Vector3.zero);
+                return;
+            }
+
+            Vector2 average = (a.ServerCoCarryInput + b.ServerCoCarryInput) * 0.5f;
+            Vector3 velocity = average.sqrMagnitude < 0.0025f ? Vector3.zero
+                : new Vector3(average.x, 0f, average.y) * (config.runSpeed * definition.carrySpeedMultiplier);
+            if (AirportFacility.BeltRunning)
+                velocity += (airport.BeltVelocityAt(a.transform.position) + airport.BeltVelocityAt(b.transform.position)) * 0.5f;
+            if (velocity.sqrMagnitude < 0.0001f) return;
+
+            Vector3 offset = velocity * deltaTime;
+            float lift = definition.coCarryHeight > 0f ? definition.coCarryHeight : halfExtents.y + 0.02f;
+            float floorNow = transform.position.y - lift;
+            Vector3 middle = transform.position + offset;
+            middle.y = floorNow;
+            Vector3 aFeet = GrabPointWorld(a) + offset;
+            Vector3 bFeet = GrabPointWorld(b) + offset;
+            aFeet.y = bFeet.y = floorNow;
+            if (!airport.TryCarryFloor(middle, out RaycastHit under) || !airport.TryCarryFloor(aFeet, out RaycastHit underA)
+                || !airport.TryCarryFloor(bFeet, out RaycastHit underB)) return;
+
+            float floor = Mathf.Max(under.point.y, underA.point.y, underB.point.y);
+            Vector3 next = transform.position + offset;
+            next.y = Mathf.MoveTowards(transform.position.y, floor + lift, 6f * deltaTime);
+            if (Physics.CheckBox(next + Vector3.up * 0.06f, halfExtents * 0.9f, Quaternion.identity, GameLayers.LevelMask, QueryTriggerInteraction.Ignore)) return;
+            transform.position = next;
+        }
+
+        /// <summary>B03 carries loose cargo along with it (host only).</summary>
+        public void ServerConvey(Vector3 direction, float speed, float velocityChange)
+        {
+            if (!IsServer || State.Value != CargoState.Ground || body.isKinematic) return;
+            Vector3 velocity = body.linearVelocity;
+            float along = Vector3.Dot(velocity, direction);
+            body.linearVelocity = velocity + direction * (Mathf.MoveTowards(along, speed, velocityChange) - along);
         }
 
         /// <summary>The level's surface under a point, looking down from a little above it.</summary>
@@ -670,6 +738,7 @@ namespace CargoClash
                 }
             }
             avatar.ServerSetCarry(this);
+            if (AutoPilot.Active) AutoPilot.Log($"PICKUP {definition.kind} by={avatar.DisplayName} side={avatar.Side} at=({transform.position.x:0},{transform.position.y:0},{transform.position.z:0})");
             return true;
         }
 

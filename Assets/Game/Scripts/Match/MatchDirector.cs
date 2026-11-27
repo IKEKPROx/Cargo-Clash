@@ -114,6 +114,8 @@ namespace CargoClash
                 ResetField();
                 yield return RunPhase(MatchPhase.HalfIntro, config.halfIntroSeconds);
                 halfStartedAt = Now;
+                AirportMatch airport = AirportMatch.Instance;
+                if (airport != null) airport.ServerStartHalf(Now, config.EffectiveHalfSeconds);
                 HelicopterArrivesAt.Value = Now + config.EffectiveHalfSeconds + config.helicopterArrivalDelay;
                 yield return RunPhase(MatchPhase.Playing, config.EffectiveHalfSeconds);
                 foreach (PlayerAvatar avatar in PlayerAvatar.All) avatar.ServerStopActions();
@@ -134,6 +136,7 @@ namespace CargoClash
             PhaseEndsAt.Value = Now + seconds;
             while (Now < PhaseEndsAt.Value)
             {
+                if (phase == MatchPhase.Playing) DispatchFromWarehouse();
                 // A half has nothing left to play once every piece of cargo is saved or smashed.
                 if (phase == MatchPhase.Playing && AllCargoResolved())
                 {
@@ -146,6 +149,9 @@ namespace CargoClash
 
         private bool AllCargoResolved()
         {
+            // The airport's warehouse still has cases to send out.
+            AirportMatch airport = AirportMatch.Instance;
+            if (airport != null && airport.HasPending) return false;
             foreach (CargoItem cargo in CargoItem.All)
             {
                 if (cargo.IsPlank) continue;
@@ -201,9 +207,11 @@ namespace CargoClash
             if (layout.PlacesEachKind) SpawnEachKind(thirds);
             else SpawnBySize(thirds);
 
-            // The river level's planks and catcher start over too.
+            // The river level's planks and catcher start over too, and the airport's door and warehouse.
             RiverMatch river = RiverMatch.Instance;
             if (river != null) river.ServerResetHalf();
+            AirportMatch airport = AirportMatch.Instance;
+            if (airport != null) airport.ServerResetHalf(thirds);
 
             int orangeIndex = 0;
             int blueIndex = 0;
@@ -231,6 +239,19 @@ namespace CargoClash
                     halfTotal += definition.value;
                 }
             }
+        }
+
+        /// <summary>The airport's next case out of the warehouse, when it's due and the belt's mouth is clear.</summary>
+        private void DispatchFromWarehouse()
+        {
+            AirportMatch airport = AirportMatch.Instance;
+            if (airport == null) return;
+            CargoDefinition definition = airport.ServerTryDispatch(Now, out Vector3 position);
+            if (definition == null) return;
+            GameObject instance = Instantiate(definition.prefab, position, Quaternion.LookRotation(AirportFacility.Instance.BeltDirection));
+            instance.GetComponent<NetworkObject>().Spawn(true);
+            halfTotal += definition.value;
+            AutoPilot.Log($"AIRPORT_DISPATCH half={Half.Value} {definition.kind} pending={airport.Pending} left={SecondsLeft:0.0}");
         }
 
         private void SpawnBySize(int thirds)
@@ -279,6 +300,8 @@ namespace CargoClash
         public void ServerOnDestroyed(CargoItem cargo, List<PlayerAvatar> smashers)
         {
             int value = cargo.Definition.value;
+            Vector3 at = cargo.transform.position;
+            AutoPilot.Log($"DESTROYED {cargo.Definition.kind} at=({at.x:0},{at.y:0},{at.z:0}) left={SecondsLeft:0}");
             AddScore(TeamOn(Side.Interrupter), value);
             halfDestroyed += value;
             float share = smashers.Count > 0 ? (float)value / smashers.Count : 0f;
@@ -311,15 +334,16 @@ namespace CargoClash
             if (stats.TryGetValue(attacker, out PlayerStats entry)) entry.Hits++;
         }
 
+        /// <summary>No attacker for a fall off the airport's upper deck.</summary>
         public void ServerOnKnockedOut(PlayerAvatar attacker, PlayerAvatar victim, Weapon weapon, bool droppedCargo)
         {
-            if (stats.TryGetValue(attacker, out PlayerStats winner)) winner.KnockOuts++;
+            if (attacker != null && stats.TryGetValue(attacker, out PlayerStats winner)) winner.KnockOuts++;
             if (stats.TryGetValue(victim, out PlayerStats loser))
             {
                 loser.TimesOut++;
                 if (droppedCargo) loser.Drops++;
             }
-            KnockOutRpc(attacker.NetworkObjectId, victim.NetworkObjectId, weapon);
+            KnockOutRpc(attacker != null ? attacker.NetworkObjectId : NetIds.None, victim.NetworkObjectId, weapon);
         }
 
         /// <summary>Back at their own side's start for this half.</summary>
@@ -347,7 +371,9 @@ namespace CargoClash
         {
             int rescued = HalfRescued.Value;
             int untouched = halfTotal - rescued - halfDestroyed - halfLost;
-            AutoPilot.Log($"HALF {half} seconds={Now - halfStartedAt:0} collectors={CollectorTeam.Value} rescued={rescued} destroyed={halfDestroyed} lost={halfLost} untouched={untouched} total={halfTotal} orange={OrangeScore.Value} blue={BlueScore.Value}");
+            AirportMatch airport = AirportMatch.Instance;
+            string warehouse = airport != null ? $" sentOut={airport.Dispatched.Value}/{airport.Queued.Value}" : "";
+            AutoPilot.Log($"HALF {half} seconds={Now - halfStartedAt:0} collectors={CollectorTeam.Value} rescued={rescued} destroyed={halfDestroyed} lost={halfLost} untouched={untouched} total={halfTotal} orange={OrangeScore.Value} blue={BlueScore.Value}{warehouse}");
             csv.AppendLine($"half,{half},{Now - halfStartedAt:0},{CollectorTeam.Value},{rescued},{halfDestroyed},{untouched},{halfTotal},{halfLost}");
         }
 
@@ -428,8 +454,9 @@ namespace CargoClash
         {
             PlayerAvatar attacker = PlayerAvatar.Find(attackerId);
             PlayerAvatar victim = PlayerAvatar.Find(victimId);
-            if (attacker == null || victim == null) return;
-            AutoPilot.Log($"KNOCKOUT {attacker.DisplayName} on {victim.DisplayName} with={weapon}");
+            if (victim == null || (attacker == null && weapon != Weapon.Fall)) return;
+            AutoPilot.Log(weapon == Weapon.Fall ? $"KNOCKOUT {victim.DisplayName} with=Fall"
+                : $"KNOCKOUT {attacker.DisplayName} on {victim.DisplayName} with={weapon}");
             MatchHud hud = MatchHud.Instance;
             if (hud != null) hud.ShowKnockOut(attacker, victim, weapon);
         }

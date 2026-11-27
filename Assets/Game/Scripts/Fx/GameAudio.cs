@@ -13,6 +13,7 @@ namespace CargoClash
         private const float DuckedMusicVolume = 0.16f;
         private const float HearFullyWithin = 5f;
         private const float HearNothingBeyond = 55f;
+        private const float MusicFadeSeconds = 0.25f;
 
         private static GameAudio instance;
 
@@ -24,6 +25,10 @@ namespace CargoClash
         private readonly AudioSource[] placed = new AudioSource[8];
         private int nextPlaced;
         private bool ducked;
+        // A level's timed match music: which half it started for, whether it's in its fast part, and its fade-in after a jump.
+        private int timedHalf;
+        private bool timedSprint;
+        private float musicFade = 1f;
 
         private void Awake()
         {
@@ -50,7 +55,7 @@ namespace CargoClash
         public static void ApplyVolumes()
         {
             if (instance == null) return;
-            instance.music.volume = (instance.ducked ? DuckedMusicVolume : MusicVolume) * GameSettings.MusicVolume;
+            instance.music.volume = (instance.ducked ? DuckedMusicVolume : MusicVolume) * GameSettings.MusicVolume * instance.musicFade;
             instance.effects.volume = GameSettings.EffectsVolume;
             foreach (AudioSource source in instance.placed) source.volume = GameSettings.EffectsVolume;
         }
@@ -101,6 +106,13 @@ namespace CargoClash
         {
             if (instance == null) return;
             AudioSource source = instance.music;
+            instance.timedHalf = 0;
+            if (instance.musicFade < 1f)
+            {
+                instance.musicFade = 1f;
+                ApplyVolumes();
+            }
+            source.loop = true;
             source.pitch = pitch;
             if (string.IsNullOrEmpty(clipName))
             {
@@ -111,6 +123,70 @@ namespace CargoClash
             if (source.clip == clip && source.isPlaying) return;
             source.clip = clip;
             source.Play();
+        }
+
+        /// <summary>
+        /// A level's own match music (LevelLayout.matchMusic), timed to the half: it starts from the top each half, and the
+        /// final stretch jumps to its fast part if a short half didn't get there by itself. A jump fades in.
+        /// </summary>
+        public static void SetTimedMusic(AudioClip clip, int half, float position, float sprintStart, bool sprint)
+        {
+            if (instance == null || clip == null) return;
+            GameAudio audio = instance;
+            AudioSource source = audio.music;
+            bool newHalf = audio.timedHalf != half || source.clip != clip;
+            bool sectionChanged = audio.timedSprint != sprint;
+            bool wrapped = !sprint && source.time >= sprintStart && position < sprintStart - 0.25f;
+            bool seek = (sectionChanged || wrapped) && Mathf.Abs(source.time - position) > 0.30f;
+            if (audio.ducked)
+            {
+                audio.ducked = false;
+                ApplyVolumes();
+            }
+            if (newHalf)
+            {
+                source.clip = clip;
+                source.loop = false;
+                source.pitch = 1f;
+                source.time = position;
+                source.Play();
+                audio.musicFade = 0f;
+            }
+            else if (seek)
+            {
+                source.time = position;
+                if (!source.isPlaying) source.Play();
+                audio.musicFade = 0f;
+            }
+            if (newHalf || sectionChanged)
+                AutoPilot.Log($"TIMED_MUSIC {clip.name} half={half} sprint={sprint} position={position:0.00} seek={!newHalf && seek}");
+            audio.timedHalf = half;
+            audio.timedSprint = sprint;
+        }
+
+        /// <summary>A level's music for loading, between the halves and over the results (LevelLayout.matchInterlude).</summary>
+        public static void SetInterludeMusic(AudioClip clip, bool ducked)
+        {
+            if (instance == null || clip == null) return;
+            GameAudio audio = instance;
+            AudioSource source = audio.music;
+            audio.timedHalf = 0;
+            audio.musicFade = 1f;
+            audio.ducked = ducked;
+            ApplyVolumes();
+            source.loop = true;
+            source.pitch = 1f;
+            if (source.clip == clip && source.isPlaying) return;
+            source.clip = clip;
+            source.Play();
+            AutoPilot.Log($"LEVEL_INTERLUDE {clip.name}");
+        }
+
+        private void Update()
+        {
+            if (musicFade >= 1f) return;
+            musicFade = Mathf.MoveTowards(musicFade, 1f, Time.unscaledDeltaTime / MusicFadeSeconds);
+            ApplyVolumes();
         }
 
         /// <summary>Turns the music down so something else can be heard over it.</summary>

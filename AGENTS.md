@@ -31,6 +31,7 @@
 | 角色动作 | 各电脑按同步下来的状态自己播放，不影响规则 | `CharacterVisual` |
 | 第一人称的手、货物裂开和碎块 | 只在本地播放，不影响规则，也不走网络 | `FirstPersonRig`、`CargoItem`、`CargoPieces` |
 | 河流关卡：水流推货、漂出场地算流失、木屋放木板、插板、木板到时冲走 | 主机。挡板每个槽插进去的时间是 `NetworkList`，各电脑按它显示木板新旧 | `RiverMatch`（挂在 MatchDirector 的网络物体上） |
+| 机场关卡：铁门、仓库逐件出货、从二楼摔下 | 主机。门的状态、这半场仓库要出几件、出了几件是 `NetworkVariable`，各电脑按它转门、摆仓库里待发的货；传送带按比赛时钟各自转，带面推人由拥有者算、推散货由主机算；爬梯子和滑风管由拥有者沿路线自己走（主机先确认能走）；摔下楼由主机看脚落在哪里判定 | `AirportMatch`（挂在 MatchDirector 的网络物体上）、场景里的 `AirportFacility`、`PlayerAvatar.UseAirportRpc`、`ServerTrackAirportFall` |
 
 改联网逻辑时，先想清楚这段代码在哪台电脑上跑。写 `NetworkVariable` 和判定规则都只在主机上做。
 
@@ -89,7 +90,7 @@
 
 人物、锤子和收集器的原件是 Astra 的 Blender 文件，在仓库外面的 `game design/独立建模/`，不进 Git。`make_crew.py` 从那里读（不在旁边就加 `-- --source 文件夹`），写出 `Crew_Short.fbx`、`Crew_Medium.fbx`、`Crew_Tall.fbx`。她的原件每人约 45 万个三角面，脚本去掉缝线和拉链齿，按颜色分开减面到每人约 2 万（帽子和眼镜另算，全部加起来约 2.7 万），把她的 35 种颜色并成游戏的二十来种（`COLOURS`），`ClothPrimary` 换成队伍颜色。
 
-- **画出来的外观是另一套文件。** `Crew_Short.fbx` 这三个只管骨架、动作和挂点；游戏里看到的网格是 `Crew_*_Visual.fbx`，现在是 Astra 自己精修后给的（`独立建模/三体型人物精修_v23/FBX`，每人身体约 13–17 万个三角面，带布料的 UV）。她出了新版本：原样复制进 `Assets/Game/Models`，保留 `.meta`，再运行 `Tools > Cargo Clash > Apply Crew Appearance`（`CargoClashVisualRefinement.ApplyCrew`）。它先逐根骨骼核对绑定矩阵和捏脸形状键，对不上就停下；再把网格、骨骼列表和材质换到 `Avatar.prefab`、开始场景（CREW 页和主菜单车上的三个人）和两关的第一人称检视手臂上。不要运行 `refine_visuals.py -- --crew`，它会用她的旧原件把这些文件盖掉。
+- **画出来的外观是另一套文件。** `Crew_Short.fbx` 这三个只管骨架、动作和挂点；游戏里看到的网格是 `Crew_*_Visual.fbx`，现在是 Astra 自己精修后给的（`独立建模/三体型人物精修_v23/FBX`，每人身体约 13–17 万个三角面，带布料的 UV）。她出了新版本：原样复制进 `Assets/Game/Models`，保留 `.meta`，再运行 `Tools > Cargo Clash > Apply Crew Appearance`（`CargoClashVisualRefinement.ApplyCrew`）。它先逐根骨骼核对绑定矩阵和捏脸形状键，对不上就停下；再把网格、骨骼列表和材质换到 `Avatar.prefab`、开始场景（CREW 页和主菜单车上的三个人）和每一关的第一人称检视手臂上（关卡场景列在 `CrewScenes`，新开一关要加进去）。不要运行 `refine_visuals.py -- --crew`，它会用她的旧原件把这些文件盖掉。
   - **布料：** 她的衣服用了帆布斜纹和棉针织两张法线贴图（`Assets/Game/Textures/Crew_*_Normal.png`，强度照她的节点）。只有身体有 UV，所以贴图只放在身体专用的材质上（`Crew_Fabric_Orange`/`Blue`、`Porter_Shirt_Fabric`、`Wrecker_Shirt_Fabric`、`Wrecker_Jacket_Fabric`）；帽子、收集器和第一人称的袖子没有 UV，还用原来的材质，放上法线贴图会整片偏色。蓝队换色时 `GameConfig.orangeFabric` 跟着换成 `blueFabric`。
   - **捏脸形状键：** 有了 UV，Unity 给每个形状键都重算切线，全身几乎每个顶点都存了一点切线差，形状键大了 20 倍，帧率掉了一半。`CrewBlendShapeCleanup`（导入后处理）把位移不到 0.01 毫米、法线几乎不变的顶点从形状键里去掉，真正会动的顶点原样保留，导入日志里有 `[Crew]` 的统计。
 - **三种体型，两套衣服。** 同一身高的搬运工（v05，运输公司的人）和破坏者（v06，对手公司的人）骨架一样，所以每种体型一个文件、一套动作，里面有 `Porter` 和 `Wrecker` 两套衣服。正方穿搬运工的，反方穿破坏者的，中场换边时 `CharacterVisual` 换衣服。手套用 v06 的（她在 v06 改正了手的绑定方向），两套衣服共用。
@@ -184,11 +185,13 @@ Astra 的四种货物（`独立建模/互动货物_v08`）：烟盒、现金箱�
 
 开始场景是 `Assets/CargoRover/Scenes/CargoRover.unity`，由 `CargoClashBuilder.BuildTitleScene` 生成，再由 `Tools > Cargo Clash > Apply Menu Presentation`（`CargoClashMenuPresentation`）加上主菜单后面的循环：能看见车内的货车（`make_menu_truck.py`）、三个人的动作（`make_menu_animation.py` 写的 `Menu_*.fbx`）和 `MenuLoop.json`（方向盘、车的晃动、表情、镜头），由 `MenuDeliveryLoop` 播放。改这段看交接说明第 21 步，不打包看效果用 `MenuLoopPreview`。页面的跳转在 `TitleFlow`：打开就是主菜单 → 选关 → 练习或大厅。加入别人的房间不选关，由主机决定。
 
-**关卡列表**在 `GameConfig.levels`，由 `CargoClashBuilder.BuildLevelList` 写入。第 1 个是教学关（`Level01`），第 4 个是河流关卡（`LevelRiver`，卡片由生成脚本渲染），其余是占位：`scene` 为空的关卡，卡片是锁着的。一关可以有自己的半场时长（`LevelLayout.halfSeconds`）和按种类摆的货物点（`LevelLayout.kindSpots`）。开放一关要做三件事：
+**关卡列表**在 `GameConfig.levels`，由 `CargoClashBuilder.BuildLevelList` 写入，一共 5 张卡片：教学关（`Level01`）、河流关卡（`LevelRiver`）、机场（`LevelAirport`），后面两张是还在做的遗迹庭院（组员 ChenHaoyu311 的 `codex/ruin-v10-layout` 分支）和高地：`scene` 为空的关卡，卡片是锁着的。选关页每行 3 张，没排满的一行居中。一关可以有自己的半场时长（`LevelLayout.halfSeconds`）、按种类摆的货物点（`LevelLayout.kindSpots`）和自己的比赛音乐（`LevelLayout.matchMusic`）。开放一关要做三件事：
 
-1. 在 `Assets/Game/Scenes` 做好场景（可以复制 `Level01.unity`，`LevelLayout` 和 `MatchHud` 都要有）。
-2. 在 `BuildLevelList` 填上它的 `scene`，运行生成脚本，它会自动进 Build Settings。如果不想再运行生成脚本，就直接改 `GameConfig` 资源，并手动把场景加进 Build Settings。
-3. 换掉卡片图。`Assets/Game/UI/LevelNN_Card.png`，928×500。占位图是 `make_ui.py` 画的，教学关那张是实机截图：窗口运行时加 `-ccHideUi -ccShotDir 目录` 拍下来，再裁成这个比例。
+1. 在 `Assets/Game/Scenes` 做好场景（照 `CargoClashBuilder.River.cs` 或 `.Airport.cs` 写一个生成脚本，`LevelLayout` 和 `MatchHud` 都要有）。
+2. 在 `BuildLevelList` 填上它的 `scene`，再写进 `GameConfig` 和 Build Settings：机场的生成命令就是这样做的（`BuildAirportLevel` 末尾）。**不要为此运行 `Build Game Content`**，它会盖掉第 18 步以后的人物、菜单和界面。
+3. 卡片图是 `Assets/Game/UI/Card_*.png`，928×500：河流和机场的由生成脚本从场景渲染，教学关那张是实机截图（窗口运行时加 `-ccHideUi -ccShotDir 目录` 拍下来，再裁成这个比例），遗迹庭院那张是它分支里的 `RuinCard.png`，高地的占位图是 `make_ui.py -- --only cards` 画的。
+
+列表顺序改了以后，`-ccLevel` 的编号跟着变（现在 1 是河流，2 是机场），测试命令和文档要一起改。
 
 开局时主机把选的关卡放进 `SessionRoster.Level`，加载场景都从这里取，不要再写死场景名。
 
@@ -229,7 +232,23 @@ Astra 的雨天河流关卡（`game design/独立建模/雨天河流关卡_v16_�
 - **不要开雾：** 她的着色器在像素阶段拿深度缓冲的值算雾（`RiverWeatherCommon.hlsl`），一开雾她的东西全变成雾的颜色。
 - **木板**是 `CargoKind.Plank` 的货物（`Cargo_Plank`），拿、放、漂和联网都走货物那一套，但不计分、不能砸、送到货车不算（`CargoItem.IsPlank`）。第一人称横在身前托着（`FirstPersonRig.PlankPoses`），别人看到的是托在两个手掌上（`CharacterVisual` 用托烟盒的动作）。
 - **两人合搬**的箱子和人跟着地面高度走（`CargoItem.MoveWithCarriers`、`PlayerAvatar.TickCoCarry`），过不去的深水也挡住。教学关是平地，以前看不出来。
-- 测试：`-ccLevel 3` 选这一关，`-ccRiverTest` 跑河流专项（主机上真的拿木板去插、看货被挡住、等木板冲走、货流失不计分、渡口和深水、机器人过河的路线、两人合搬过坡；客户端上检查看到的木板和挡板对不对）。
+- 测试：`-ccLevel 1` 选这一关，`-ccRiverTest` 跑河流专项（主机上真的拿木板去插、看货被挡住、等木板冲走、货流失不计分、渡口和深水、机器人过河的路线、两人合搬过坡；客户端上检查看到的木板和挡板对不对）。
+
+## 机场关卡（AIRPORT）
+
+组员做的 Map3 de_airport（仓库外 `game design/独立建模/Map3 de_airport/`，玩法见里面的 `玩法与设计说明.md`），Astra 又精修了四轮（同一文件夹的 `模型精修01`–`04`）。货车在二楼停机坪 H01 故障，送货方从一楼 B03 出货口接货，搬上二楼送进 H01；每半场 60 秒，比赛音乐也是 60 秒。
+
+- **文件。** `Assets/Game/Models/Airport/`：Astra 精修04 的 `AirportEnvironment.fbx`、`AirportPalette.json`、`AirportDistrictHorizon.png`、`AirportCargoLayout.json`，组员的背景着色器、两首音乐和材质（保留他的 `.meta`）。她出了新版本，就把这几个文件拷过来覆盖（带 `.meta`），再运行下面的生成命令。组员交付里的场景、导航网格和 `Airport-Gameplay.patch` 是按旧的 `main` 做的，没有用：规则已经手工移植进这里的代码。
+- **场景** `Assets/Game/Scenes/LevelAirport.unity` 由 `CargoClashBuilder.Airport.cs` 生成，不要手改：`Tools > Cargo Clash > Build Airport Level`（`-executeMethod CargoClashBuilder.BuildAirportLevel`），它只动机场、MatchDirector 预制体上的 `AirportMatch`、关卡列表和 Build Settings，然后再运行 `Apply Crew Appearance` 和 `Apply Menu Pages`。模型里的 `CC_AirportAnchor_*` 是组员留的定位点（出生点、门、梯子、风管、传送带两端、H01、小地图范围），碰撞按组员列的名字前缀加（`AirportSolidPrefixes`），Astra 精修04 新加的、站在场地里的设备另外加了碰撞盒（`AirportPropBoxes`）。生成时会检查 H01 只在二楼算、传送带和风管、每个出生点和开局货物都走得到 H01，日志里看 `[Builder] Airport`。
+- **货物。** 用游戏的四种货：开局每种一件，按 Astra 的布局放（`AirportCargoLayout.json` 的 `opening`，烟盒在传送带尽头、现金在西边梯子旁、金条在东边、鹅箱在坡前），其余 12 件按她的顺序（`dispatch`）从仓库逐件送上 B03，前三分之二个半场里送完；出口两条道都被占着就等。人少时只送队列的前一部分。一个半场共 16 件、420 分，和组员的设计（小件 10 件 10 分、中件 4 件 30 分、大件 2 件 100 分）总分一样。仓库里的长凳上摆着还没送出的货，送一件少一件（`AirportFacility.queueDisplays`）。
+- **铁门**在梯子间和二楼之间，两队都能按 E，门往离按的人远的那边开，开着时两边都能关，锤子砸不坏，每半场开始关上。
+- **梯子和风管**走进去就自动开始，不用按键（`AirportFacility.FindTraversal`），爬梯子可以抱着一人搬的货，两人合搬的大件不行。风管只能从二楼往下滑，一次一个人。爬和滑的时候打不到人，也不会被打。
+- **传送带**比赛进行时把站在上面的人和地上的散货往外送。从二楼直接掉下来，落在带上没事，落在别的地面算摔倒淘汰（`Weapon.Fall`，没有人得击倒分，战报写“摔下楼了”），等重生。
+- **H01 交货区**有高度限制（`LevelLayout.truckZoneHalfHeight`），站在它正下方的一楼不算。机器人判断到达时也看高度（`BotBrain.Steer`）。
+- **机器人。** 梯子（双向）和风管（只往下）是机器人地图上的连接（`NavMeshLink`，区域 `AirportFacility.TraversalArea`，合搬时不走），烘焙时铁门当开着，机器人走到门前门关着就按 E（`BotBrain.OpenDoorIfShut`）。机场的地形偏向破坏方（出生点在梯子间，挨着仓库出货口），所以机器人另有几项只在机场用的数值：`GameConfig` 的 `airportInterrupterAggression`、`airportInterrupterSmashShare`、`airportLargeCargoInterest`，楼上楼下按绕路算远近（`BotBrain.Apart`）。调平衡改这几项就行，测的时候看 `DESTROYED`、`PICKUP`、`RESCUED` 日志。
+- **两人合搬**在机场换成 `CargoItem.MoveOnDecks`：箱子中间和两个人脚下都要有地面才能走，所以不会被抬出二楼边缘或竖井口，过坡时跟着最高的地面走。
+- **音乐。** `LevelLayout.matchMusic`（60 秒，45 秒起是加速段）按半场的时间播，半场短于 60 秒时最后 15 秒会跳到加速段；进场、半场之间、直升机和结算播 `matchInterlude`（`MatchHud.UpdateMusic`、`GameAudio.SetTimedMusic`）。
+- 测试：`-ccLevel 2` 选这一关，`-ccAirportTest` 跑机场专项（主机上用真实按键：两边开关门、传送带送货送人、抱着金条上下梯子、滑风管、风管出口不能往上爬、从二楼掉到传送带没事、掉到地面被淘汰、下半场门重新关上、锤子砸不坏门）。`-ccForceCoCarry` 在机场上半场把鹅箱放到坡道上，看两人合搬能上坡。
 
 ## 怎么验证
 
@@ -256,9 +275,10 @@ grep CCTEST /tmp/cargo-match.log
 | 参数 | 作用 |
 |---|---|
 | `-ccMode host` / `client` | 开局域网主机 / 加入，配合 `-ccAddress`、`-ccExpectClients` 测两台机器 |
-| `-ccLevel 编号` | 练习和开房选第几关（从 0 数），比如 3 是河流关卡。不加就是教学关 |
+| `-ccLevel 编号` | 练习和开房选第几关（从 0 数），1 是河流关卡，2 是机场。不加就是教学关 |
 | `-ccLanguage zh` | 这一局用中文，不保存。测试默认是英文 |
-| `-ccRiverTest` | 河流关卡的专项测试，见上面“河流关卡”。配合 `-ccLevel 3`，加 `-ccShotDir` 会拍拿木板和挡板的照片 |
+| `-ccRiverTest` | 河流关卡的专项测试，见上面“河流关卡”。配合 `-ccLevel 1`，加 `-ccShotDir` 会拍拿木板和挡板的照片 |
+| `-ccAirportTest` | 机场的专项测试，见上面“机场关卡”。配合 `-ccLevel 2`，不要加 `-ccBotLocal`（它自己操作本地玩家），加 `-ccShotDir` 会拍开门、梯子顶和摔倒 |
 | `-ccMode menu` | 用真实的点击走一遍开始页面的每一屏并拍照，同时检查锁着的关卡点不进去、加入失败有提示，CREW 页的按钮、滑块、预览和改了之后能传到房间，以及设置页的每一项（垂直同步、帧率上限、画质、音量、鼠标反转、灵敏度、按 APPLY 改窗口、切到中文再切回来、Esc 退出）。配合 `-ccShotDir`，窗口运行。它会改窗口大小，跑之前先存一份 PlayerPrefs（见下面） |
 | `-ccShotDir 目录`、`-ccShotEvery 秒` | 窗口运行时定时截图，用来检查画面 |
 | `-ccSmashScale 倍数` | 临时改砸货时间，用来比较平衡 |
@@ -273,7 +293,7 @@ grep CCTEST /tmp/cargo-match.log
 | `-ccSwingBurst 秒` | 配合 `-ccDriveInput`、`-ccShotDir` 和 `-ccView first`：每半场按这个间隔连拍跑步、站立、挥击、检视、右键，拿货和合搬时也拍，用来看手的动作 |
 | `-ccView first` / `third` | 这一局用第一人称或肩后视角，不保存。不加就用上次玩时存下的视角，截图时记得加 |
 | `-ccInspectShots 秒` | 配合 `-ccShotDir`：机器人不动，依次拿起烟盒、现金、金条，走几步，按 F 检视，再走开；最后去开鹅箱。检视时按这个间隔截图，并检查检视会自己结束、箱子回到手里、走动会打断。窗口运行 |
-| `-ccEyeTour "x,z,yaw;x,z,yaw"` | 站在这些位置平视并截图，用来检查场景从地面看是什么样 |
+| `-ccEyeTour "x,z,yaw;x,z,yaw"` | 站在这些位置平视并截图，用来检查场景从地面看是什么样。可以加第四个数 `x,z,yaw,高度`：站在这个高度以下的第一层地面上，用来拍机场二楼下面的一楼 |
 | `-ccTour "x,z;x,z"` | 用老的高空镜头依次看这些位置并截图（要配合 `-ccShotDir`），用来检查场景的每个角落 |
 | `-ccCameraZoom 倍数` | 把上面那个高空镜头拉近，比如 0.42 |
 | `-ccUncapped` | 窗口运行时不限帧率，每 5 秒记一次帧率，用来比较两个版本哪个更卡。不同时间测的数可以差两成，要两个包同一时间交替跑 |

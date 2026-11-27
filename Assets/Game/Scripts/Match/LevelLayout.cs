@@ -33,6 +33,9 @@ namespace CargoClash
         [Tooltip("Carrying cargo into this area rescues it. Half size is in the transform's local X and Z.")]
         public Transform truckZone;
         public Vector2 truckZoneHalfSize = new Vector2(5f, 7f);
+        [Tooltip("How far above and below the zone's height it counts, in local metres. 0 counts any height, which is right " +
+                 "on one floor. On the airport the truck is on the upper deck, so standing under it doesn't count.")]
+        [Min(0f)] public float truckZoneHalfHeight;
         [Tooltip("Rescued cargo lands in a grid on this transform's local X and Z.")]
         public Transform bedOrigin;
         public Vector2 bedHalfSize = new Vector2(1.4f, 2f);
@@ -43,6 +46,15 @@ namespace CargoClash
         public Texture mapPicture;
         [Tooltip("The map shows world -Z at the top instead of +Z, the way the level was drawn.")]
         public bool mapUpsideDown;
+
+        [Header("Music")]
+        [Tooltip("A level's own match music, timed to the half: it plays from its start each half and switches to its " +
+                 "fast part for the final stretch. None plays the usual music.")]
+        public AudioClip matchMusic;
+        [Tooltip("Plays while loading, between the halves and over the results, with the level's match music.")]
+        public AudioClip matchInterlude;
+        [Tooltip("Seconds from the start of matchMusic to its first fast beat.")]
+        [Min(0f)] public float matchMusicSprintStart;
 
         private int bedCount;
 
@@ -59,8 +71,12 @@ namespace CargoClash
         public bool InTruckZone(Vector3 worldPosition)
         {
             Vector3 local = truckZone.InverseTransformPoint(worldPosition);
-            return Mathf.Abs(local.x) <= truckZoneHalfSize.x && Mathf.Abs(local.z) <= truckZoneHalfSize.y;
+            return Mathf.Abs(local.x) <= truckZoneHalfSize.x && Mathf.Abs(local.z) <= truckZoneHalfSize.y
+                && (truckZoneHalfHeight <= 0f || Mathf.Abs(local.y) <= truckZoneHalfHeight);
         }
+
+        /// <summary>The level has its own timed match music.</summary>
+        public bool HasTimedMusic => matchMusic != null && matchMusicSprintStart > 0f && matchMusicSprintStart < matchMusic.length;
 
         public Vector3 ClosestTruckZonePoint(Vector3 worldPosition)
         {

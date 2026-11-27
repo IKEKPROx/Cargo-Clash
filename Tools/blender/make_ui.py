@@ -199,17 +199,6 @@ def winding_road(image, colour, edge, centre_x, bend, top_row):
     make_ground.mix(image, np.array((0.97, 0.95, 0.85), np.float32), dashes.astype(np.float32))
 
 
-def card_forest():
-    rng = np.random.default_rng(2)
-    image = sky((0.6, 0.86, 0.82), (0.93, 0.97, 0.72))
-    fill_below(image, treetops(rng, 300.0, 70.0, 58.0), (0.56, 0.75, 0.55))
-    fill_below(image, treetops(rng, 340.0, 90.0, 66.0, pointed=True), (0.36, 0.62, 0.42))
-    fill_below(image, np.full(CARD_WIDTH, 335.0, np.float32), (0.42, 0.66, 0.3))
-    winding_road(image, (0.82, 0.68, 0.46), (0.6, 0.48, 0.3), 470.0, 130.0, 338.0)
-    fill_below(image, treetops(rng, 500.0, 170.0, 74.0, pointed=True, gap=(250.0, 690.0)), (0.16, 0.4, 0.28))
-    return image
-
-
 def card_mountain():
     rng = np.random.default_rng(3)
     image = sky((0.42, 0.56, 0.9), (0.97, 0.82, 0.76))
@@ -223,47 +212,6 @@ def card_mountain():
     fill_below(image, ridge(rng, 370.0, 130.0, 3), (0.34, 0.36, 0.56))
     fill_below(image, np.full(CARD_WIDTH, 360.0, np.float32) - 18.0 * np.sin(np.arange(CARD_WIDTH, dtype=np.float32) * 0.008), (0.5, 0.56, 0.4))
     winding_road(image, (0.42, 0.42, 0.48), (0.82, 0.8, 0.72), 520.0, -170.0, 372.0)
-    return image
-
-
-def card_river():
-    rng = np.random.default_rng(4)
-    image = sky((0.42, 0.5, 0.62), (0.78, 0.84, 0.86))
-    fill_below(image, treetops(rng, 240.0, 56.0, 96.0), (0.46, 0.56, 0.56))
-    fill_below(image, np.full(CARD_WIDTH, 232.0, np.float32), (0.56, 0.48, 0.34))
-    xs, ys = grid(CARD_WIDTH, CARD_HEIGHT)
-    # The river swings across the mud, wider toward the viewer.
-    t = np.clip((ys - 232.0) / (CARD_HEIGHT - 232.0), 0.0, 1.0)
-    middle = 520.0 + 240.0 * np.sin(t * 5.0 + 0.6)
-    half = 18.0 + t * 150.0
-    water = np.abs(xs - middle) - half
-    make_ground.mix(image, np.array((0.44, 0.36, 0.25), np.float32), cover(water - 14.0) * (ys > 232))
-    make_ground.mix(image, np.array((0.32, 0.6, 0.76), np.float32), cover(water) * (ys > 232))
-    glint = np.sin(ys * 0.5 + xs * 0.03) > 0.86
-    make_ground.mix(image, np.array((0.62, 0.82, 0.9), np.float32), (glint & (water < -6.0) & (ys > 240)).astype(np.float32))
-    # Rain falling across everything.
-    streaks = np.zeros((CARD_HEIGHT, CARD_WIDTH), np.float32)
-    for _ in range(170):
-        x = rng.uniform(0, CARD_WIDTH)
-        y = rng.uniform(-40, CARD_HEIGHT)
-        streaks = np.maximum(streaks, cover(segment(xs, ys, x, y, x - 10.0, y + 34.0, 1.3)))
-    make_ground.mix(image, np.array((0.9, 0.95, 1.0), np.float32), streaks * 0.55)
-    return image
-
-
-def card_unknown(top, bottom, crate, seed):
-    """Nothing is decided about this level yet, so the picture only hints at scattered cargo."""
-    rng = np.random.default_rng(seed)
-    image = sky(top, bottom)
-    xs, ys = grid(CARD_WIDTH, CARD_HEIGHT)
-    for _ in range(26):
-        cx, cy = rng.uniform(0, CARD_WIDTH), rng.uniform(0, CARD_HEIGHT)
-        half = rng.uniform(22.0, 62.0)
-        angle = rng.uniform(-0.5, 0.5)
-        u = (xs - cx) * math.cos(angle) + (ys - cy) * math.sin(angle)
-        v = (ys - cy) * math.cos(angle) - (xs - cx) * math.sin(angle)
-        shape = box(u, v, 0.0, 0.0, half, half, 7.0)
-        make_ground.mix(image, np.array(crate, np.float32), cover(shape) * rng.uniform(0.25, 0.6))
     return image
 
 
@@ -1243,11 +1191,10 @@ def make_menu():
 
 
 def make_cards():
-    write_png(FOLDER / "Level02_Card.png", card_forest())
-    write_png(FOLDER / "Level03_Card.png", card_mountain())
-    # Level04_Card.png is the river level's real picture now, rendered by CargoClashBuilder.River.cs.
-    write_png(FOLDER / "Level05_Card.png", card_unknown((0.42, 0.26, 0.62), (0.86, 0.46, 0.62), (0.3, 0.16, 0.46), 5))
-    write_png(FOLDER / "Level06_Card.png", card_unknown((0.12, 0.42, 0.56), (0.42, 0.82, 0.68), (0.06, 0.28, 0.38), 6))
+    # Only the highland's placeholder is painted. The river's and the airport's cards are rendered from their scenes
+    # (CargoClashBuilder.River.cs, .Airport.cs), the tutorial's is a screenshot, and the ruin courtyard's comes from its
+    # own branch.
+    write_png(FOLDER / "Card_Highland.png", card_mountain())
 
 
 def main():

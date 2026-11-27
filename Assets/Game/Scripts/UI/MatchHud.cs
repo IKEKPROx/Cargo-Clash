@@ -201,7 +201,13 @@ namespace CargoClash
         {
             UpdateCursor();
             MatchDirector director = MatchDirector.Instance;
-            if (director == null || !director.IsSpawned) return;
+            if (director == null || !director.IsSpawned)
+            {
+                // Loading into a level with its own music: its interlude plays until the match starts.
+                LevelLayout layout = LevelLayout.Instance;
+                if (layout != null && layout.HasTimedMusic) GameAudio.SetInterludeMusic(layout.matchInterlude, false);
+                return;
+            }
 
             UpdateTopBar(director);
             UpdateBanner(director);
@@ -271,7 +277,7 @@ namespace CargoClash
             if (orangeYou.activeSelf != orange) orangeYou.SetActive(orange);
             if (blueYou.activeSelf == orange) blueYou.SetActive(!orange);
             bool collector = local.Side == Side.Collector;
-            roleChip.text = collector ? GameText.CollectorGoal : GameText.InterrupterGoal;
+            roleChip.text = collector ? CollectorGoal : GameText.InterrupterGoal;
             roleChipBack.color = PlateColor(local.Team);
         }
 
@@ -305,7 +311,8 @@ namespace CargoClash
                     if (me != null && me.KnockedOut.Value)
                     {
                         int back = Mathf.Max(1, Mathf.CeilToInt((float)(me.KnockedUntil.Value - director.Now)));
-                        bannerText.text = GameText.KnockedOutBy(knockedOutBy, back);
+                        // Nobody knocked you out when you fell off the airport's deck.
+                        bannerText.text = string.IsNullOrEmpty(knockedOutBy) ? GameText.FellRespawn(back) : GameText.KnockedOutBy(knockedOutBy, back);
                         break;
                     }
                     float left = director.SecondsLeft;
@@ -337,7 +344,7 @@ namespace CargoClash
             bool collector = local.Side == Side.Collector;
             introHeading.text = collector ? GameText.CollectorRole : GameText.InterrupterRole;
             introHeading.color = local.Team.ToColor();
-            introGoal.text = collector ? GameText.CollectorGoal : GameText.InterrupterGoal;
+            introGoal.text = collector ? CollectorGoal : GameText.InterrupterGoal;
             introCount.text = Mathf.CeilToInt(director.SecondsLeft).ToString();
             bool swapped = director.Half.Value > 1;
             if (introSwap.gameObject.activeSelf != swapped) introSwap.gameObject.SetActive(swapped);
@@ -393,7 +400,6 @@ namespace CargoClash
         public void ShowKnockOut(PlayerAvatar attacker, PlayerAvatar victim, Weapon weapon)
         {
             PlayerAvatar local = PlayerAvatar.Local;
-            string first = ColoredName(attacker);
             string second = ColoredName(victim);
             FeedLine line = new FeedLine { Label = NewLabel("Feed") };
             line.Label.rectTransform.SetParent(feedRoot, false);
@@ -402,7 +408,8 @@ namespace CargoClash
             line.Label.fontSize = 28;
             line.Label.color = Color.white;
             line.Label.supportRichText = true;
-            line.Label.text = $"{first}  {GameText.KnockOutVerb(weapon)}  {second}";
+            // A fall off the airport's deck has nobody to blame.
+            line.Label.text = attacker == null ? $"{second}  {GameText.FellVerb}" : $"{ColoredName(attacker)}  {GameText.KnockOutVerb(weapon)}  {second}";
             feed.Add(line);
             if (feed.Count > FeedLines)
             {
@@ -410,8 +417,8 @@ namespace CargoClash
                 feed.RemoveAt(0);
             }
 
-            if (victim == local) knockedOutBy = attacker.DisplayName;
-            if (attacker != local) return;
+            if (victim == local) knockedOutBy = attacker != null ? attacker.DisplayName : "";
+            if (attacker == null || attacker != local) return;
 
             streak = Time.time - lastKnockOutAt < StreakWindowSeconds ? streak + 1 : 1;
             lastKnockOutAt = Time.time;
@@ -465,6 +472,28 @@ namespace CargoClash
         private void UpdateMusic(MatchDirector director)
         {
             MatchPhase phase = director.Phase.Value;
+            LevelLayout layout = LevelLayout.Instance;
+            if (layout != null && layout.HasTimedMusic)
+            {
+                // The level's own music: its interlude around the halves (quieter under the helicopter), and its match
+                // music timed to the half, jumping to the fast part for the final stretch.
+                if (phase != MatchPhase.Playing)
+                {
+                    GameAudio.SetInterludeMusic(layout.matchInterlude, phase == MatchPhase.HalfOutro);
+                    return;
+                }
+                GameConfig config = GameConfig.Get();
+                float remaining = director.SecondsLeft;
+                float sprintStart = layout.matchMusicSprintStart;
+                float length = layout.matchMusic.length;
+                bool sprint = remaining <= config.finalStretchSeconds;
+                float position = sprint
+                    ? Mathf.Max(sprintStart, length - remaining)
+                    : Mathf.Repeat(Mathf.Max(0f, config.EffectiveHalfSeconds - remaining), sprintStart);
+                GameAudio.SetTimedMusic(layout.matchMusic, director.Half.Value, Mathf.Clamp(position, 0f, length - 0.02f), sprintStart, sprint);
+                return;
+            }
+
             GameAudio.SetMusicDucked(phase == MatchPhase.HalfOutro);
             if (phase == MatchPhase.Playing)
             {
@@ -528,7 +557,8 @@ namespace CargoClash
             PlayerAvatar local = PlayerAvatar.Local;
             bool playing = director.Phase.Value == MatchPhase.Playing && local != null && !local.IsKnockedDown;
             // Nothing to aim at or press while looking inside cargo, and the dot would sit on the face in the front view.
-            bool aiming = playing && !local.IsInspecting;
+            // Nor on the airport's ladder or in its duct.
+            bool aiming = playing && !local.IsInspecting && !local.IsTravellingAirport;
             if (crosshairDot.enabled != aiming) crosshairDot.enabled = aiming;
             if (!aiming)
             {
@@ -554,6 +584,8 @@ namespace CargoClash
 
             // Someone to hit comes before any cargo, the same as in the swing itself.
             bool aimsAtPerson = carried == null && local.AimedEnemy != null;
+            // Beside the airport's iron door, E works the door, cargo in hand or not.
+            if (!aimsAtPerson && ShowDoorPrompt(local)) target = null;
             if (aimsAtPerson) target = null;
             crosshairRing.enabled = target != null || aimsAtPerson;
             if (aimsAtPerson)
@@ -623,8 +655,21 @@ namespace CargoClash
             if (waiting) promptB.Show(null, GameText.PromptWaiting);
             else if (large) promptB.Show(null, GameText.PromptTogether);
             else if (carried.Definition.Inspectable) promptB.Show(GameText.KeyInspect, GameText.PromptLookInside);
-            else if (local.Side == Side.Collector) promptB.Show(null, GameText.PromptToTruck);
+            else if (local.Side == Side.Collector) promptB.Show(null, AirportFacility.Instance != null ? GameText.PromptToHelipad : GameText.PromptToTruck);
             else promptB.Hide();
+        }
+
+        /// <summary>On the airport the truck is up on the deck, at H01.</summary>
+        private static string CollectorGoal => AirportFacility.Instance != null ? GameText.CollectorGoalAirport : GameText.CollectorGoal;
+
+        private bool ShowDoorPrompt(PlayerAvatar local)
+        {
+            if (local.AimedAirportUse != AirportUse.Door) return false;
+            AirportMatch airport = AirportMatch.Instance;
+            bool open = airport != null && airport.DoorState.Value != 0;
+            promptA.Show(GameText.KeyInteract, open ? GameText.PromptCloseDoor : GameText.PromptOpenDoor);
+            promptB.Hide();
+            return true;
         }
 
         private void ShowAimPrompts(PlayerAvatar local, bool interrupter)

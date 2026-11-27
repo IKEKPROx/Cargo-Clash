@@ -159,6 +159,11 @@ namespace CargoClash
         public static string PromptInsertPlank => T("PUT IN THE CATCHER");
         public static string PromptToCatcher => T("Plug a gap in the catcher downstream!");
         public static string PromptCatcherFull => T("The catcher is full.");
+        // The airport: the truck waits on the upper deck, and the iron door at the top of the ladder.
+        public static string CollectorGoalAirport => T("Carry cargo up to the truck at H01!");
+        public static string PromptToHelipad => T("Take it up to the truck at H01!");
+        public static string PromptOpenDoor => T("OPEN DOOR");
+        public static string PromptCloseDoor => T("CLOSE DOOR");
         public static string RamReady => T("RAM");
         public static string RamCooling => T("RECHARGING");
         public static string MarkerTruck => T("TRUCK");
@@ -215,6 +220,10 @@ namespace CargoClash
         }
 
         public static string KnockedOutBy(string attacker, int seconds) => F("KNOCKED OUT BY {0}  -  BACK IN {1}", Name(attacker), seconds);
+
+        /// <summary>In the feed after someone's name, when they fell off the airport's upper deck onto hard ground.</summary>
+        public static string FellVerb => T("FELL");
+        public static string FellRespawn(int seconds) => F("FELL FROM THE DECK  -  BACK IN {0}", seconds);
 
         /// <summary>For knocking people out one after another.</summary>
         public static string Streak(int count)

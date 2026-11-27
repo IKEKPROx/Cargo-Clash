@@ -124,6 +124,12 @@ namespace CargoClash
         /// <summary>Cargo the vacuum would pull in right now. Only set on the owner's computer.</summary>
         public CargoItem AimedSuck { get; private set; }
 
+        /// <summary>The airport's iron door is in reach, so E works it. Only set on the owner's computer.</summary>
+        public AirportUse AimedAirportUse { get; private set; }
+
+        /// <summary>On the airport's ladder or sliding down its duct. Only meaningful on the owner's computer.</summary>
+        public bool IsTravellingAirport => airportRoute != null;
+
         public Vector3 EyePosition => transform.position + Vector3.up * config.eyeHeight;
         public Vector3 LookDirection => Quaternion.Euler(LookPitch, LookYaw, 0f) * Vector3.forward;
 
@@ -174,6 +180,12 @@ namespace CargoClash
         private Vector3 approachTo;
         private float approachYawFrom;
         private float approachYawTo;
+        // The airport's ladder and duct: the route being followed, and not asking again while still walking into it.
+        private Vector3[] airportRoute;
+        private int airportPoint;
+        private float airportTravelSpeed;
+        private bool airportTravelLatched;
+        private float nextAirportTravelAskAt;
 
         // Host state
         private double serverRamUntil;
@@ -188,6 +200,9 @@ namespace CargoClash
         private bool serverPositionKnown;
         private double serverSlamAt;
         private float nextPullSendAt;
+        private double serverAirportTravelUntil;
+        private double airportIgnoreFallUntil;
+        private float airportFallPeak = float.NaN;
 
         /// <summary>How fast this person is moving as the host sees them. Only kept on the host.</summary>
         public float ServerSpeed { get; private set; }
@@ -264,10 +279,17 @@ namespace CargoClash
             input.Tick();
 
             MatchDirector director = MatchDirector.Instance;
-            bool canAct = director != null && director.Phase.Value == MatchPhase.Playing && !IsKnockedDown && !IsStaggered;
+            // On the airport's ladder or in its duct, the route carries you and your hands are busy.
+            bool canAct = director != null && director.Phase.Value == MatchPhase.Playing && !IsKnockedDown && !IsStaggered
+                && airportRoute == null;
             if (input.SwitchViewPressed && IsLocalPlayer) FollowCamera.ToggleView();
             if (input.InspectPressed) PressInspect(canAct);
             UpdateLook(director);
+            if (airportRoute != null)
+            {
+                MoveThroughAirport(deltaTime);
+                return;
+            }
 
             Vector2 rawMove = canAct ? Vector2.ClampMagnitude(input.Move, 1f) : Vector2.zero;
             CargoItem carried = CarriedCargo;
@@ -279,16 +301,33 @@ namespace CargoClash
                 : new Vector3(rawMove.x, 0f, rawMove.y);
             bool coCarrying = carried != null && carried.Definition.requiredCarriers > 1;
 
+            // Walking into the foot or the top of the airport's ladder, or into its duct, starts the climb or the slide.
+            // Once asked, it waits until you stop heading in, so arriving at the top doesn't send you straight back down.
+            AirportFacility airport = AirportFacility.Instance;
+            AirportUse traversal = canAct && airport != null && !coCarrying && !IsInspecting && approachStart < 0f
+                ? airport.FindTraversal(transform.position, wish) : AirportUse.None;
+            if (traversal == AirportUse.None) airportTravelLatched = false;
+            else if (!airportTravelLatched && Time.time >= nextAirportTravelAskAt)
+            {
+                nextAirportTravelAskAt = Time.time + 0.35f;
+                UseAirportRpc(traversal);
+                // On the host the climb has already begun.
+                if (airportRoute != null) return;
+            }
+
             if (coCarrying) TickCoCarry(carried, testCoCarry ?? new Vector2(wish.x, wish.z));
             else if (approachStart >= 0f) TickApproach();
-            else TickRunning(carried, wish, deltaTime);
+            // Waiting your turn at the duct's mouth, you don't walk on into it.
+            else TickRunning(carried, traversal == AirportUse.DuctDown ? Vector3.zero : wish, deltaTime);
 
             UpdateAim();
             if (canAct && input.RamPressed) TryRam(carried, wish, director);
             if (canAct && input.InteractPressed)
             {
-                // The host decides. With nothing in hand, this says what the person was aiming at.
-                if (carried != null) InteractRpc(NetIds.None);
+                // The host decides. With nothing in hand, this says what the person was aiming at. Beside the airport's
+                // iron door, E works the door, even with cargo in hand.
+                if (AimedAirportUse == AirportUse.Door) UseAirportRpc(AirportUse.Door);
+                else if (carried != null) InteractRpc(NetIds.None);
                 else if (AimedGrab != null) InteractRpc(AimedGrab.NetworkObjectId);
             }
 
@@ -501,6 +540,9 @@ namespace CargoClash
 
         private void UpdateAim()
         {
+            // Beside the airport's iron door, E works it. Bots only press E there when they mean to go through.
+            AirportFacility airport = AirportFacility.Instance;
+            AimedAirportUse = airport != null && airport.CanReach(AirportUse.Door, transform.position) ? AirportUse.Door : AirportUse.None;
             if (input.LooksAround)
             {
                 AimedGrab = CargoItem.FindAimed(EyePosition, LookYaw, LookPitch, transform.position, config.pickupRange, false);
@@ -578,6 +620,8 @@ namespace CargoClash
             }
 
             velocity += SeparationFromOthers();
+            // Standing on the airport's B03 while a half is on, the belt carries you along.
+            if (controller.isGrounded && AirportFacility.BeltRunning) velocity += AirportFacility.Instance.BeltVelocityAt(transform.position);
 
             verticalSpeed = controller.isGrounded ? -2f : verticalSpeed - 20f * deltaTime;
             controller.Move((velocity + Vector3.up * verticalSpeed) * deltaTime);
@@ -661,6 +705,10 @@ namespace CargoClash
         [Rpc(SendTo.Owner)]
         public void TeleportRpc(Vector3 position, Quaternion rotation)
         {
+            airportRoute = null;
+            airportTravelLatched = false;
+            nextAirportTravelAskAt = 0f;
+            if (IsServer) ResetAirportFall();
             bool wasEnabled = controller.enabled;
             controller.enabled = false;
             netTransform.Teleport(position, rotation, transform.localScale);
@@ -671,6 +719,46 @@ namespace CargoClash
             localRamReadyTime = 0f;
             verticalSpeed = 0f;
             slide = Vector3.zero;
+        }
+
+        /// <summary>The host said yes: up or down the airport's ladder, or down its duct.</summary>
+        [Rpc(SendTo.Owner)]
+        private void StartAirportTravelRpc(AirportUse use)
+        {
+            AirportFacility airport = AirportFacility.Instance;
+            if (airport == null) return;
+            airportRoute = airport.Route(use);
+            airportTravelLatched = true;
+            airportTravelSpeed = airport.TravelSpeed(use);
+            airportPoint = 0;
+            verticalSpeed = 0f;
+            slide = pull = Vector3.zero;
+            dashUntil = pullUntil = 0f;
+        }
+
+        /// <summary>Along the route at a steady speed, through every corner, ending where it ends.</summary>
+        private void MoveThroughAirport(float deltaTime)
+        {
+            float remaining = airportTravelSpeed * deltaTime;
+            Vector3 next = transform.position;
+            while (airportPoint < airportRoute.Length)
+            {
+                Vector3 point = airportRoute[airportPoint];
+                float distance = Vector3.Distance(next, point);
+                if (remaining < distance)
+                {
+                    next = Vector3.MoveTowards(next, point, remaining);
+                    break;
+                }
+                next = point;
+                remaining -= distance;
+                airportPoint++;
+            }
+            bool wasEnabled = controller.enabled;
+            controller.enabled = false;
+            transform.position = next;
+            controller.enabled = wasEnabled;
+            if (airportPoint == airportRoute.Length) airportRoute = null;
         }
 
         [Rpc(SendTo.Owner)]
@@ -710,7 +798,34 @@ namespace CargoClash
         private bool ServerCanAct()
         {
             MatchDirector director = MatchDirector.Instance;
-            return director != null && director.Phase.Value == MatchPhase.Playing && !IsKnockedDown && !IsStaggered;
+            return director != null && director.Phase.Value == MatchPhase.Playing && !IsKnockedDown && !IsStaggered
+                && Now >= serverAirportTravelUntil;
+        }
+
+        /// <summary>
+        /// The airport: E at the iron door, or walking into the ladder or the duct. The host checks the person is really
+        /// there. The duct takes one at a time, and nobody takes a crate for two up a ladder or down a duct.
+        /// </summary>
+        [Rpc(SendTo.Server)]
+        private void UseAirportRpc(AirportUse use)
+        {
+            AirportFacility airport = AirportFacility.Instance;
+            AirportMatch rules = AirportMatch.Instance;
+            if (!ServerCanAct() || airport == null || rules == null || !airport.CanReach(use, transform.position)) return;
+            if (use == AirportUse.Door)
+            {
+                rules.ServerToggleDoor(transform.position);
+                return;
+            }
+            CargoItem cargo = CarriedCargo;
+            if (cargo != null && cargo.Definition.requiredCarriers > 1) return;
+            float seconds = airport.TravelSeconds(use, transform.position) + 0.2f;
+            if (!airport.ServerReserveTraversal(use, Now, seconds)) return;
+            ServerStopTools();
+            serverRamUntil = 0;
+            serverAirportTravelUntil = Now + seconds;
+            AutoPilot.Log($"AIRPORT {use} {DisplayName}");
+            StartAirportTravelRpc(use);
         }
 
         [Rpc(SendTo.Server)]
@@ -793,6 +908,7 @@ namespace CargoClash
         private void TickServer(float deltaTime)
         {
             TrackSpeed(deltaTime);
+            ServerTrackAirportFall();
             if (Now < serverRamUntil) ServerCheckRamHit();
             if (serverRespawnAt > 0.0 && Now >= serverRespawnAt) ServerRespawn();
             if (serverSlamAt > 0.0 && Now >= serverSlamAt) ServerSlam();
@@ -953,7 +1069,8 @@ namespace CargoClash
         /// </summary>
         public bool ServerTakeHit(PlayerAvatar attacker, Weapon weapon)
         {
-            if (IsKnockedDown || IsImmune) return false;
+            // Nobody can be hit on the airport's ladder or in its duct.
+            if (IsKnockedDown || IsImmune || Now < serverAirportTravelUntil) return false;
 
             Vector3 direction = transform.position - attacker.transform.position;
             direction.y = 0f;
@@ -989,6 +1106,7 @@ namespace CargoClash
             return true;
         }
 
+        /// <summary>No attacker for a fall off the airport's upper deck.</summary>
         private void ServerKnockOut(PlayerAvatar attacker, Weapon weapon, Vector3 direction)
         {
             KnockedOut.Value = true;
@@ -997,6 +1115,7 @@ namespace CargoClash
             serverRespawnAt = KnockedUntil.Value;
             StaggeredUntil.Value = 0.0;
             hitsInARow = 0;
+            serverRamUntil = 0;
             ServerStopTools();
 
             CargoItem carried = CarriedCargo;
@@ -1005,8 +1124,42 @@ namespace CargoClash
             KnockbackRpc(direction * 1.7f);
         }
 
+        /// <summary>Put somewhere by the host: whatever height that was, it wasn't a fall.</summary>
+        private void ResetAirportFall()
+        {
+            airportFallPeak = float.NaN;
+            if (AirportFacility.Instance != null) airportIgnoreFallUntil = Now + 0.35;
+        }
+
+        /// <summary>
+        /// The host watches everyone's feet on the airport: a drop from the upper deck that ends on hard ground knocks
+        /// them out, and nobody gets the credit. The belt under the shaft is a safe landing. Climbing down, sliding down
+        /// the duct or walking down the ramp never adds up to a fall, because the highest point starts again wherever
+        /// the feet touch a floor.
+        /// </summary>
+        private void ServerTrackAirportFall()
+        {
+            AirportFacility airport = AirportFacility.Instance;
+            if (airport == null) return;
+            if (!AirportFacility.BeltRunning || KnockedOut.Value || Now < serverAirportTravelUntil || Now < airportIgnoreFallUntil)
+            {
+                airportFallPeak = float.NaN;
+                return;
+            }
+            Vector3 feet = transform.position;
+            if (float.IsNaN(airportFallPeak) || feet.y > airportFallPeak) airportFallPeak = feet.y;
+            if (!airport.TryFindFloor(feet, out RaycastHit ground)) return;
+            float peak = airportFallPeak;
+            airportFallPeak = feet.y;
+            if (!airport.IsLethalLanding(peak, feet, ground)) return;
+            AutoPilot.Log($"FELL {DisplayName} from={peak:0.0} to={ground.point.y:0.0}");
+            Health.Value = 0;
+            ServerKnockOut(null, Weapon.Fall, Vector3.zero);
+        }
+
         private void ServerRespawn()
         {
+            ResetAirportFall();
             serverRespawnAt = 0.0;
             KnockedOut.Value = false;
             Health.Value = MaxHealth;
@@ -1071,6 +1224,8 @@ namespace CargoClash
 
         public void ServerResetForHalf(Vector3 position, Quaternion rotation)
         {
+            serverAirportTravelUntil = 0;
+            ResetAirportFall();
             ServerStopActions();
             ServerClearCarry();
             KnockedUntil.Value = 0;

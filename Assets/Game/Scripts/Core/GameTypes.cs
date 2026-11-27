@@ -27,8 +27,8 @@ namespace CargoClash
     /// <summary>Lost: the river carried it off the field. Nobody scores it.</summary>
     public enum CargoState : byte { Ground = 0, Carried = 1, Rescued = 2, Destroyed = 3, Lost = 4 }
 
-    /// <summary>What someone got hit with.</summary>
-    public enum Weapon : byte { Hammer = 0, Blast = 1, Slam = 2, Ram = 3 }
+    /// <summary>What someone got hit with. Fall: off the airport's upper deck onto hard ground, with nobody to blame.</summary>
+    public enum Weapon : byte { Hammer = 0, Blast = 1, Slam = 2, Ram = 3, Fall = 4 }
 
     public static class GameLayers
     {

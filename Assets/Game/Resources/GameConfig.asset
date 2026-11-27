@@ -17,21 +17,18 @@ MonoBehaviour:
   - title: TUTORIAL
     scene: Level01
     picture: {fileID: 21300000, guid: 4203716cdd7a04b72b2dea72cfa0458f, type: 3}
-  - title: FOREST ROAD
-    scene: 
-    picture: {fileID: 21300000, guid: 294ff343a699f41e79a9b13e11592dc4, type: 3}
-  - title: MOUNTAIN PASS
-    scene: 
-    picture: {fileID: 21300000, guid: cd1680c89a5a84853a64c704cadd53cb, type: 3}
   - title: RIVER FLATS
     scene: LevelRiver
     picture: {fileID: 21300000, guid: caab7b6327add41e9949b2d59ffeb6f6, type: 3}
-  - title: ???
+  - title: AIRPORT
+    scene: LevelAirport
+    picture: {fileID: 21300000, guid: b85c78697c07c4a499c62fc28168cadd, type: 3}
+  - title: RUIN COURTYARD
     scene: 
-    picture: {fileID: 21300000, guid: 9335afe636bcf45d3a76ec341ba11f82, type: 3}
-  - title: ???
+    picture: {fileID: 21300000, guid: a5ad77f8067874eab92e7f5a71dc8025, type: 3}
+  - title: HIGHLAND
     scene: 
-    picture: {fileID: 21300000, guid: 79bdd48a6a6424424a487d698bc6f439, type: 3}
+    picture: {fileID: 21300000, guid: cd1680c89a5a84853a64c704cadd53cb, type: 3}
   maxPlayers: 6
   teamSize: 3
   halfSeconds: 60
@@ -132,6 +129,18 @@ MonoBehaviour:
   plankSeconds: 60
   plankInsertRange: 3.5
   plank: {fileID: 11400000, guid: 263f59f55dd4a483895c2b73d20b9862, type: 2}
+  airportDispatchStart: 0.8
+  airportDispatchFraction: 0.68
+  airportDispatchMinGap: 0.9
+  airportBeltSpeed: 1.8
+  airportBeltPull: 40
+  airportLadderSpeed: 3.2
+  airportDuctSpeed: 5
+  airportDoorDegreesPerSecond: 340
+  airportLethalDrop: 2.65
+  airportInterrupterAggression: 0.35
+  airportInterrupterSmashShare: 0.35
+  airportLargeCargoInterest: 0.3
   cargo:
   - {fileID: 11400000, guid: aee7fbe6cc96b4f11ab08fbdc94cba88, type: 2}
   - {fileID: 11400000, guid: 40d1b45efb3054357bcf266e6fe3302d, type: 2}

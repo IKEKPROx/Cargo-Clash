@@ -41,6 +41,8 @@ namespace CargoClash
         private Vector3 stuckCheckPosition;
         private float stuckCheckAt;
         private float ignoreTargetUntil;
+        private float nextDoorPressAt;
+        private readonly float beat = Random.value;
 
         /// <summary>For each enemy, whether it's going after them, and until when that holds (WillFight).</summary>
         private readonly Dictionary<PlayerAvatar, (float until, bool fight)> moods = new Dictionary<PlayerAvatar, (float, bool)>();
@@ -200,12 +202,19 @@ namespace CargoClash
                 if (cargo != target && claims >= cargo.Definition.requiredCarriers) continue;
 
                 // Rough points per second: running there, carrying it back, and the risk of a fight.
-                float reachTime = cargo.EdgeDistance(self.transform.position) / self.RunSpeed;
+                float reachTime = (cargo.EdgeDistance(self.transform.position) + FloorDetour(cargo.transform.position, self.transform.position)) / self.RunSpeed;
                 Vector3 truckPoint = LevelLayout.Instance.ClosestTruckZonePoint(cargo.transform.position);
                 float carrySpeed = self.RunSpeed * cargo.Definition.carrySpeedMultiplier;
-                float carryTime = Vector3.Distance(cargo.transform.position, truckPoint) / carrySpeed;
+                float carryTime = Apart(cargo.transform.position, truckPoint) / carrySpeed;
                 float score = cargo.Definition.value / (reachTime + carryTime + 1.5f);
                 if (large && !waitingForHelp) score *= 0.5f;
+                // On the airport a crate for two only goes up the long parking ramp at half speed: rarely worth starting.
+                // A case under the hammer is worth snatching: in someone's hands it can't be smashed.
+                if (AirportFacility.Instance != null)
+                {
+                    if (large && !waitingForHelp) score *= config.airportLargeCargoInterest;
+                    else if (!large && cargo.Durability.Value < 1f) score *= 1.5f;
+                }
                 if (NearestEnemyTo(cargo.transform.position, 4f) != null) score *= 0.6f;
                 if (waitingForHelp) score += 5f;
                 if (cargo == target) score *= 1.25f;
@@ -269,6 +278,10 @@ namespace CargoClash
             float distance = target.EdgeDistance(self.transform.position);
             SetGoal(target.transform.position, 0.8f + target.Radius * 0.5f);
             attack = distance <= config.smashRange - 0.2f;
+            // On the airport they catch their breath between swings (each bot on its own beat), or they'd smash nearly
+            // everything the warehouse sends out before anyone can carry it off.
+            if (attack && AirportFacility.Instance != null)
+                attack = Mathf.Repeat(Time.time * 0.5f + beat, 1f) < config.airportInterrupterSmashShare;
         }
 
         /// <summary>Now and then, with someone close, it charges up a slam and walks at them. Returns true while it's doing that.</summary>
@@ -302,9 +315,12 @@ namespace CargoClash
             foreach (CargoItem cargo in CargoItem.All)
             {
                 if (cargo.State.Value != CargoState.Ground || cargo.IsPlank) continue;
-                float distance = cargo.EdgeDistance(self.transform.position);
+                float distance = cargo.EdgeDistance(self.transform.position) + FloorDetour(cargo.transform.position, self.transform.position);
                 float score = (cargo.Definition.value + 10f) / (distance + 6f);
                 if (cargo.Durability.Value < 1f) score *= 1.4f;
+                // On the airport the goose crate waits until last, unless someone has started on it: gang up on it at
+                // once and nobody ever gets the chance to carry it up the ramp.
+                else if (cargo.Definition.requiredCarriers > 1 && AirportFacility.Instance != null) score *= config.airportLargeCargoInterest;
                 if (cargo == target) score += 0.5f;
                 if (ClaimsOn(cargo) > 0 && cargo != target) score *= 0.6f;
                 if (score > bestScore)
@@ -332,7 +348,7 @@ namespace CargoClash
             foreach (PlayerAvatar other in PlayerAvatar.All)
             {
                 if (other.Team == self.Team || other.IsKnockedDown || !condition(other)) continue;
-                float distance = Vector3.Distance(other.transform.position, self.transform.position);
+                float distance = Apart(other.transform.position, self.transform.position);
                 if (distance < bestDistance)
                 {
                     best = other;
@@ -350,12 +366,21 @@ namespace CargoClash
                 if (mate == self || mate.Team != self.Team) continue;
                 CargoItem carried = mate.CarriedCargo;
                 if (carried == null || carried.Definition.size == CargoSize.Small) continue;
-                if (Vector3.Distance(mate.transform.position, self.transform.position) > 16f) continue;
+                if (Apart(mate.transform.position, self.transform.position) > 16f) continue;
                 PlayerAvatar enemy = NearestEnemyTo(mate.transform.position, 8f);
                 if (enemy != null && !enemy.IsImmune && !enemy.IsKnockedDown && WillFight(enemy)) return enemy;
             }
             return null;
         }
+
+        /// <summary>
+        /// How far apart two places are for a bot. On the airport the floors stand over each other: someone right
+        /// overhead on the deck is a long way round by the ladder or the ramp, not a few metres.
+        /// </summary>
+        private static float Apart(Vector3 a, Vector3 b) => Vector3.Distance(a, b) + FloorDetour(a, b);
+
+        private static float FloorDetour(Vector3 a, Vector3 b) =>
+            AirportFacility.Instance != null && Mathf.Abs(a.y - b.y) > 2.5f ? 30f : 0f;
 
         /// <summary>
         /// Whether it bothers going after this enemy now. Decided afresh every few seconds for each enemy, so a bot
@@ -366,6 +391,8 @@ namespace CargoClash
         {
             if (moods.TryGetValue(enemy, out var mood) && Time.time < mood.until) return mood.fight;
             float chance = config.botAggression * (enemy.IsBotVar.Value ? 1f : config.botHumanTargeting);
+            // The airport favours the Interrupters' spot; their bots go after people less there.
+            if (AirportFacility.Instance != null && self.Side == Side.Interrupter) chance *= config.airportInterrupterAggression;
             bool fight = Random.value < chance;
             moods[enemy] = (Time.time + Random.Range(3f, 6f), fight);
             return fight;
@@ -375,7 +402,7 @@ namespace CargoClash
         {
             foreach (PlayerAvatar other in PlayerAvatar.All)
             {
-                if (other.Team != self.Team && Vector3.Distance(other.transform.position, position) < range) return other;
+                if (other.Team != self.Team && Apart(other.transform.position, position) < range) return other;
             }
             return null;
         }
@@ -431,28 +458,57 @@ namespace CargoClash
             if (!hasGoal) return Vector2.zero;
             Vector3 position = self.transform.position;
             Vector3 toGoal = goal - position;
+            float rise = toGoal.y;
             toGoal.y = 0f;
-            if (toGoal.magnitude <= stopDistance) return Vector2.zero;
+            // On the airport a goal can be right overhead, up on the deck: standing under it isn't getting there.
+            if (toGoal.magnitude <= stopDistance && (Mathf.Abs(rise) < 2.5f || AirportFacility.Instance == null)) return Vector2.zero;
 
             if (Time.time >= repathAt) Repath(position);
 
             Vector3 direction = toGoal;
             if (pathValid && corner < path.corners.Length)
             {
+                // On the airport a corner only counts as reached at its own height: the next one can be straight up the
+                // ladder or down the duct, right overhead or underfoot.
+                AirportFacility airport = AirportFacility.Instance;
                 Vector3 next = path.corners[corner];
                 Vector3 toCorner = next - position;
+                bool level = airport == null || Mathf.Abs(toCorner.y) < 1.5f;
                 toCorner.y = 0f;
-                if (toCorner.magnitude < 0.6f && corner < path.corners.Length - 1)
+                if (toCorner.magnitude < 0.6f && level && corner < path.corners.Length - 1)
                 {
                     corner++;
-                    toCorner = path.corners[corner] - position;
+                    next = path.corners[corner];
+                    toCorner = next - position;
+                    level = airport == null || Mathf.Abs(toCorner.y) < 1.5f;
                     toCorner.y = 0f;
                 }
                 direction = toCorner;
+
+                if (airport != null)
+                {
+                    // Walking into the ladder or the duct is what starts the climb or the slide (PlayerAvatar).
+                    if (!level && airport.TryEntryTarget(position, out Vector3 into))
+                    {
+                        direction = into - position;
+                        direction.y = 0f;
+                    }
+                    OpenDoorIfShut(airport, position, next);
+                }
             }
 
             direction.Normalize();
             return new Vector2(direction.x, direction.z);
+        }
+
+        /// <summary>The airport's iron door is shut between here and where the path goes next: press E at it.</summary>
+        private void OpenDoorIfShut(AirportFacility airport, Vector3 position, Vector3 next)
+        {
+            AirportMatch rules = AirportMatch.Instance;
+            if (rules == null || rules.DoorState.Value != 0 || Time.time < nextDoorPressAt) return;
+            if (!airport.CanReach(AirportUse.Door, position) || !airport.DoorBetween(position, next)) return;
+            interact = true;
+            nextDoorPressAt = Time.time + 1.2f;
         }
 
         private void Repath(Vector3 position)
@@ -461,7 +517,10 @@ namespace CargoClash
             pathValid = false;
             if (!NavMesh.SamplePosition(position, out NavMeshHit from, 3f, NavMesh.AllAreas)) return;
             if (!NavMesh.SamplePosition(goal, out NavMeshHit to, 4f, NavMesh.AllAreas)) return;
-            if (!NavMesh.CalculatePath(from.position, to.position, NavMesh.AllAreas, path)) return;
+            // A crate carried by two doesn't go up the airport's ladder or down its duct.
+            CargoItem carried = self.CarriedCargo;
+            int areas = carried != null && carried.Definition.requiredCarriers > 1 ? NavMesh.AllAreas & ~(1 << AirportFacility.TraversalArea) : NavMesh.AllAreas;
+            if (!NavMesh.CalculatePath(from.position, to.position, areas, path)) return;
             pathValid = path.corners.Length > 0;
             corner = path.corners.Length > 1 ? 1 : 0;
         }

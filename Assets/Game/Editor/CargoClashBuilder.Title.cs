@@ -20,25 +20,25 @@ public static partial class CargoClashBuilder
     // ---- Levels ----
 
     /// <summary>
-    /// Every level the game shows, in order. A level with no scene is a locked card. To open one, make
-    /// its scene in Assets/Game/Scenes and fill in its name here.
+    /// Every level the game shows, in order: the tutorial, then the team's maps. A level with no scene is a locked card.
+    /// The ruin courtyard (ChenHaoyu311's branch codex/ruin-v10-layout, picture from there) and the highland are still
+    /// being made. To open one, make its scene in Assets/Game/Scenes and fill in its name here.
     /// </summary>
     private static LevelInfo[] BuildLevelList()
     {
         return new[]
         {
-            new LevelInfo { title = "TUTORIAL", scene = "Level01", picture = CardPicture(1) },
-            new LevelInfo { title = "FOREST ROAD", picture = CardPicture(2) },
-            new LevelInfo { title = "MOUNTAIN PASS", picture = CardPicture(3) },
-            new LevelInfo { title = "RIVER FLATS", scene = RiverSceneName, picture = CardPicture(4) },
-            new LevelInfo { title = "???", picture = CardPicture(5) },
-            new LevelInfo { title = "???", picture = CardPicture(6) },
+            new LevelInfo { title = "TUTORIAL", scene = "Level01", picture = CardPicture("Card_Tutorial") },
+            new LevelInfo { title = "RIVER FLATS", scene = RiverSceneName, picture = CardPicture(RiverCardName) },
+            new LevelInfo { title = "AIRPORT", scene = AirportSceneName, picture = CardPicture(AirportCardName) },
+            new LevelInfo { title = "RUIN COURTYARD", picture = CardPicture("Card_Ruins") },
+            new LevelInfo { title = "HIGHLAND", picture = CardPicture("Card_Highland") },
         };
     }
 
-    private static Sprite CardPicture(int number)
+    /// <summary>Assets/Game/UI/{name}.png, 928×500, or nothing if it isn't there yet.</summary>
+    private static Sprite CardPicture(string name)
     {
-        string name = $"Level{number:00}_Card";
         bool exists = !string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID($"{UiDir}/{name}.png", AssetPathToGUIDOptions.OnlyExistingAssets));
         return exists ? UiSprite(name, mipmaps: true) : null;
     }
@@ -1044,7 +1044,9 @@ public static partial class CargoClashBuilder
         {
             int column = i % 3;
             int row = i / 3;
-            Vector2 position = new Vector2((column - 1) * gapX, centreY + (0.5f - row) * gapY);
+            // A row that isn't full sits in the middle.
+            int inRow = Mathf.Min(3, levels.Length - row * 3);
+            Vector2 position = new Vector2((column - (inRow - 1) * 0.5f) * gapX, centreY + (0.5f - row) * gapY);
             flow.levelCards[i] = LiveryLevelCard(panel, i, position, size, 0.05f + i * 0.05f);
         }
 

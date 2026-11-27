@@ -14,4 +14,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Game/Scenes/LevelRiver.unity
     guid: 991900f57b33c4a85aebb0013e4b4c83
+  - enabled: 1
+    path: Assets/Game/Scenes/LevelAirport.unity
+    guid: a904cbe66044b48d88485ded726269b8
   m_configObjects: {}

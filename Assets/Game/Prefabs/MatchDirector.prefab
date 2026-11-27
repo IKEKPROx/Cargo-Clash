@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 8382722016673283166}
   - component: {fileID: 2432615635710395590}
   - component: {fileID: 5177449834353105853}
+  - component: {fileID: 500110992370099132}
   m_Layer: 0
   m_Name: MatchDirector
   m_TagString: Untagged
@@ -86,4 +87,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd26c1bc5a47b40b5abe7a7aa6f576ae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: CargoClash::CargoClash.RiverMatch
+  ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &500110992370099132
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8093289547608941666}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55cf4b58afb064627bdb430d8b15faf2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CargoClash::CargoClash.AirportMatch
   ShowTopMostFoldoutHeaderGroup: 1
