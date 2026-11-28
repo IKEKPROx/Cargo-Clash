@@ -53,9 +53,10 @@ namespace CargoClash
 
         [Header("Ruin Courtyard")]
         public float ruinUseRange = 2.4f;
-        public float ruinDoorCooldown = .45f;
-        public float ruinRestoreSeconds = 1.2f;
-        public float ruinWallSwitchCooldown = 3f;
+        public float ruinRestoreSeconds = 2f;
+        [Tooltip("Blasts of a collector's blower that knock a ruin wall down, 1 to 3 (the replicated state holds two partly blown stages).")]
+        public int ruinBlastsToBreak = 3;
+        public float ruinWallSwitchCooldown = 1f;
         public float ruinThrowRange = 5f;
         public float ruinPatchRadius = 1.4f;
         public float ruinPatchSeconds = 6f;
@@ -69,6 +70,10 @@ namespace CargoClash
         public float ruinPitReturnHeight = -6f;
         public float ruinDepotHeight = 3.8f;
         public float ruinDropCreditSeconds = 15f;
+        [Tooltip("Ruin Courtyard far blur, in metres from the camera. The play area is at most about 140 m across.")]
+        public float ruinFarBlurStart = 95f;
+        public float ruinFarBlurEnd = 320f;
+        [Range(.5f, 1.5f)] public float ruinFarBlurRadius = .9f;
 
         [Header("Helicopter")]
         [Tooltip("It starts flying in this long before it arrives over the truck.")]

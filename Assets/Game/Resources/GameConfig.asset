@@ -26,7 +26,7 @@ MonoBehaviour:
   - title: RIVER FLATS
     scene: LevelRiver
     picture: {fileID: 21300000, guid: caab7b6327add41e9949b2d59ffeb6f6, type: 3}
-  - title: RUIN COURTYARD
+  - title: MAYA RUINS
     scene: LevelRuinCourtyard
     picture: {fileID: 21300000, guid: 7b265054b996fafc7d12e8f4b376b79f, type: 3}
   - title: ???
@@ -38,9 +38,9 @@ MonoBehaviour:
   finalStretchSeconds: 15
   halfIntroSeconds: 4
   ruinUseRange: 2.4
-  ruinDoorCooldown: 0.45
-  ruinRestoreSeconds: 1.2
-  ruinWallSwitchCooldown: 3
+  ruinRestoreSeconds: 2
+  ruinBlastsToBreak: 3
+  ruinWallSwitchCooldown: 1
   ruinThrowRange: 5
   ruinPatchRadius: 1.4
   ruinPatchSeconds: 6

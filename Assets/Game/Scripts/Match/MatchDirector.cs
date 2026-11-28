@@ -64,7 +64,7 @@ namespace CargoClash
         private readonly StringBuilder csv = new StringBuilder();
         private GameConfig config;
         private LevelLayout layout;
-        public readonly NetworkVariable<uint> RuinBits = new NetworkVariable<uint>();
+        public readonly NetworkVariable<ulong> RuinBits = new NetworkVariable<ulong>();
         internal NetworkList<RuinPatch> RuinPatches;
         private int halfDestroyed;
         private int halfLost;

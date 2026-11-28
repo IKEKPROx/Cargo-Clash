@@ -9,7 +9,7 @@ RUNNING THE GAME
    check it for malware. Click Done, then open System Settings > Privacy & Security, scroll down to
    the message about CargoClash and click Open Anyway, then Open. After that it opens normally.
    (Or, in Terminal: xattr -dr com.apple.quarantine followed by the app, dragged into the window.)
-3. To play alone, click PLAY, then PRACTICE WITH BOTS, then TUTORIAL, RIVER FLATS or RUIN COURTYARD. The
+3. To play alone, click PLAY, then PRACTICE WITH BOTS, then TUTORIAL, RIVER FLATS or MAYA RUINS. The
    YOUR CREW page opens: pick a body type, a hat, glasses and a face, then click START. No network
    or account is needed. The cards with a lock aren't ready yet.
 
@@ -29,7 +29,7 @@ F                    Inspect what's in your hands
 V                    Switch between first person and over the shoulder
 Esc                  Pause menu, with the settings
 
-RUIN COURTYARD / 藤坠石庭
+MAYA RUINS / 玛雅遗迹
 The V09 ruins, trees and pits are included, with 8 value-10 boxes, 5 value-30 boxes and 2 value-100
 boxes. The two 100 boxes are inside operable vaults and need two carriers.
 Empty-handed, aim and press E to use gates, collect/throw vines, attach a vine ladder, or join a

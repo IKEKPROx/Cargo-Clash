@@ -8,6 +8,8 @@ namespace CargoClash
     {
         [SerializeField] private Texture2D cordonTape;
         private Mesh cordonMesh;
+        /// <summary>Ground plan of the warning tape, kept for the runtime checks.</summary>
+        internal Vector3[] CordonRoute { get; private set; }
 
         private void BuildCordon()
         {
@@ -22,14 +24,14 @@ namespace CargoClash
             tape.SetFloat("_Cull", (float)CullMode.Off);
 
             const float inset = .38f;
-            const float roadside = -10.5f;
+            // West, north and east around the ruin. The road guardrail is the south edge, so no tape runs
+            // toward the road.
             Vector3[] route =
             {
-                new Vector3(CargoExitWest, 0, roadside), new Vector3(CargoExitWest, 0, inset),
-                new Vector3(inset, 0, inset), new Vector3(inset, 0, data.size.y - inset),
-                new Vector3(data.size.x - inset, 0, data.size.y - inset), new Vector3(data.size.x - inset, 0, inset),
-                new Vector3(CargoExitEast, 0, inset), new Vector3(CargoExitEast, 0, roadside)
+                new Vector3(data.playArea.x + inset, 0, inset), new Vector3(data.playArea.x + inset, 0, data.playArea.w - inset),
+                new Vector3(data.playArea.z - inset, 0, data.playArea.w - inset), new Vector3(data.playArea.z - inset, 0, inset)
             };
+            CordonRoute = route;
             var vertices = new List<Vector3>();
             var uv = new List<Vector2>();
             var triangles = new List<int>();
@@ -62,24 +64,13 @@ namespace CargoClash
             renderer.shadowCastingMode = ShadowCastingMode.Off;
 
             BuildCordonSign(root, new Vector3(CargoExitWest - 2.1f, 0, 1.05f), posts, cream, navy);
-            BuildCordonSign(root, new Vector3(data.size.x * .5f - 8f, 0, data.size.y - 1.05f), posts, cream, navy);
+            BuildCordonSign(root, new Vector3((data.playArea.x + data.playArea.z) * .5f - 8f, 0, data.playArea.w - 1.05f), posts, cream, navy);
 
-            foreach (float z in new[] { -7.1f, -3.2f })
+            foreach (float z in new[] { -4.4f, -2.2f })
             {
                 Vector3 mark = CordonFoot(new Vector3(data.truckZone.x, 0, z)) + Vector3.up * .035f;
                 SpawnPaintStroke(root, "Cargo access arrow", mark + new Vector3(-.72f, 0, -.36f), mark + Vector3.forward * .46f, .14f, yellow);
                 SpawnPaintStroke(root, "Cargo access arrow", mark + new Vector3(.72f, 0, -.36f), mark + Vector3.forward * .46f, .14f, yellow);
-            }
-
-            foreach (DoorSpec door in data.doors)
-            {
-                foreach (float direction in new[] { -1f, 1f })
-                {
-                    Vector3 mark = CordonFoot(door.center + Vector3.forward * (2.1f * direction)) + Vector3.up * .025f;
-                    Vector3 tip = mark - Vector3.forward * (.26f * direction);
-                    SpawnPaintStroke(field, "Walk-up gate marking", mark + new Vector3(-.26f, 0, .13f * direction), tip, .09f, yellow);
-                    SpawnPaintStroke(field, "Walk-up gate marking", mark + new Vector3(.26f, 0, .13f * direction), tip, .09f, yellow);
-                }
             }
         }
 

@@ -28,14 +28,14 @@ namespace CargoClash
         public static RuinCourtyard Instance { get; private set; }
         private const string ResourceRoot = "RuinCourtyard/";
         public const string SceneName = "LevelRuinCourtyard";
-        // Twelve two-bit wall states, then two doors, three pickups and the ladder.
-        private const int DoorBit = 24;
-        private const uint ClosedDoorBits = 3u << DoorBit;
-        private const int PickupBit = 26;
-        private const uint LadderBit = 1u << 29;
+        // Two bits per breakable wall (room for 16), then one per wall for the side its stones were pushed to,
+        // then three vine pickups and the ladder.
+        private const int MaxWalls = 16;
+        private const int PushSideBit = 32;
+        private const int PickupBit = 48;
+        private const ulong LadderBit = 1UL << 51;
         private const int MaxPatches = 12;
         private const int NoAction = 0;
-        private const int FirstDoor = 1;
         private const int Climb = 10;
         private const int Boost = 11;
         private const int PullTeammate = 12;
@@ -45,7 +45,6 @@ namespace CargoClash
         [Serializable] private sealed class Spot { public string name; public Vector3 position; public float yaw; }
         [Serializable] private sealed class Block { public string name; public Vector4 rect; public Vector3 circle; public float minY, maxY; public bool round; }
         [Serializable] private sealed class WallSpec { public string id; public Vector4 footprintXZ; public Vector3 position; public float height; }
-        [Serializable] private sealed class DoorSpec { public string id; public Vector3 center; public float width, height; public string[] leaves, hinges; }
         [Serializable] private sealed class MapData
         {
             public Spot[] collectorSpawns, interrupterSpawns, smallSpots, mediumSpots, largeSpots;
@@ -55,7 +54,10 @@ namespace CargoClash
             public Vector3[] pitReturns, vinePickups;
             public Block[] blockers;
             public WallSpec[] walls;
-            public DoorSpec[] doors;
+            // Where players can go (x min, z south, x max, z north): drawn in from the full courtyard.
+            public Vector4 playArea;
+            // Shipped breakables kept standing for good, no longer breakable (R7, the cracked floor on its steps).
+            public WallSpec[] fixedWalls;
             public Vector3 boostStart, boostExit, ladderStart, ladderExit, ladderAnchor;
         }
 
@@ -69,45 +71,15 @@ namespace CargoClash
             public double LastPullAt;
             public int LastPullFrame = -1;
             public float Restore;
-        }
-
-        private sealed class Door
-        {
-            public Transform[] Hinges, Leaves;
-            public BoxCollider[] Boxes;
-            public Quaternion[] Open, Closed;
-            public Bounds Sweep;
-            public DoorLeafPose[] SweptLeaves;
-            public double LockedUntil;
-        }
-
-        private readonly struct DoorLeafPose
-        {
-            public readonly Bounds Bounds;
-            private readonly Vector3 right, forward, half;
-
-            public DoorLeafPose(BoxCollider box, float motionMargin)
-            {
-                right = box.transform.right;
-                forward = box.transform.forward;
-                half = box.size * .5f + new Vector3(motionMargin, 0, motionMargin);
-                Vector3 extents = Abs(right) * half.x + Vector3.up * half.y + Abs(forward) * half.z;
-                Bounds = new Bounds(box.transform.position, extents * 2f);
-            }
-
-            public bool Intersects(Bounds other)
-            {
-                if (!Bounds.Intersects(other)) return false;
-                Vector3 offset = other.center - Bounds.center;
-                return Mathf.Abs(Vector3.Dot(right, offset)) <= half.x + Vector3.Dot(Abs(right), other.extents) &&
-                       Mathf.Abs(Vector3.Dot(forward, offset)) <= half.z + Vector3.Dot(Abs(forward), other.extents);
-            }
+            // The separate stones of the wall, when it is built of them (RuinCourtyard.WallStones.cs).
+            public Stone[] Stones;
+            public float Ground;
+            public int ShownStage = -1;
         }
 
         private MapData data;
         private GameConfig config;
         private Wall[] walls;
-        private Door[] doors;
         private GameObject[] coils;
         private GameObject ladder, patchTemplate;
         private readonly List<GameObject> patchViews = new List<GameObject>();
@@ -117,7 +89,7 @@ namespace CargoClash
         private Traverse ladderTraverse, boostTraverse;
         private PlayerAvatar boostHelper;
         private double boostReadyUntil;
-        private uint shownBits = uint.MaxValue;
+        private ulong shownBits = ulong.MaxValue;
         private MatchDirector lastDirector;
         private int shownPatchCount = -1;
         private bool built;
@@ -131,19 +103,21 @@ namespace CargoClash
         }
 
         private MatchDirector Director => MatchDirector.Instance;
-        private uint Bits => Director != null && Director.IsSpawned ? Director.RuinBits.Value : ClosedDoorBits;
+        private ulong Bits => Director != null && Director.IsSpawned ? Director.RuinBits.Value : 0UL;
         private double Now => Director.Now;
         private bool Playing => Director != null && Director.IsSpawned && Director.Phase.Value == MatchPhase.Playing;
+        // A wall's two bits: 0 standing, 1 blown once, 3 blown twice, 2 down.
         private int WallState(int index) => (int)(Bits >> (index * 2) & 3);
-        private bool DoorClosed(int index) => (Bits & (1u << (DoorBit + index))) != 0;
-        private bool PickupAvailable(int index) => (Bits & (1u << (PickupBit + index))) == 0;
+        private static int BlastsIn(int state) => state == 1 ? 1 : state == 3 ? 2 : 0;
+        private static int StateAfterBlasts(int blasts) => blasts <= 0 ? 0 : blasts == 1 ? 1 : 3;
+        private bool PickupAvailable(int index) => (Bits & (1UL << (PickupBit + index))) == 0;
         private bool LadderInstalled => (Bits & LadderBit) != 0;
 
         private void Awake()
         {
             config = GameConfig.Get();
             data = JsonUtility.FromJson<MapData>(Load<TextAsset>("RuinLayout").text);
-            if (data.walls.Length != 12 || data.doors.Length != 2 || data.vinePickups.Length != 3)
+            if (data.vinePickups.Length > 3)
                 throw new InvalidOperationException("Ruin Courtyard layout does not fit the replicated state.");
             BuildField();
             Instance = this;
@@ -163,27 +137,25 @@ namespace CargoClash
             {
                 lastDirector = Director;
                 shownPatchCount = -1;
-                shownBits = uint.MaxValue;
+                shownBits = ulong.MaxValue;
             }
             if (Director.IsServer) ServerTick();
             if (shownBits != Bits)
             {
-                uint previous = shownBits;
+                ulong previous = shownBits;
                 ShowState();
-                if (previous != uint.MaxValue && Playing)
+                if (previous != ulong.MaxValue && Playing)
                 {
                     for (int i = 0; i < walls.Length; i++)
-                        if ((previous >> (i*2) & 3) != WallState(i))
+                        if ((int)(previous >> (i*2) & 3) != WallState(i))
                             PlayWallFeedback(i, WallState(i));
-                    for (int i = 0; i < doors.Length; i++)
-                        if (((previous ^ Bits) & (1u << (DoorBit + i))) != 0)
-                            PlayDoorFeedback(i);
                 }
             }
             if (Director.RuinPatches.Count != shownPatchCount || shownPatchCount > 0) ShowPatches();
+            ShowStones();
         }
 
-        private void SetBit(uint bit, bool active)
+        private void SetBit(ulong bit, bool active)
         {
             Director.RuinBits.Value = active ? Bits | bit : Bits & ~bit;
             ShowState();
@@ -192,7 +164,7 @@ namespace CargoClash
         private void SetWall(int index, int state)
         {
             int shift = index * 2;
-            Director.RuinBits.Value = (Bits & ~(3u << shift)) | ((uint)state << shift);
+            Director.RuinBits.Value = (Bits & ~(3UL << shift)) | ((ulong)state << shift);
             ShowState();
             PlayWallFeedback(index, state);
         }
@@ -201,10 +173,9 @@ namespace CargoClash
         {
             Vector3 centre = walls[index].Bounds.center;
             GameAudio.PlayAt(state == 0 ? "pickup" : "crack", centre);
-            if (state == 2) FxBurst.PlayPuff(centre, new Color(.68f, .61f, .46f), 8);
+            if (state != 0) FxBurst.PlayPuff(centre + Vector3.up * walls[index].Bounds.extents.y * .5f,
+                                             new Color(.68f, .61f, .46f), state == 2 ? 14 : 6);
         }
-
-        private void PlayDoorFeedback(int index) => GameAudio.PlayAt("clunk", data.doors[index].center + Vector3.up);
 
         private void ShowState()
         {
@@ -213,22 +184,13 @@ namespace CargoClash
             {
                 Wall wall = walls[i];
                 int state = WallState(i);
-                wall.Intact.gameObject.SetActive(state == 0 || state == 1 && wall.Cracked == null);
-                if (wall.Cracked != null) wall.Cracked.gameObject.SetActive(state == 1);
-                wall.Broken.gameObject.SetActive(state == 2);
+                // A wall of separate stones shows them instead of its shipped model (ShowStones).
+                wall.Intact.gameObject.SetActive(wall.Stones == null && state != 2);
+                if (wall.Cracked != null) wall.Cracked.gameObject.SetActive(false);
+                // Stone walls leave their own stones lying about instead of the shipped rubble.
+                wall.Broken.gameObject.SetActive(state == 2 && wall.Stones == null);
                 wall.Collider.enabled = state != 2;
                 if (wall.Obstacle != null) wall.Obstacle.enabled = state != 2;
-            }
-            for (int i = 0; i < doors.Length; i++)
-            {
-                Door door = doors[i];
-                Quaternion[] rotations = DoorClosed(i) ? door.Closed : door.Open;
-                for (int j = 0; j < door.Hinges.Length; j++)
-                {
-                    door.Hinges[j].localRotation = rotations[j];
-                    AlignDoorCollider(door, j);
-                    door.Boxes[j].enabled = true;
-                }
             }
             for (int i = 0; i < coils.Length; i++) coils[i].SetActive(PickupAvailable(i));
             ladder.SetActive(LadderInstalled);
@@ -251,7 +213,7 @@ namespace CargoClash
 
         internal void ServerReset()
         {
-            Director.RuinBits.Value = ClosedDoorBits;
+            Director.RuinBits.Value = 0UL;
             Director.RuinPatches.Clear();
             Array.Clear(pickupReadyAt, 0, pickupReadyAt.Length);
             foreach (Wall wall in walls)
@@ -261,7 +223,6 @@ namespace CargoClash
                 wall.LastPullFrame = -1;
                 wall.Restore = 0;
             }
-            foreach (Door door in doors) door.LockedUntil = 0;
             ladderTraverse = boostTraverse = null;
             boostHelper = null;
             ladderExpiresAt = 0;
@@ -280,7 +241,7 @@ namespace CargoClash
             {
                 if (pickupReadyAt[i] == 0 || pickupReadyAt[i] > Now) continue;
                 pickupReadyAt[i] = 0;
-                SetBit(1u << (PickupBit+i), false);
+                SetBit(1UL << (PickupBit+i), false);
             }
             for (int i = Director.RuinPatches.Count-1; i >= 0; i--)
                 if (Director.RuinPatches[i].ExpiresAt <= Now) Director.RuinPatches.RemoveAt(i);
@@ -452,12 +413,12 @@ namespace CargoClash
             return true;
         }
 
-        private static bool Occupied(Bounds area, PlayerAvatar ignored = null, DoorLeafPose[] leaves = null)
+        private static bool Occupied(Bounds area, PlayerAvatar ignored = null)
         {
             foreach (PlayerAvatar player in PlayerAvatar.All)
             {
                 if (player == ignored) continue;
-                if (OverlapsArea(area, player.BodyBoundsAt(player.transform.position), leaves)) return true;
+                if (area.Intersects(player.BodyBoundsAt(player.transform.position))) return true;
             }
             foreach (CargoItem cargo in CargoItem.All)
             {
@@ -465,17 +426,8 @@ namespace CargoClash
                 Vector3 extents = cargo.HalfExtents;
                 Vector3 right = cargo.transform.right * extents.x, up = cargo.transform.up * extents.y, forward = cargo.transform.forward * extents.z;
                 Vector3 aabb = Abs(right) + Abs(up) + Abs(forward);
-                if (OverlapsArea(area, new Bounds(cargo.transform.position, aabb * 2f), leaves)) return true;
+                if (area.Intersects(new Bounds(cargo.transform.position, aabb * 2f))) return true;
             }
-            return false;
-        }
-
-        private static bool OverlapsArea(Bounds area, Bounds occupant, DoorLeafPose[] leaves)
-        {
-            if (!area.Intersects(occupant)) return false;
-            if (leaves == null) return true;
-            foreach (DoorLeafPose leaf in leaves)
-                if (leaf.Intersects(occupant)) return true;
             return false;
         }
 
@@ -502,48 +454,15 @@ namespace CargoClash
             return flat.sqrMagnitude < .03f || Vector3.Dot(flat.normalized, player.transform.forward) >= .4f;
         }
 
-        internal bool TryBotOpenDoor(PlayerAvatar player, Vector3 goal)
-        {
-            if (!Playing || !Director.IsServer || player.CarriedCargo != null) return false;
-            for (int i = 0; i < doors.Length; i++)
-            {
-                if (!DoorClosed(i)) continue;
-                Vector3 feet = player.transform.position;
-                float centreZ = data.doors[i].center.z;
-                if (Mathf.Abs(goal.z - centreZ) < .3f ||
-                    (goal.z - centreZ) * (feet.z - centreZ) >= 0f) continue;
-                Vector3 target = DoorHandlePoint(i, player);
-                Vector3 direction = (target - player.EyePosition).normalized;
-                if (CanReachDoor(i, player, direction) && TrySetDoor(i, false)) return true;
-            }
-            return false;
-        }
-
         internal static bool BotCanReachCargo(PlayerAvatar player, CargoItem cargo)
         {
             if (Instance == null || cargo.transform.position.y < 1.7f) return true;
             return Mathf.Abs(cargo.transform.position.y - cargo.HalfExtents.y - player.transform.position.y) < 1.2f;
         }
 
-        private Vector3 DoorHandlePoint(int index, PlayerAvatar player)
-        {
-            Vector3 point = data.doors[index].center + Vector3.up * 1.12f;
-            point.z += player.transform.position.z < point.z ? -.2f : .2f;
-            return point;
-        }
-
-        private bool CanReachDoor(int index, PlayerAvatar player, Vector3 direction)
-        {
-            Door door = doors[index];
-            return IsAimed(player, direction, DoorHandlePoint(index, player), config.ruinUseRange + .9f,
-                door.Boxes[0], door.Boxes[1]);
-        }
-
         internal int FindUse(PlayerAvatar player, Vector3 aim, bool allowThrow = true)
         {
             if (!Playing || player.RuinClimbing.Value || player.CarriedCargo != null) return 0;
-            for (int i = 0; i < doors.Length; i++)
-                if (CanReachDoor(i, player, aim)) return FirstDoor + i;
             if (IsAimed(player, aim, data.ladderStart + Vector3.up * .85f, config.ruinUseRange) &&
                 (LadderInstalled || player.HasRuinVine.Value)) return Climb;
             if (ReadyToBoost(player) && IsAimed(player, aim, data.boostStart + Vector3.up, config.ruinUseRange)) return Boost;
@@ -561,12 +480,7 @@ namespace CargoClash
         internal void ServerUse(PlayerAvatar player, int action, Vector3 aim)
         {
             if (!Playing || !ValidAim(player, aim) || action == 0 || FindUse(player, aim) != action) return;
-            if (action >= FirstDoor && action < FirstDoor + doors.Length)
-            {
-                int index = action - FirstDoor;
-                TrySetDoor(index, !DoorClosed(index));
-            }
-            else if (action == Climb) UseLadder(player);
+            if (action == Climb) UseLadder(player);
             else if (action == Boost) UseBoost(player);
             else if (action == PullTeammate) PullUp(player);
             else if (action >= FirstPickup && action < FirstPickup + coils.Length)
@@ -574,30 +488,13 @@ namespace CargoClash
                 int index = action - FirstPickup;
                 pickupReadyAt[index] = Now + config.ruinPickupSeconds;
                 player.HasRuinVine.Value = true;
-                SetBit(1u << (PickupBit+index), true);
+                SetBit(1UL << (PickupBit+index), true);
             }
             else if (action == ThrowVine) DeployVine(player, aim);
         }
 
-        private bool TrySetDoor(int index, bool closed)
-        {
-            Door door = doors[index];
-            if (Now < door.LockedUntil || Occupied(door.Sweep, leaves: door.SweptLeaves)) return false;
-            door.LockedUntil = Now + config.ruinDoorCooldown;
-            SetBit(1u << (DoorBit+index), closed);
-            PlayDoorFeedback(index);
-            return true;
-        }
-
         internal string UsePrompt(PlayerAvatar player, int action)
         {
-            if (action >= FirstDoor && action < FirstDoor + doors.Length)
-            {
-                int index = action - FirstDoor;
-                Door door = doors[index];
-                if (Occupied(door.Sweep, leaves: door.SweptLeaves)) return GameText.RuinDoorBlocked;
-                return DoorClosed(index) ? GameText.RuinOpenDoor : GameText.RuinCloseDoor;
-            }
             if (action == Climb) return LadderInstalled ? GameText.RuinClimb : GameText.RuinAttachVine;
             if (action == Boost)
                 return player.RuinBoostReadyUntil.Value >= Now ? GameText.RuinBoostReady : GameText.RuinBoost;
@@ -606,18 +503,35 @@ namespace CargoClash
             return action == ThrowVine ? GameText.RuinThrowVine : null;
         }
 
+        internal int WallCount => walls.Length;
+        internal int VinePickupCount => coils.Length;
+        internal int WallIndex(string id) => Array.FindIndex(data.walls, wall => wall.id == id);
+        /// <summary>Blasts of a collector's blower a standing wall has taken: it carries them in its state.</summary>
+        internal int WallBlasts(int index) => BlastsIn(WallState(index));
+        /// <summary>The replicated state has room for two partly blown stages, so a wall takes at most three.</summary>
+        internal int BlastsToBreak => Mathf.Clamp(config.ruinBlastsToBreak, 1, 3);
+        internal Vector3 WallCentre(int index) => walls[index].Bounds.center;
+        internal Bounds WallBounds(int index) => walls[index].Bounds;
+
         internal int FindWall(PlayerAvatar player, Vector3 aim, bool restore)
         {
             int best = -1;
             float bestDistance = float.PositiveInfinity;
             bool bestRayHit = false;
-            float range = restore ? config.suckRange : config.smashRange + config.reachTolerance;
+            float range = restore ? config.suckRange
+                : (player.Side == Side.Collector ? config.blastRange : config.smashRange) + config.reachTolerance;
             Ray ray = new Ray(player.EyePosition, aim);
             for (int i = 0; i < walls.Length; i++)
             {
                 int state = WallState(i);
                 if (restore ? state == 0 : state == 2) continue;
                 Wall wall = walls[i];
+                // Standing in a broken wall's gap, sucking it back: that is the wall, wherever you look. Most
+                // walls are lower than your eyes, so a level look from the gap passes over them.
+                Vector3 feet = player.transform.position;
+                if (restore && feet.x >= wall.Bounds.min.x && feet.x <= wall.Bounds.max.x &&
+                    feet.z >= wall.Bounds.min.z && feet.z <= wall.Bounds.max.z && Mathf.Abs(feet.y - wall.Bounds.min.y) < 1f)
+                    return i;
                 bool rayHit = wall.Bounds.IntersectRay(ray, out float t) && t <= range;
                 if (bestRayHit && !rayHit) continue;
                 Vector3 point = rayHit ? ray.GetPoint(t+.015f) : wall.Bounds.ClosestPoint(player.EyePosition);
@@ -636,20 +550,30 @@ namespace CargoClash
             return best;
         }
 
+        /// <summary>
+        /// One hammer blow knocks a wall down. A collector blows one down with BlastsToBreak blasts of the blower;
+        /// each blast before the last knocks out a batch of its stones and stays in its state until it is
+        /// repaired or knocked down.
+        /// </summary>
         internal void ServerHitWall(PlayerAvatar player, int index, Vector3 aim)
         {
-            if (!Playing || player.Side != Side.Interrupter || index < 0 || index >= walls.Length) return;
+            if (!Playing || index < 0 || index >= walls.Length) return;
             Wall wall = walls[index];
             int state = WallState(index);
             if (state == 2 || Now < wall.LockedUntil ||
                 !ValidAim(player, aim) || FindWall(player, aim, false) != index) return;
             wall.Restore = 0;
-            if (wall.Cracked != null && state == 0) SetWall(index, 1);
-            else
+            // The side the stones go: away from whoever hit it. Every machine lays them down the same way.
+            Vector3 across = wall.Bounds.size.x < wall.Bounds.size.z ? Vector3.right : Vector3.forward;
+            SetBit(1UL << (PushSideBit + index), Vector3.Dot(wall.Bounds.center - player.transform.position, across) >= 0f);
+            int blasts = BlastsIn(state) + 1;
+            if (player.Side == Side.Collector && blasts < BlastsToBreak)
             {
-                SetWall(index, 2);
-                wall.LockedUntil = Now + config.ruinWallSwitchCooldown;
+                SetWall(index, StateAfterBlasts(blasts));
+                return;
             }
+            SetWall(index, 2);
+            wall.LockedUntil = Now + config.ruinWallSwitchCooldown;
         }
 
         internal bool ServerRestoreWall(PlayerAvatar player, float delta, Vector3 aim)
@@ -665,13 +589,42 @@ namespace CargoClash
             wall.LastPullFrame = Time.frameCount;
             wall.LastPullAt = Now;
             wall.Restore = Mathf.Min(config.ruinRestoreSeconds, wall.Restore + delta);
-            Bounds sweep = wall.Bounds;
-            sweep.Expand(wall.Cracked != null ? new Vector3(.25f, 1.1f, .25f) : Vector3.one * .15f);
-            if (wall.Restore < config.ruinRestoreSeconds || Occupied(sweep)) return true;
+            if (wall.Restore < config.ruinRestoreSeconds) return true;
+            // Anyone or anything standing in the gap steps out to their own side: the restorer usually stands
+            // right at it, and waiting for an empty gap meant the wall never came back.
+            ClearWallGap(wall);
             wall.Restore = 0;
             wall.LockedUntil = Now + config.ruinWallSwitchCooldown;
             SetWall(index, 0);
             return true;
+        }
+
+        private static void ClearWallGap(Wall wall)
+        {
+            Bounds gap = wall.Bounds;
+            Vector3 across = gap.size.x < gap.size.z ? Vector3.right : Vector3.forward;
+            float half = Vector3.Dot(gap.extents, across);
+            foreach (PlayerAvatar player in PlayerAvatar.All)
+            {
+                if (player == null || !player.IsSpawned) continue;
+                Vector3 feet = player.transform.position;
+                Bounds body = player.BodyBoundsAt(feet);
+                if (!gap.Intersects(body)) continue;
+                float offset = Vector3.Dot(feet - gap.center, across);
+                float side = offset >= 0f ? 1f : -1f;
+                float clear = half + Vector3.Dot(body.extents, across) + .1f;
+                player.TeleportRpc(feet + across * (side * clear - offset), player.transform.rotation);
+            }
+            foreach (CargoItem cargo in CargoItem.All)
+            {
+                if (cargo.State.Value != CargoState.Ground || cargo.Body == null) continue;
+                Vector3 extents = Abs(cargo.transform.right * cargo.HalfExtents.x) + Abs(cargo.transform.up * cargo.HalfExtents.y) +
+                                  Abs(cargo.transform.forward * cargo.HalfExtents.z);
+                if (!gap.Intersects(new Bounds(cargo.transform.position, extents * 2f))) continue;
+                float offset = Vector3.Dot(cargo.transform.position - gap.center, across);
+                float side = offset >= 0f ? 1f : -1f;
+                cargo.Body.position = cargo.transform.position + across * (side * (half + Vector3.Dot(extents, across) + .1f) - offset);
+            }
         }
 
         internal static bool CargoReach(PlayerAvatar player, CargoItem cargo)

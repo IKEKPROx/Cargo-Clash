@@ -545,6 +545,9 @@ namespace CargoClash
                 bool interrupter = local.Side == Side.Interrupter;
                 target = interrupter && local.AimedSmash != null ? local.AimedSmash : local.AimedGrab;
                 ShowAimPrompts(local, interrupter);
+                // Carrying a ruin vine: say what it is for, under whatever the aim shows.
+                if (RuinCourtyard.Instance != null && local.HasRuinVine.Value && !promptB.gameObject.activeSelf)
+                    promptB.Show(null, GameText.RuinHaveVine);
             }
 
             // Someone to hit comes before any cargo, the same as in the swing itself.
@@ -631,15 +634,25 @@ namespace CargoClash
             {
                 int action = ruins.FindUse(local, local.LookDirection, grab == null);
                 string useWords = ruins.UsePrompt(local, action);
-                bool wall = ruins.FindWall(local, local.LookDirection, !interrupter) >= 0;
-                if (useWords != null || wall)
+                // A standing wall: the hammer, or the collector's blower a few times. A broken one: suck it back up.
+                string wallKey = null, wallWords = null;
+                int standing = ruins.FindWall(local, local.LookDirection, false);
+                if (standing >= 0)
+                {
+                    wallKey = GameText.KeyAttack;
+                    wallWords = interrupter ? GameText.RuinBreak
+                        : GameText.RuinBlowDown(ruins.BlastsToBreak - ruins.WallBlasts(standing));
+                }
+                else if (!interrupter && ruins.FindWall(local, local.LookDirection, true) >= 0)
+                {
+                    wallKey = GameText.KeySecondary;
+                    wallWords = GameText.RuinRestore;
+                }
+                if (useWords != null || wallWords != null)
                 {
                     if (useWords != null) promptA.Show(GameText.KeyInteract, useWords);
-                    else promptA.Show(interrupter ? GameText.KeyAttack : GameText.KeySecondary,
-                                      interrupter ? GameText.RuinBreak : GameText.RuinRestore);
-                    if (useWords != null && wall)
-                        promptB.Show(interrupter ? GameText.KeyAttack : GameText.KeySecondary,
-                                     interrupter ? GameText.RuinBreak : GameText.RuinRestore);
+                    else promptA.Show(wallKey, wallWords);
+                    if (useWords != null && wallWords != null) promptB.Show(wallKey, wallWords);
                     else promptB.Hide();
                     return;
                 }

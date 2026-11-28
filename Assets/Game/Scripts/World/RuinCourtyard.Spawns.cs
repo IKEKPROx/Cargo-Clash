@@ -6,24 +6,6 @@ namespace CargoClash
 {
     public sealed partial class RuinCourtyard
     {
-        internal int SpawnMarkerCount { get; private set; }
-        internal int SpawnBannerCount { get; private set; }
-        internal Transform SpawnMarkersRoot { get; private set; }
-
-        /// <summary>Painted standing spots and two-sided workshop signs; all decoration is non-colliding.</summary>
-        private void BuildSpawnMarkers()
-        {
-            SpawnMarkersRoot = new GameObject("Spawn assembly markers").transform;
-            SpawnMarkersRoot.SetParent(field, false);
-            Material cream = SpawnMarkerMaterial("Spawn cream", new Color(223f/255f, 216f/255f, 183f/255f));
-            Material navy = SpawnMarkerMaterial("Spawn workwear blue", new Color(48f/255f, 57f/255f, 80f/255f));
-            Material orange = SpawnMarkerMaterial("Spawn warm orange", new Color(203f/255f, 104f/255f, 43f/255f));
-            Material yellow = SpawnMarkerMaterial("Spawn helmet yellow", new Color(217f/255f, 169f/255f, 40f/255f));
-            SpawnMarkerCount = SpawnBannerCount = 0;
-            BuildSpawnTeam(data.collectorSpawns, "Collectors", true, orange, cream, navy, yellow);
-            BuildSpawnTeam(data.interrupterSpawns, "Interrupters", false, navy, cream, navy, yellow);
-        }
-
         private Material SpawnMarkerMaterial(string name, Color color)
         {
             Material material = new Material(Load<Material>("RuinSurface")) { name = name };
@@ -33,66 +15,6 @@ namespace CargoClash
             // Reuse the existing field lifecycle without changing the shared material asset.
             renderMaterials.Add(material, material);
             return material;
-        }
-
-        private void BuildSpawnTeam(Spot[] spots, string team, bool collectors, Material teamColor,
-            Material cream, Material navy, Material yellow)
-        {
-            Vector3 centre = Vector3.zero;
-            foreach (Spot spot in spots)
-            {
-                centre += spot.position;
-                Transform pad = new GameObject(spot.name + " standing marker").transform;
-                pad.SetParent(SpawnMarkersRoot, false);
-                pad.localPosition = spot.position + Vector3.up * .025f;
-                pad.localRotation = Quaternion.Euler(0, spot.yaw, 0);
-                for (int side = 0; side < 16; side++)
-                {
-                    float angle = side * Mathf.PI * 2f / 16f;
-                    float next = (side + 1) * Mathf.PI * 2f / 16f;
-                    SpawnPaintStroke(pad, "Painted standing ring",
-                        new Vector3(Mathf.Sin(angle), 0, Mathf.Cos(angle)),
-                        new Vector3(Mathf.Sin(next), 0, Mathf.Cos(next)), .11f, teamColor);
-                }
-                // Two chunky boot prints make each of the three positions understandable up close.
-                SpawnDecoration(pad, "Left boot print", PrimitiveType.Sphere,
-                    new Vector3(-.19f, .005f, -.23f), new Vector3(.23f, .025f, .48f), cream);
-                SpawnDecoration(pad, "Right boot print", PrimitiveType.Sphere,
-                    new Vector3(.19f, .005f, -.13f), new Vector3(.23f, .025f, .48f), cream);
-                SpawnPaintStroke(pad, "Forward arrow stem", new Vector3(0, 0, .2f), new Vector3(0, 0, .68f), .14f, cream);
-                SpawnPaintStroke(pad, "Forward arrow left", new Vector3(-.23f, 0, .45f), new Vector3(0, 0, .7f), .14f, cream);
-                SpawnPaintStroke(pad, "Forward arrow right", new Vector3(.23f, 0, .45f), new Vector3(0, 0, .7f), .14f, cream);
-                SpawnMarkerCount++;
-            }
-            if (spots.Length == 0) return;
-            centre /= spots.Length;
-            Vector3 forward = new Vector3(data.size.x * .5f - centre.x, 0, data.size.y * .5f - centre.z).normalized;
-            Transform banner = new GameObject(team + " assembly banner").transform;
-            banner.SetParent(SpawnMarkersRoot, false);
-            banner.localPosition = centre - forward * 3.4f;
-            banner.localRotation = Quaternion.LookRotation(forward);
-            foreach (float x in new[] { -2.1f, 2.1f })
-            {
-                SpawnDecoration(banner, "Rounded weighted foot", PrimitiveType.Sphere,
-                    new Vector3(x, .11f, 0), new Vector3(.7f, .22f, .65f), navy, true);
-                SpawnDecoration(banner, "Chunky sign post", PrimitiveType.Cylinder,
-                    new Vector3(x, 1.55f, 0), new Vector3(.18f, 1.5f, .18f), navy, true);
-                SpawnDecoration(banner, "Safety collar", PrimitiveType.Cylinder,
-                    new Vector3(x, .8f, 0), new Vector3(.23f, .13f, .23f), yellow, true);
-                SpawnDecoration(banner, "Round post cap", PrimitiveType.Sphere,
-                    new Vector3(x, 3.15f, 0), Vector3.one * .28f, yellow, true);
-            }
-            SpawnDecoration(banner, "Rounded sign border", PrimitiveType.Sphere,
-                new Vector3(0, 2.55f, 0), new Vector3(5.6f, 1.9f, .32f), navy, true);
-            SpawnDecoration(banner, "Cream sign face", PrimitiveType.Sphere,
-                new Vector3(0, 2.55f, 0), new Vector3(5.3f, 1.66f, .35f), cream);
-            SpawnDecoration(banner, "Team colour header", PrimitiveType.Sphere,
-                new Vector3(0, 3.22f, 0), new Vector3(3.3f, .24f, .37f), teamColor);
-            string title = collectors ? GameText.RuinCollectorBaseEnglish : GameText.RuinInterrupterBaseEnglish;
-            string hint = collectors ? GameText.RuinCollectorAssemblyEnglish : GameText.RuinInterrupterAssemblyEnglish;
-            BuildSignFace(banner, true, title, hint, teamColor.color);
-            BuildSignFace(banner, false, title, hint, teamColor.color);
-            SpawnBannerCount++;
         }
 
         private static void SpawnPaintStroke(Transform parent, string name, Vector3 from, Vector3 to, float width, Material material)

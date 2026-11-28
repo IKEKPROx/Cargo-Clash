@@ -1,11 +1,13 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace CargoClash
 {
     public sealed partial class RuinCourtyard
     {
-        /// <summary>Floor-to-ground walking routes, one per pit, including the ground outside its south rim.</summary>
+        /// <summary>Floor-to-ground walking routes, one per pit: up a side flight, across the landing, up the central
+        /// flight to the ground outside the south rim (make_ruin_pit_stairs.py).</summary>
         internal Vector3[][] PitStairPaths { get; private set; }
         internal Bounds[] PitStairBounds { get; private set; }
 
@@ -54,24 +56,28 @@ namespace CargoClash
                 throw new InvalidOperationException("Pit stair frame did not align with the level.");
 
             PitStairPaths = new Vector3[2][];
-            PitStairBounds = new Bounds[34];
+            var stairBounds = new List<Bounds>();
             for (int pit = 0; pit < 2; pit++)
             {
                 string prefix = "PitStairs_"+(pit == 0 ? "West" : "East");
-                PitStairPaths[pit] = new Vector3[19];
-                for (int i = 0; i < 19; i++)
-                    PitStairPaths[pit][i] = Find(source, $"{prefix}_Path_{i:00}").position;
-                for (int i = 0; i < 17; i++)
+                var path = new List<Vector3>();
+                for (Transform point; (point = TryFind(source, $"{prefix}_Path_{path.Count:00}")) != null;) path.Add(point.position);
+                if (path.Count < 2) throw new InvalidOperationException("Pit stair path missing: " + prefix);
+                PitStairPaths[pit] = path.ToArray();
+                for (int i = 0; ; i++)
                 {
-                    Vector3 min = Find(source, $"{prefix}_Box_{i:00}_Min").position;
+                    Transform low = TryFind(source, $"{prefix}_Box_{i:00}_Min");
+                    if (low == null) break;
+                    Vector3 min = low.position;
                     Vector3 max = Find(source, $"{prefix}_Box_{i:00}_Max").position;
                     Bounds bounds = new Bounds((min+max)*.5f, max-min);
                     if (bounds.size.x <= 0 || bounds.size.y <= 0 || bounds.size.z <= 0)
                         throw new InvalidOperationException("Invalid pit stair collider " + prefix + i);
-                    PitStairBounds[pit*17+i] = bounds;
+                    stairBounds.Add(bounds);
                     AddBox($"{prefix} stair {i:00}", bounds);
                 }
             }
+            PitStairBounds = stairBounds.ToArray();
         }
     }
 }

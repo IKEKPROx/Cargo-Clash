@@ -88,6 +88,9 @@ namespace CargoClash
             Active = true;
             AutoPilot pilot = rig.AddComponent<AutoPilot>();
             pilot.Parse(args);
+            // Tests run silently unless -ccSound is given. Pausing the listener leaves the volume settings
+            // (and the checks on them) untouched.
+            if (Array.IndexOf(args, "-ccSound") < 0) AudioListener.pause = true;
 
             // Without a display nothing limits the frame rate, and thousands of frames per second
             // make a test behave unlike a real game. 60 is what players see.
@@ -128,6 +131,7 @@ namespace CargoClash
                     case "-ccUncapped": uncapped = true; break;
                     case "-ccTour": tourSpots = next; break;
                     case "-ccEyeTour": eyeTourSpots = next; break;
+                    case "-ccExportLevel": exportDirectory = next; break;
                     case "-ccDriveInput": driveInput = true; break;
                     case "-ccSwingBurst": burstEvery = float.Parse(next); break;
                     case "-ccInspectShots": inspectShotEvery = float.Parse(next); BotsIdle = true; break;
@@ -178,6 +182,7 @@ namespace CargoClash
             if (uncapped) StartCoroutine(MeasureFrames());
             if (!string.IsNullOrEmpty(tourSpots)) StartCoroutine(TourTheLevel());
             if (!string.IsNullOrEmpty(eyeTourSpots)) StartCoroutine(TourAtEyeLevel());
+            if (!string.IsNullOrEmpty(exportDirectory)) StartCoroutine(ExportLevel());
             if (driveInput) StartCoroutine(DriveWithKeysAndMouse());
             if (inspectShotEvery > 0f) StartCoroutine(PhotographInspects());
             if (!string.IsNullOrEmpty(startView)) GameSettings.FirstPerson = startView != "third";

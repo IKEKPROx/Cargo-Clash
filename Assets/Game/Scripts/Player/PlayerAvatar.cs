@@ -474,12 +474,12 @@ namespace CargoClash
                 SetSwingingRpc(swing, smashTarget, hitTarget);
             }
             if (swing && !input.LooksAround && wish.sqrMagnitude <= 0.01f) FaceSwingTarget(deltaTime);
-            if (RuinCourtyard.Instance != null && (swing && !collector || free && collector && secondary)
+            if (RuinCourtyard.Instance != null && (swing || free && collector && secondary)
                 && Time.time >= nextRuinAimAt)
             {
                 nextRuinAimAt = Time.time + .1f;
                 Vector3 aim = input.LooksAround ? LookDirection : transform.forward;
-                SendRuinAimRpc(!collector, aim);
+                SendRuinAimRpc(swing, aim);
             }
         }
 
@@ -920,7 +920,7 @@ namespace CargoClash
             if (target != null && target.IsWithin(transform.position, config.smashRange + config.reachTolerance)
                 && RuinCourtyard.CargoReach(this, target))
                 target.ServerApplySmash(this, config.smashSwingSeconds);
-            else if (!collector && Now - ruinSwingAimReceived < .25)
+            else if (Now - ruinSwingAimReceived < .25)
                 RuinCourtyard.Instance?.ServerHitWall(this, ruinSwingWall, ruinSwingAim);
         }
 
@@ -1181,17 +1181,18 @@ namespace CargoClash
         }
 
         [Rpc(SendTo.Server, Delivery = RpcDelivery.Unreliable, RequireOwnership = true)]
-        private void SendRuinAimRpc(bool hammer, Vector3 aim)
+        private void SendRuinAimRpc(bool swing, Vector3 aim)
         {
             RuinCourtyard ruins = RuinCourtyard.Instance;
             if (ruins == null || !ServerCanAct() || CarriedCargo != null || !RuinCourtyard.ValidAim(this, aim)) return;
-            if (hammer && Side == Side.Interrupter)
+            // A hammer swing or a blast of the blower at a wall; the blower sucking a broken one back up.
+            if (swing)
             {
                 ruinSwingAim = aim;
                 ruinSwingAimReceived = Now;
                 ruinSwingWall = ruins.FindWall(this, aim, false);
             }
-            if (!hammer && Side == Side.Collector)
+            if (!swing && Side == Side.Collector)
             {
                 ruinSuckAim = aim;
                 ruinSuckAimReceived = Now;

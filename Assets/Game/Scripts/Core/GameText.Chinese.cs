@@ -11,11 +11,10 @@ namespace CargoClash
         private static readonly Dictionary<string, string> Chinese = new Dictionary<string, string>
         {
             // Ruin Courtyard.
-            ["OPEN GATE"] = "打开遗迹门",
-            ["CLOSE GATE"] = "关闭遗迹门",
-            ["CLEAR THE GATE SWING"] = "请让开门扇范围",
             ["TAKE VINE"] = "拾取藤蔓",
             ["THROW VINE"] = "投掷藤蔓",
+            ["BLOW DOWN WALL ({0} MORE BLASTS)"] = "吹倒墙（还要吹{0}下）",
+            ["You have a vine: press E to throw it and slow your opponents"] = "你拥有藤蔓，按E扔出可减速对手",
             ["ATTACH VINE"] = "挂上藤蔓",
             ["CLIMB"] = "攀爬",
             ["TEAM BOOST"] = "合作托举",
@@ -23,7 +22,7 @@ namespace CargoClash
             ["HOLD TO RESTORE WALL"] = "按住复原墙体",
             ["PULL UP TEAMMATE"] = "拉队友上来",
             ["READY TO BOOST"] = "准备托举",
-            ["RUIN COURTYARD"] = "藤坠石庭",
+            ["MAYA RUINS"] = "玛雅遗迹",
             ["COLLECTOR BASE"] = "搬运方出生区",
             ["INTERRUPTER BASE"] = "阻拦方出生区",
             ["3 CREW / CARRY TO TRUCK"] = "三人集合 · 运货回车",

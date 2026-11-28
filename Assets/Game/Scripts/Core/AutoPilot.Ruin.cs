@@ -31,34 +31,29 @@ namespace CargoClash
             RuinTestMap map = JsonUtility.FromJson<RuinTestMap>(Resources.Load<TextAsset>("RuinCourtyard/RuinLayout").text);
             BotsIdle = true;
             double cargoDeadline = MatchDirector.Instance.Now + 5;
-            while (CargoItem.All.Count < 15 && MatchDirector.Instance.Now < cargoDeadline) yield return null;
+            while (CargoItem.All.Count < 43 && MatchDirector.Instance.Now < cargoDeadline) yield return null;
             CheckRuinCargo(config, layout);
             if (HalfSecondsOverride <= 0)
                 Expect(Mathf.Approximately(config.EffectiveHalfSeconds, 120f), "RUIN defaults to two minutes per half");
             Expect(layout.collectorSpawns.Length == layout.interrupterSpawns.Length &&
-                   ruins.SpawnMarkerCount == layout.collectorSpawns.Length + layout.interrupterSpawns.Length &&
-                   ruins.SpawnBannerCount == 2 && ruins.SpawnMarkersRoot != null &&
-                   !ruins.SpawnMarkersRoot.GetComponentsInChildren<Collider>(true).Any(c => c.enabled),
-                "RUIN both equal teams have marked spawn slots and non-blocking bilingual assembly signs");
+                   GameObject.Find("Spawn assembly markers") == null,
+                "RUIN both teams have equal spawn slots and nothing is painted on the ground for them");
             if (!local.IsServer)
             {
                 // The client must not deliver unrelated cargo during the host's score-isolation checks.
                 BotsIdle = true;
-                uint openedGates = 0;
-                bool wall = false, pad = false, ladder = false, coCarry = false;
+                bool wall = false, ladder = false, coCarry = false;
                 int half = MatchDirector.Instance.Half.Value;
                 while (MatchDirector.Instance.Half.Value == half && MatchDirector.Instance.Phase.Value == MatchPhase.Playing)
                 {
-                    uint bits = MatchDirector.Instance.RuinBits.Value;
-                    openedGates |= (~bits >> 24) & 3u;
-                    wall |= (bits & 3u) == 2u;
-                    pad |= MatchDirector.Instance.RuinPatches.Count > 0;
-                    ladder |= (bits & (1u << 29)) != 0;
+                    ulong bits = MatchDirector.Instance.RuinBits.Value;
+                    wall |= (bits & 3UL) == 2UL;
+                    ladder |= (bits & (1UL << 51)) != 0;
                     coCarry |= CargoItem.All.Any(c => c.Definition.value == 100 && !c.HasFreeSlot && c.State.Value == CargoState.Carried);
                     yield return null;
                 }
-                Expect(openedGates == 3u && wall, "RUIN client observes both gates open and the wall break");
-                Expect(pad && ladder, "RUIN client observes replicated vine pad and ladder states");
+                Expect(wall, "RUIN client observes the wall break");
+                Expect(ladder, "RUIN client observes the replicated ladder state");
                 Expect(coCarry, "RUIN client observes two carriers on a 100 crate");
                 BotsIdle = false;
                 yield break;
@@ -81,13 +76,67 @@ namespace CargoClash
                 Expect(layout.collectorSpawns.Concat(layout.interrupterSpawns).All(spot =>
                     Physics.Raycast(spot.position + Vector3.up * .3f, Vector3.down, .6f, GameLayers.LevelMask)),
                     "RUIN ground collider supports both teams' spawn points");
-                Vector3 road = new Vector3(map.truckZone.x - 3.4f, .05f, -8f);
-                Vector3 apron = road + Vector3.forward * 10f;
-                NavMeshPath deliveryPath = new NavMeshPath();
-                Expect(!Physics.Linecast(road + Vector3.up, apron + Vector3.up, GameLayers.LevelMask) &&
-                       NavMesh.CalculatePath(road, apron, NavMesh.AllAreas, deliveryPath) &&
-                       deliveryPath.status == NavMeshPathStatus.PathComplete,
-                    "RUIN cargo opening connects the road and truck apron for players and bots");
+                Vector3 road = new Vector3(map.truckZone.x - 3.4f, .05f, -9f);
+                Vector3 apron = road + Vector3.forward * 6f;
+                NavMeshPath roadPath = new NavMeshPath();
+                Expect(Physics.Linecast(apron + Vector3.up * .5f, road + Vector3.up * .5f, GameLayers.LevelMask) &&
+                       !(NavMesh.CalculatePath(apron, road, NavMesh.AllAreas, roadPath) &&
+                         roadPath.status == NavMeshPathStatus.PathComplete),
+                    "RUIN the road guardrail, crushed low at the gap, keeps players and bots off the road");
+                Expect(ruins.MayaBlockerCount >= 20 &&
+                       Physics.Raycast(new Vector3(17f, 1f, 2f), Vector3.forward, 4f, GameLayers.LevelMask) &&
+                       Physics.Raycast(new Vector3(113f, 1f, 52f), Vector3.left, 3f, GameLayers.LevelMask),
+                    "RUIN the six Maya structures inside the play area block players");
+                // The play area was drawn in to x 10-115, north to z 66.4.
+                Expect(Physics.Raycast(new Vector3(12f, 1f, 44f), Vector3.left, 2.5f, GameLayers.LevelMask) &&
+                       Physics.Raycast(new Vector3(113f, 1f, 44f), Vector3.right, 2.5f, GameLayers.LevelMask) &&
+                       Physics.Raycast(new Vector3(40f, 1f, 64.5f), Vector3.forward, 2.5f, GameLayers.LevelMask) &&
+                       layout.mapArea.xMin == 10f && Mathf.Approximately(layout.mapArea.xMax, 115f) && Mathf.Approximately(layout.mapArea.yMax, 66.4f),
+                    "RUIN the drawn-in edges (x 10-115, z 66.4) stop players and frame the minimap");
+                Vector3 truckGoal = map.truckZone + Vector3.back * 4.2f;
+                bool allReach = true;
+                // Every spot, the terrace and the open vaults included, with all walls standing.
+                foreach (Transform spot in layout.collectorSpawns.Concat(layout.interrupterSpawns).Concat(layout.smallSpots)
+                             .Concat(layout.mediumSpots).Concat(layout.largeSpots))
+                {
+                    NavMeshPath route = new NavMeshPath();
+                    if (!NavMesh.SamplePosition(spot.position, out NavMeshHit from, 2.5f, NavMesh.AllAreas) ||
+                        !NavMesh.CalculatePath(from.position, truckGoal, NavMesh.AllAreas, route) ||
+                        route.status != NavMeshPathStatus.PathComplete)
+                    {
+                        allReach = false;
+                        Log($"RUIN no route from {spot.name} {spot.position} to the truck");
+                    }
+                }
+                Expect(allReach, "RUIN every spawn and cargo spot still has a walking route to the truck");
+                Log("RUIN blockers dropped with their cleared models: " + string.Join(", ", ruins.DroppedBlockers));
+                Expect(!ruins.DroppedBlockers.Any(name => name.StartsWith("U2_") || name.StartsWith("U3_") ||
+                                                          name.StartsWith("U4_") || name.StartsWith("RuinButtress")),
+                    "RUIN the rampart keeps the old gate frames and buttress it joins");
+                Expect(ruins.PitSignSolids >= 4 && Physics.Raycast(new Vector3(23.6f, .3f, 33.5f), Vector3.forward, 2.5f, GameLayers.LevelMask),
+                    $"RUIN the pit warning signs are solid ({ruins.PitSignSolids} pieces)");
+                Expect(ruins.ClearedClutter > 30, $"RUIN loose rocks and grass clumps are cleared off the ground ({ruins.ClearedClutter})");
+                Expect(ruins.ClearedIslands > 20,
+                    $"RUIN shipped trees, rocks and rim plants are cleared under the new structures ({ruins.ClearedIslands})");
+                Expect(ruins.MayaTrackCount == 4 && ruins.DepthOfFieldReady,
+                    "RUIN tyre tracks are painted and the far blur is on the main camera");
+                Vector3[] tape = ruins.CordonRoute;
+                Expect(tape != null && tape.Length == 4 && tape.All(p => p.z > .3f),
+                    "RUIN warning tape runs only along the west, north and east edges, never toward the road");
+                Expect(Physics.Raycast(new Vector3(30f, .5f, -3f), Vector3.back, 4f, GameLayers.LevelMask) &&
+                       Physics.Raycast(new Vector3(100f, .5f, -3.5f), Vector3.back, 4f, GameLayers.LevelMask) &&
+                       NavMesh.SamplePosition(new Vector3(30f, 0f, -4.5f), out _, .5f, NavMesh.AllAreas),
+                    "RUIN the strip between the ruin and the road is playable and ends at the guardrail");
+                int ramp = 0;
+                foreach ((Vector3 foot, Vector3 top) in ruins.MayaRamps)
+                {
+                    ramp++;
+                    Vector3 up = Vector3.ProjectOnPlane(top - foot, Vector3.up).normalized;
+                    Vector3 summit = top + up * .3f;
+                    yield return StandRuin(a, foot - up * 1.2f + Vector3.up * .05f, summit);
+                    yield return WalkMayaRamp(a, foot - up * 1.2f, summit, ramp);
+                }
+                yield return StandRuin(a, starts[0], starts[0] + Vector3.forward);
                 foreach (Vector4 rect in map.pits)
                 {
                     Vector3 pit = RuinPitCenter(rect, .1f);
@@ -95,65 +144,173 @@ namespace CargoClash
                     Expect(!NavMesh.SamplePosition(pit, out _, .25f, NavMesh.AllAreas), "RUIN navigation does not bridge a pit");
                 }
 
-                Vector3[] entrances = { new Vector3(44.5f, 0f, 33.12f), new Vector3(82f, 0f, 34.12f) };
-                for (int i = 0; i < entrances.Length; i++)
-                {
-                    Vector3 entry = entrances[i], handle = entry + Vector3.up * 1.12f;
-                    uint gate = 1u << (24 + i);
-                    Vector3 front = entry - Vector3.forward * 2f;
-                    Vector3 inside = entry + Vector3.forward * 1.6f;
-                    Expect((director.RuinBits.Value & gate) != 0 &&
-                        Physics.Linecast(front + Vector3.up, inside + Vector3.up, GameLayers.LevelMask),
-                        $"RUIN gate {i + 1} starts closed with a sealed collision seam");
-                    yield return StandRuin(a, front, handle);
-                    UseRuinTest(ruins, a, handle);
-                    Expect((director.RuinBits.Value & gate) == 0 &&
-                        !Physics.Linecast(front + Vector3.up, inside + Vector3.up, GameLayers.LevelMask),
-                        $"RUIN gate {i + 1} opens from the clear centre approach at two metres");
-                    yield return StandRuin(b, entry - Vector3.forward * .3f, handle);
-                    yield return new WaitForSeconds(config.ruinDoorCooldown + .1f);
-                    UseRuinTest(ruins, a, handle);
-                    Expect((director.RuinBits.Value & gate) == 0, $"RUIN gate {i + 1} refuses to swing through a player");
-                    yield return StandRuin(b, starts[1], starts[1] + Vector3.forward);
-                    yield return StandRuin(a, inside, handle);
-                    UseRuinTest(ruins, a, handle);
-                    Expect((director.RuinBits.Value & gate) != 0, $"RUIN gate {i + 1} closes from inside");
-                    yield return new WaitForSeconds(config.ruinDoorCooldown + .1f);
-                    UseRuinTest(ruins, a, handle);
-                    Expect((director.RuinBits.Value & gate) == 0, $"RUIN gate {i + 1} reopens from inside");
-                }
+                Expect(!Physics.Linecast(new Vector3(44.5f, 1f, 31f), new Vector3(44.5f, 1f, 35f), GameLayers.LevelMask) &&
+                       !Physics.Linecast(new Vector3(82f, 1f, 32f), new Vector3(82f, 1f, 36f), GameLayers.LevelMask),
+                    "RUIN both vaults stand open without gates");
 
-                Vector3 wall = new Vector3(36.5f, 1.1f, 33.6f);
-                yield return StandRuin(interrupter, new Vector3(36.5f, 0, 32), wall);
-                Vector3 hitAim = (wall-interrupter.EyePosition).normalized;
+                // Five breakable walls are left: the three rampart gates and the two vault side walls.
+                Expect(ruins.WallCount == 5 && new[] { "R3", "R4", "R5", "R9", "R10" }.All(id => ruins.WallIndex(id) >= 0),
+                    "RUIN keeps five breakable walls: rampart gates R3, R5, R4 and vault sides R9, R10");
+                int r3 = ruins.WallIndex("R3"), r4 = ruins.WallIndex("R4"), r5 = ruins.WallIndex("R5");
+                ulong WallBits(int index) => director.RuinBits.Value >> (index * 2) & 3UL;
+                // Feet south of a rampart gate (inside its stone frame) and the middle of its face.
+                Vector3 GateFeet(int index, float back) => ruins.WallCentre(index) - Vector3.up * ruins.WallCentre(index).y + Vector3.back * back;
+                Vector3 GateFace(int index) => new Vector3(ruins.WallCentre(index).x, 1f, ruins.WallCentre(index).z);
+
+                // The rampart: its gates standing, the interrupters go round an end to reach the truck and the
+                // collectors round an end to reach the vaults; broken, both go straight through.
+                float toTruckIntact = RuinRouteLength(layout.interrupterSpawns[0].position, truckGoal);
+                float toVaultIntact = RuinRouteLength(layout.collectorSpawns[2].position, layout.largeSpots[0].position);
+
+                // One hammer blow knocks R3 down; sucking it back takes the full restore time.
+                yield return StandRuin(interrupter, GateFeet(r3, 1.6f), GateFace(r3));
+                Vector3 hitAim = (GateFace(r3) - interrupter.EyePosition).normalized;
                 int wallIndex = ruins.FindWall(interrupter, hitAim, false);
-                Expect(wallIndex == 0, "RUIN hammer aims at R1");
+                Expect(wallIndex == r3, "RUIN hammer aims at R3");
                 ruins.ServerHitWall(interrupter, wallIndex, hitAim);
-                Expect((director.RuinBits.Value & 3u) == 2u, "RUIN hammer breaks R1");
+                Expect(WallBits(r3) == 2UL, "RUIN one hammer blow knocks R3 down");
                 yield return StandRuin(interrupter, starts[2], starts[2] + Vector3.forward);
-                yield return StandRuin(a, new Vector3(36.5f, 0, 32), wall);
+                yield return StandRuin(a, GateFeet(r3, 2.2f), GateFace(r3));
                 yield return new WaitForSeconds(config.ruinWallSwitchCooldown + .1f);
-                float until = Time.time + config.ruinRestoreSeconds + .35f;
+                float until = Time.time + config.ruinRestoreSeconds - .4f;
                 while (Time.time < until)
                 {
-                    ruins.ServerRestoreWall(a, Time.deltaTime, (wall-a.EyePosition).normalized);
+                    ruins.ServerRestoreWall(a, Time.deltaTime, (GateFace(r3) - a.EyePosition).normalized);
                     yield return null;
                 }
-                Expect((director.RuinBits.Value & 3u) == 0, "RUIN collector restores broken R1");
+                Expect(WallBits(r3) == 2UL, $"RUIN sucking a wall back takes the full {config.ruinRestoreSeconds:0.#} s");
+                until = Time.time + .75f;
+                while (Time.time < until)
+                {
+                    ruins.ServerRestoreWall(a, Time.deltaTime, (GateFace(r3) - a.EyePosition).normalized);
+                    yield return null;
+                }
+                Expect(WallBits(r3) == 0UL, "RUIN collector sucks R3 back up");
 
-                Vector3 coil = map.vinePickups[0] + Vector3.up * .25f;
-                Vector3 vineFeet = map.vinePickups[0] + Vector3.forward * 1.7f;
-                yield return StandRuin(a, vineFeet, coil);
-                UseRuinTest(ruins, a, coil);
-                Expect(a.HasRuinVine.Value, "RUIN vine coil can be collected");
-                Vector3 pad = vineFeet + Vector3.right * 2.6f;
-                UseRuinTest(ruins, a, pad);
-                Expect(!a.HasRuinVine.Value && director.RuinPatches.Count == 1, "RUIN throw creates one pad and consumes the vine");
-                Expect(Mathf.Approximately(ruins.SpeedAt(pad), config.ruinPatchSpeed), "RUIN vine pad applies its configured slowdown");
-                yield return new WaitForSeconds(config.ruinPatchSeconds + .2f);
-                Expect(director.RuinPatches.Count == 0 && Mathf.Approximately(ruins.SpeedAt(pad), 1), "RUIN vine pad expires");
+                // A collector's blower knocks R4 down in exactly three blasts.
+                yield return StandRuin(a, GateFeet(r4, 1.8f), GateFace(r4));
+                Vector3 blastAim = (GateFace(r4) - a.EyePosition).normalized;
+                int blasted = ruins.FindWall(a, blastAim, false);
+                // Each blast knocks out another batch of its stones; the last brings the rest down.
+                Expect(ruins.StoneCount(r4) > 12 && ruins.StonesStanding(r4) == ruins.StoneCount(r4),
+                    $"RUIN R4 is a stack of {ruins.StoneCount(r4)} separate stones, all in place");
+                int standingBefore = ruins.StonesStanding(r4);
+                ulong[] afterBlast = { 1UL, 3UL, 2UL };
+                for (int blast = 1; blast <= ruins.BlastsToBreak; blast++)
+                {
+                    ruins.ServerHitWall(a, blasted, blastAim);
+                    yield return null;
+                    int standing = ruins.StonesStanding(r4);
+                    bool last = blast == ruins.BlastsToBreak;
+                    Expect(blasted == r4 && WallBits(r4) == (last ? 2UL : afterBlast[blast - 1]) &&
+                           standing < standingBefore && (standing == 0) == last,
+                        $"RUIN blower blast {blast} of {ruins.BlastsToBreak} at R4 " +
+                        (last ? "brings the rest down" : $"knocks out stones ({standingBefore} -> {standing} left)"));
+                    standingBefore = standing;
+                    yield return new WaitForSeconds(.3f);
+                }
+                // Knocked-out stones land and stay, solid, on the far side from the blower.
+                yield return new WaitForSeconds(1.2f);
+                var lying = ruins.LyingStones(r4);
+                Expect(lying.Count == ruins.StoneCount(r4) &&
+                       lying.All(stone => stone.center.z > ruins.WallCentre(r4).z + .3f &&
+                                          Physics.Raycast(stone.center + Vector3.up, Vector3.down, out RaycastHit top, 2f,
+                                              GameLayers.LevelMask, QueryTriggerInteraction.Ignore) &&
+                                          Mathf.Abs(top.point.y - stone.max.y) < .03f),
+                    $"RUIN all {lying.Count} R4 stones lie solid beyond the wall, away from the blower");
+                yield return new WaitForSeconds(config.ruinWallSwitchCooldown + .1f);
+                // Standing right in the gap, where people stand to suck it back: the wall still comes back, and
+                // they step out of it.
+                yield return StandRuin(a, GateFeet(r4, 0f), GateFace(r4) + Vector3.forward);
+                until = Time.time + config.ruinRestoreSeconds + .35f;
+                while (Time.time < until && WallBits(r4) != 0UL)
+                {
+                    ruins.ServerRestoreWall(a, Time.deltaTime, Vector3.forward);
+                    yield return null;
+                }
+                yield return new WaitForSeconds(.3f);
+                Expect(WallBits(r4) == 0UL && !ruins.WallBounds(r4).Intersects(a.BodyBoundsAt(a.transform.position)),
+                    $"RUIN collector standing in the R4 gap sucks it back up and is moved out of it ({a.transform.position:F2})");
+                yield return new WaitForSeconds(1.2f);
+                Expect(ruins.StonesStanding(r4) == ruins.StoneCount(r4) && ruins.LyingStones(r4).Count == 0,
+                    "RUIN every R4 stone flies back into place and no solid stone is left lying");
 
-                // Pickup already tested. Supply another vine to isolate the ladder rule.
+                // The same with the real buttons: hold left click at R5 until it falls, then right click until it
+                // stands again. The blasts land on the swing rhythm, so it takes three of them.
+                yield return new WaitForSeconds(config.ruinWallSwitchCooldown + .1f);
+                yield return StandRuin(a, GateFeet(r5, 1.8f), GateFace(r5));
+                if (a == PlayerAvatar.Local) Shot("blow-down-prompt");
+                int mostBlasts = 0;
+                float pressed = Time.time;
+                BotBrain.TestAttacker = a;
+                ulong shownBits = 0UL;
+                float shotAt = float.PositiveInfinity;
+                while (WallBits(r5) != 2UL && Time.time < pressed + 8f)
+                {
+                    mostBlasts = Mathf.Max(mostBlasts, ruins.WallBlasts(r5));
+                    // A picture of the stones in the air after each blast.
+                    if (WallBits(r5) != shownBits) { shownBits = WallBits(r5); shotAt = Time.time + .18f; }
+                    if (Time.time >= shotAt) { Shot($"wall-blast-{ruins.WallBlasts(r5)}"); shotAt = float.PositiveInfinity; }
+                    yield return null;
+                }
+                yield return new WaitForSeconds(.2f);
+                Shot("wall-blast-down");
+                yield return null;
+                BotBrain.TestAttacker = null;
+                Expect(WallBits(r5) == 2UL && mostBlasts == ruins.BlastsToBreak - 1,
+                    $"RUIN holding the blower at R5 blows it down on blast {ruins.BlastsToBreak} ({Time.time - pressed:F1} s)");
+                yield return new WaitForSeconds(config.ruinWallSwitchCooldown + .3f);
+                pressed = Time.time;
+                BotBrain.TestSucker = a;
+                while (WallBits(r5) != 0UL && Time.time < pressed + 6f) yield return null;
+                float sucked = Time.time - pressed;
+                BotBrain.TestSucker = null;
+                yield return new WaitForSeconds(.25f);
+                Shot("wall-stones-returning");
+                yield return null;
+                Expect(WallBits(r5) == 0UL && sucked >= config.ruinRestoreSeconds - .05f,
+                    $"RUIN holding suction at R5 puts it back after {sucked:F1} s");
+                yield return StandRuin(a, starts[0], starts[0] + Vector3.forward);
+
+                // All three gates down: both sides have a shorter way.
+                yield return new WaitForSeconds(config.ruinWallSwitchCooldown + .1f);
+                int[] gates = { r3, r5, r4 };
+                foreach (int i in gates)
+                {
+                    yield return StandRuin(interrupter, GateFeet(i, 1.6f), GateFace(i));
+                    Vector3 aim = (GateFace(i) - interrupter.EyePosition).normalized;
+                    int found = ruins.FindWall(interrupter, aim, false);
+                    ruins.ServerHitWall(interrupter, found, aim);
+                    Vector3 feet = GateFeet(i, 1.6f);
+                    Expect(found == i && WallBits(i) == 2UL &&
+                           !Physics.Linecast(feet + Vector3.up, feet + Vector3.forward * 3.2f + Vector3.up, GameLayers.LevelMask),
+                        $"RUIN hammer breaks rampart gate {i + 1} and opens its passage");
+                }
+                yield return new WaitForSeconds(.4f);
+                float toTruckOpen = RuinRouteLength(layout.interrupterSpawns[0].position, truckGoal);
+                float toVaultOpen = RuinRouteLength(layout.collectorSpawns[2].position, layout.largeSpots[0].position);
+                Expect(toTruckOpen < toTruckIntact - 8f,
+                    $"RUIN broken rampart gates give interrupters a shorter way to the truck ({toTruckIntact:F0} m -> {toTruckOpen:F0} m)");
+                Expect(toVaultOpen < toVaultIntact - 8f,
+                    $"RUIN broken rampart gates give collectors a shorter way to the cargo ({toVaultIntact:F0} m -> {toVaultOpen:F0} m)");
+                yield return StandRuin(interrupter, starts[2], starts[2] + Vector3.forward);
+                yield return new WaitForSeconds(config.ruinWallSwitchCooldown + .1f);
+                foreach (int i in gates)
+                {
+                    yield return StandRuin(a, GateFeet(i, 2.2f), GateFace(i));
+                    float restoreUntil = Time.time + config.ruinRestoreSeconds + .35f;
+                    while (Time.time < restoreUntil)
+                    {
+                        ruins.ServerRestoreWall(a, Time.deltaTime, (GateFace(i) - a.EyePosition).normalized);
+                        yield return null;
+                    }
+                    Expect(WallBits(i) == 0UL, $"RUIN collector restores rampart gate {i + 1}");
+                }
+
+                Expect(ruins.VinePickupCount == 0 && GameObject.Find("VinePickup_01") == null,
+                    "RUIN has no vine coils to pick up");
+
+                // No coils in the level now; hand a vine over to keep checking the ladder rule.
                 a.HasRuinVine.Value = true;
                 Vector3 ladder = map.ladderStart + Vector3.up * .85f;
                 yield return StandRuin(a, map.ladderStart + Vector3.right * .7f, ladder);
@@ -188,7 +345,7 @@ namespace CargoClash
                             $"RUIN pit {i + 1} floor is above the failsafe threshold");
                         BoxCollider box = lost.GetComponent<BoxCollider>();
                         float boxBottom = (box.center.y - box.size.y * .5f) * lost.transform.localScale.y;
-                        Vector3 cargoBottom = bottom + Vector3.right * .85f;
+                        Vector3 cargoBottom = bottom + Vector3.forward * .85f;
                         lost.Body.position = cargoBottom + Vector3.up * (.12f - boxBottom);
                         lost.Body.linearVelocity = lost.Body.angularVelocity = Vector3.zero;
                         yield return new WaitForSeconds(.6f);
@@ -284,6 +441,7 @@ namespace CargoClash
             }
             finally
             {
+                BotBrain.TestAttacker = BotBrain.TestSucker = null;
                 a.TestCoCarryMove(Vector2.zero);
                 b.TestCoCarryMove(Vector2.zero);
                 for (int i = 0; i < actors.Length; i++) actors[i].TeleportRpc(starts[i], Quaternion.identity);
@@ -293,13 +451,13 @@ namespace CargoClash
 
         private void CheckRuinCargo(GameConfig config, LevelLayout layout)
         {
-            Expect(CargoItem.All.Count == 15, "RUIN spawns exactly 15 boxes");
-            foreach (var tier in new[] { (10, 8), (30, 5), (100, 2) })
+            Expect(CargoItem.All.Count == 43, "RUIN spawns exactly 43 boxes");
+            foreach (var tier in new[] { (10, 23), (30, 17), (100, 3) })
                 Expect(CargoItem.All.Count(c => c.Definition.value == tier.Item1) == tier.Item2,
                     $"RUIN value {tier.Item1} has {tier.Item2} boxes");
-            Expect(CargoItem.All.Sum(c => c.Definition.value) == 430, "RUIN total available score is 430");
+            Expect(CargoItem.All.Sum(c => c.Definition.value) == 1040, "RUIN total available score is 1040");
             Expect(config.ruinCargo.Length == 4, "RUIN uses four isolated Astra definitions");
-            foreach (var expected in new[] { (CargoKind.Tobacco, 4), (CargoKind.Cash, 4), (CargoKind.Gold, 5), (CargoKind.Art, 2) })
+            foreach (var expected in new[] { (CargoKind.Tobacco, 12), (CargoKind.Cash, 11), (CargoKind.Gold, 17), (CargoKind.Art, 3) })
             {
                 CargoDefinition definition = config.ruinCargo.FirstOrDefault(d => d.kind == expected.Item1);
                 CargoDefinition original = config.cargo.FirstOrDefault(d => d.kind == expected.Item1);
@@ -322,6 +480,19 @@ namespace CargoClash
                             CargoItem.RuinSpawnPosition(cargo.Definition, spot)) < .15f,
                         $"RUIN {spot.name} sits on its floor using the actual prefab dimensions");
                 }
+        }
+
+        /// <summary>Walking distance between two points on the navigation mesh, or infinity with no way through.</summary>
+        private static float RuinRouteLength(Vector3 from, Vector3 to)
+        {
+            NavMeshPath route = new NavMeshPath();
+            if (!NavMesh.SamplePosition(from, out NavMeshHit start, 2.5f, NavMesh.AllAreas) ||
+                !NavMesh.SamplePosition(to, out NavMeshHit end, 2.5f, NavMesh.AllAreas) ||
+                !NavMesh.CalculatePath(start.position, end.position, NavMesh.AllAreas, route) ||
+                route.status != NavMeshPathStatus.PathComplete) return float.PositiveInfinity;
+            float length = 0f;
+            for (int i = 1; i < route.corners.Length; i++) length += Vector3.Distance(route.corners[i - 1], route.corners[i]);
+            return length;
         }
 
         private IEnumerator WalkRuinStairs(PlayerAvatar actor, Vector3[] path, int pit)
@@ -351,6 +522,27 @@ namespace CargoClash
                 $"RUIN player physically walks every step out of pit {pit}");
         }
 
+        private IEnumerator WalkMayaRamp(PlayerAvatar actor, Vector3 from, Vector3 summit, int ramp)
+        {
+            CharacterController body = actor.GetComponent<CharacterController>();
+            if (body == null || !body.enabled || !actor.IsOwner)
+            {
+                Expect(false, $"RUIN Maya ramp {ramp} walk needs the owned CharacterController");
+                yield break;
+            }
+            float deadline = Time.time + 8f;
+            while (Time.time < deadline)
+            {
+                Vector3 delta = Vector3.ProjectOnPlane(summit - actor.transform.position, Vector3.up);
+                if (delta.magnitude < .2f) break;
+                // Horizontal input and gravity only, as a player holding W would.
+                body.Move(Vector3.ClampMagnitude(delta, 3f * Time.deltaTime) + Vector3.down * (2 * Time.deltaTime));
+                yield return null;
+            }
+            Expect(actor.transform.position.y > summit.y - .35f,
+                $"RUIN player walks up Maya ramp {ramp} to the summit ({actor.transform.position.y:0.00} of {summit.y:0.00} m)");
+        }
+
         private IEnumerator CoCarryRuinStairs(PlayerAvatar a, PlayerAvatar b, CargoItem cargo, Vector3[] path, int pit)
         {
             float startY = cargo.transform.position.y;
@@ -373,7 +565,12 @@ namespace CargoClash
                     b.TestCoCarryMove(Vector2.zero);
                     if (Time.time >= deadline || a.CarriedCargo != cargo || b.CarriedCargo != cargo)
                     {
-                        Expect(false, $"RUIN pit {pit} 100 co-carry blocked/released at {waypoint}/{path.Length - 1}: {cargo.transform.position} toward {goal}");
+                        // Each carrier's feet and the tread a quarter metre ahead, to tell a wall from a missing floor.
+                        Vector3 ahead = Vector3.ProjectOnPlane(goal - cargo.transform.position, Vector3.up).normalized * .25f;
+                        string feet = string.Join(" / ", new[] { a, b }.Select(actor =>
+                            $"{actor.transform.position:F2} ahead " +
+                            (CargoItem.TryRuinCarryFloor(actor.transform.position + ahead, out float floor) ? floor.ToString("F2") : "none")));
+                        Expect(false, $"RUIN pit {pit} 100 co-carry blocked/released at {waypoint}/{path.Length - 1}: {cargo.transform.position} toward {goal}; carriers {feet}");
                         yield break;
                     }
                 }

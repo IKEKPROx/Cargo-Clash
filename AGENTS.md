@@ -252,6 +252,7 @@ grep CCTEST /tmp/cargo-match.log
 | `-ccMode host` / `client` | 开局域网主机 / 加入，配合 `-ccAddress`、`-ccExpectClients` 测两台机器 |
 | `-ccLevel 编号` | 练习和开房选第几关（从 0 数），比如 3 是河流关卡。不加就是教学关 |
 | `-ccLanguage zh` | 这一局用中文，不保存。测试默认是英文 |
+| `-ccSound` | 自动测试默认静音（暂停 `AudioListener`，音量设置不变），加这个参数才有声音 |
 | `-ccRiverTest` | 河流关卡的专项测试，见上面“河流关卡”。配合 `-ccLevel 3`，加 `-ccShotDir` 会拍拿木板和挡板的照片 |
 | `-ccMode menu` | 用真实的点击走一遍开始页面的每一屏并拍照，同时检查锁着的关卡点不进去、加入失败有提示，CREW 页的按钮、滑块、预览和改了之后能传到房间，以及设置页的每一项（垂直同步、帧率上限、画质、音量、鼠标反转、灵敏度、按 APPLY 改窗口、切到中文再切回来、Esc 退出）。配合 `-ccShotDir`，窗口运行。它会改窗口大小，跑之前先存一份 PlayerPrefs（见下面） |
 | `-ccShotDir 目录`、`-ccShotEvery 秒` | 窗口运行时定时截图，用来检查画面 |

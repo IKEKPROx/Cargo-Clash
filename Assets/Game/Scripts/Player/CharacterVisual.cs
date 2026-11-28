@@ -60,6 +60,8 @@ namespace CargoClash
         private PlayerAvatar avatar;
         private GameConfig config;
         private CrewModel look;
+        /// <summary>The dressed crew model now showing, for props held in its hands.</summary>
+        internal CrewModel Look => look;
         private Animator animator;
         private CrewModel dressedModel;
         private CrewLook dressedLook;

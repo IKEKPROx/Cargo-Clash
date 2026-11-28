@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.AI.Navigation;
 using UnityEngine;
 using UnityEngine.AI;
@@ -17,6 +18,8 @@ namespace CargoClash
         private NavMeshData runtimeNavMesh;
         private NavMeshSurface navigation;
         private const float RoadApronDepth = 18f;
+        // The road's north guardrail closes the cargo apron; see make_ruin_maya.py (GUARD_NORTH).
+        internal const float GuardrailZ = -6.2f;
         private const float CargoExitHalfWidth = 6f;
         private float CargoExitWest => data.truckZone.x - CargoExitHalfWidth;
         private float CargoExitEast => data.truckZone.x + CargoExitHalfWidth;
@@ -62,6 +65,13 @@ namespace CargoClash
             return instance;
         }
 
+        private static Transform TryFind(Transform root, string prefix)
+        {
+            foreach (Transform node in root.GetComponentsInChildren<Transform>(true))
+                if (node.name.StartsWith(prefix, StringComparison.Ordinal)) return node;
+            return null;
+        }
+
         private static Transform Find(Transform root, string prefix)
         {
             foreach (Transform node in root.GetComponentsInChildren<Transform>(true))
@@ -97,10 +107,12 @@ namespace CargoClash
             rotated.SetParent(corrected, false);
             rotated.localRotation = correction;
             environment.transform.SetParent(rotated, false);
+            LoadMaya();
+            ClearUnderStructures(environment.transform);
 
-            foreach (DoorSpec spec in data.doors)
+            foreach (string vault in new[] { "B1", "B2" })
             {
-                string mountName = spec.id.Substring(0, 2) + "_LampLightMount";
+                string mountName = vault + "_LampLightMount";
                 var lamp = new GameObject(mountName + " Interior Light");
                 lamp.transform.SetParent(field, false);
                 lamp.transform.position = Find(environment.transform, mountName).position;
@@ -112,6 +124,7 @@ namespace CargoClash
                 light.shadows = LightShadows.None;
             }
 
+            BuildPitSigns();
             MeshFilter ground = Find(environment.transform, "Ground_Surface").GetComponent<MeshFilter>();
             AddGroundMesh(ground);
             foreach (Transform node in environment.GetComponentsInChildren<Transform>(true))
@@ -126,6 +139,14 @@ namespace CargoClash
             foreach (Block block in data.blockers)
             {
                 float height = block.maxY - block.minY;
+                // A shipped tree cleared away for a Maya structure takes its blocker with it.
+                if (block.round && InStructureClearing(block.circle.x, block.circle.y)) continue;
+                // The same for any other shipped piece whose model the clearing took: no invisible walls.
+                if (!block.round && BlocksClearedModel(block.rect, block.maxY))
+                {
+                    DroppedBlockers.Add(block.name);
+                    continue;
+                }
                 if (block.round)
                 {
                     GameObject node = new GameObject(block.name + " Blocker");
@@ -138,14 +159,16 @@ namespace CargoClash
                 }
                 else AddBox(block.name + " Blocker", RectBounds(block.rect, block.minY, height));
             }
-            AddBox("West play boundary", new Bounds(new Vector3(-.5f, 5f, data.size.y*.5f), new Vector3(1, 10, data.size.y+2)));
-            AddBox("East play boundary", new Bounds(new Vector3(data.size.x+.5f, 5f, data.size.y*.5f), new Vector3(1, 10, data.size.y+2)));
-            AddBox("North play boundary", new Bounds(new Vector3(data.size.x*.5f, 5f, data.size.y+.5f), new Vector3(data.size.x, 10, 1)));
-            AddBox("South west play boundary", RectBounds(new Vector4(0, -1, CargoExitWest, 0), 0, 10));
-            AddBox("South east play boundary", RectBounds(new Vector4(CargoExitEast, -1, data.size.x, 0), 0, 10));
-            AddBox("Cargo apron west edge", RectBounds(new Vector4(CargoExitWest - 1, -RoadApronDepth, CargoExitWest, 0), 0, 10));
-            AddBox("Cargo apron east edge", RectBounds(new Vector4(CargoExitEast, -RoadApronDepth, CargoExitEast + 1, 0), 0, 10));
-            AddBox("Far road edge", RectBounds(new Vector4(CargoExitWest, -RoadApronDepth - 1, CargoExitEast, -RoadApronDepth), 0, 10));
+            // The play area runs south to the road's north guardrail along its whole width; low ruined walls
+            // close the two corners (make_ruin_maya.py corner_walls).
+            float south = GuardrailZ - .5f;
+            // The play area was drawn in from the courtyard's edges (data.playArea); what is left outside is scenery.
+            float playWest = data.playArea.x, playEast = data.playArea.z, playNorth = data.playArea.w;
+            AddBox("West play boundary", RectBounds(new Vector4(playWest - 1, south, playWest, playNorth + 1), 0, 10));
+            AddBox("East play boundary", RectBounds(new Vector4(playEast, south, playEast + 1, playNorth + 1), 0, 10));
+            AddBox("North play boundary", RectBounds(new Vector4(playWest, playNorth, playEast, playNorth + 1), 0, 10));
+            // The guardrail, intact or crushed low where the truck went through, is the visible edge here.
+            AddBox("Road guardrail", RectBounds(new Vector4(0, GuardrailZ - .3f, data.size.x, GuardrailZ + .7f), 0, 10));
 
             // Thin landing tops preserve the walkable west descent and the continuous upper deck.
             AddBox("Terrace upper deck", RectBounds(new Vector4(56.4f, 37.38f, 71.6f, 44.62f), 2.47f, .03f));
@@ -154,21 +177,19 @@ namespace CargoClash
 
             GameObject wallModel = SpawnModel("RuinCourtyard_Breakables");
             wallModel.transform.SetParent(rotated, false);
-            GameObject doorModel = SpawnModel("RuinCourtyard_OperableDoors");
-            doorModel.transform.SetParent(rotated, false);
-            ValidateAxisAlignment(environment.transform, doorModel.transform);
-            BuildWalls(wallModel.transform);
-            BuildDoors(doorModel.transform);
+            ValidateAxisAlignment(environment.transform);
+            Transform mayaModel = BuildMaya(rotated);
+            BuildWalls(wallModel.transform, mayaModel);
             BuildVines(environment.transform, rotated);
             BuildPitStairs();
             ConfigureLayout();
-            BuildSpawnMarkers();
 
             navigation = gameObject.AddComponent<NavMeshSurface>();
             navigation.navMeshData = null;
             navigation.collectObjects = CollectObjects.Volume;
-            navigation.center = new Vector3(data.size.x * .5f, 0f, (data.size.y - RoadApronDepth) * .5f);
-            navigation.size = new Vector3(data.size.x, 10f, data.size.y + RoadApronDepth);
+            // From the pit floors (-3.6 m) up to the summit of the great pyramid (7.5 m) and its shrine.
+            navigation.center = new Vector3(data.size.x * .5f, 5f, (data.size.y - RoadApronDepth) * .5f);
+            navigation.size = new Vector3(data.size.x, 20f, data.size.y + RoadApronDepth);
             navigation.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
             navigation.layerMask = GameLayers.LevelMask;
             Physics.SyncTransforms();
@@ -191,15 +212,15 @@ namespace CargoClash
             navigation.navMeshData = runtimeNavMesh;
             navigation.AddData();
             BuildCordon();
+            BuildMayaGround();
             ShowState();
         }
 
-        private void ValidateAxisAlignment(Transform environment, Transform doorModel)
+        private void ValidateAxisAlignment(Transform environment)
         {
             if ((Find(environment, "Coordinate_Origin").position).sqrMagnitude > .01f ||
                 Vector3.Distance(Find(environment, "Coordinate_EastX").position, Vector3.right*5f) > .06f ||
-                Vector3.Distance(Find(environment, "Coordinate_NorthZ").position, Vector3.forward*5f) > .06f ||
-                Vector3.Distance(Find(doorModel, "B1_Doors").position, data.doors[0].center) > .15f)
+                Vector3.Distance(Find(environment, "Coordinate_NorthZ").position, Vector3.forward*5f) > .06f)
                 throw new InvalidOperationException("Ruin Courtyard FBX positions do not align with the layout.");
         }
 
@@ -235,6 +256,8 @@ namespace CargoClash
             foreach (Material material in renderMaterials.Values) Destroy(material);
             if (cordonMesh != null) Destroy(cordonMesh);
             DisposeDepot();
+            DisposeMaya();
+            DisposeClearing();
         }
 
         private BoxCollider AddBox(string name, Bounds bounds)
@@ -252,15 +275,23 @@ namespace CargoClash
             new Bounds(new Vector3((rect.x+rect.z)*.5f, low+height*.5f, (rect.y+rect.w)*.5f),
                        new Vector3(rect.z-rect.x, height, rect.w-rect.y));
 
-        private void BuildWalls(Transform model)
+        private void BuildWalls(Transform model, Transform mayaModel)
         {
+            // R1 to R12 come with the V09 art (the layout keeps five); the Maya pass may add more like them.
+            data.walls = data.walls.Concat(maya.walls).ToArray();
+            if (data.walls.Length > MaxWalls)
+                throw new InvalidOperationException("Ruin Courtyard has more breakable walls than the replicated state holds.");
             walls = new Wall[data.walls.Length];
             for (int i = 0; i < walls.Length; i++)
             {
                 WallSpec spec = data.walls[i];
-                Transform intact = Find(model, spec.id + "_Intact");
-                Transform broken = Find(model, spec.id + "_Broken");
-                Transform cracked = spec.id == "R7" ? Find(model, spec.id + "_Cracked") : null;
+                Transform source = TryFind(model, spec.id + "_Intact") != null ? model : mayaModel;
+                Transform intact = Find(source, spec.id + "_Intact");
+                Transform broken = Find(source, spec.id + "_Broken");
+                // State 1 is a wall blown once now, not R7's cracked floor: R7 is a fixed wall (fixedWalls).
+                if (TryFind(source, spec.id + "_Cracked") != null)
+                    throw new InvalidOperationException("A cracked floor cannot be a breakable wall any more: " + spec.id);
+                Transform cracked = null;
                 if (Vector3.Distance(intact.parent.position, spec.position) > .12f)
                     throw new InvalidOperationException("Ruin wall pivot does not align: " + spec.id);
                 float floor = cracked != null ? .57f : 0f;
@@ -277,71 +308,26 @@ namespace CargoClash
                 collider.enabled = false;
                 walls[i] = new Wall { Intact = intact, Broken = broken, Cracked = cracked,
                     Bounds = bounds, Collider = collider, Obstacle = obstacle };
+                BuildWallStones(walls[i], mayaModel, spec.id);
             }
-        }
-
-        private void BuildDoors(Transform model)
-        {
-            const int sweepSteps = 16;
-            doors = new Door[data.doors.Length];
-            for (int i = 0; i < doors.Length; i++)
+            // The shipped breakables the layout no longer lists. Fixed ones stand for good, intact and solid; the
+            // rest are gone, foundation and all, so nothing is left without its collider.
+            WallSpec[] fixedWalls = data.fixedWalls ?? Array.Empty<WallSpec>();
+            foreach (WallSpec spec in fixedWalls)
             {
-                DoorSpec spec = data.doors[i];
-                var door = new Door
-                {
-                    Hinges = new Transform[2], Leaves = new Transform[2], Boxes = new BoxCollider[2],
-                    Open = new Quaternion[2], Closed = new Quaternion[2],
-                    SweptLeaves = new DoorLeafPose[2 * (sweepSteps + 1)]
-                };
-                for (int j = 0; j < 2; j++)
-                {
-                    Transform hinge = Find(model, spec.hinges[j]);
-                    Transform leaf = Find(hinge, spec.leaves[j]);
-                    door.Hinges[j] = hinge;
-                    door.Leaves[j] = leaf;
-                    door.Open[j] = hinge.localRotation;
-                    // Remove the authored open angle about the hinge's world-up direction.
-                    Vector3 axis = hinge.parent.InverseTransformDirection(Vector3.up);
-                    float orientation = Mathf.Sign(hinge.parent.localToWorldMatrix.determinant);
-                    // The authored leaf centre points toward the opposite hinge in the closed pose.
-                    Vector3 toCentre = spec.center - hinge.position;
-                    toCentre.y = 0;
-                    Vector3 toLeaf = leaf.position - hinge.position;
-                    toLeaf.y = 0;
-                    float closeBy = Vector3.SignedAngle(toLeaf, toCentre, Vector3.up);
-                    if (orientation < 0) closeBy = -closeBy;
-                    door.Closed[j] = Quaternion.AngleAxis(closeBy, axis) * door.Open[j];
-                    // Overlap the leaf colliders slightly at the seam so tools cannot reach through it.
-                    BoxCollider box = AddBox(spec.id + " leaf Blocker",
-                        new Bounds(leaf.position, new Vector3(spec.width * .5f + .14f, spec.height * .88f, .28f)));
-                    NavMeshObstacle obstacle = box.gameObject.AddComponent<NavMeshObstacle>();
-                    obstacle.shape = NavMeshObstacleShape.Box;
-                    obstacle.size = box.size;
-                    obstacle.carving = true;
-                    box.enabled = false;
-                    door.Boxes[j] = box;
-                    // Pad successive samples by half the far tip's travel to cover the space between them.
-                    float margin = spec.width * .25f * Mathf.Abs(closeBy) * Mathf.Deg2Rad / sweepSteps + .03f;
-                    for (int step = 0; step <= sweepSteps; step++)
-                    {
-                        hinge.localRotation = Quaternion.Slerp(door.Closed[j], door.Open[j], step / (float)sweepSteps);
-                        AlignDoorCollider(door, j);
-                        var pose = new DoorLeafPose(box, margin);
-                        door.SweptLeaves[j * (sweepSteps + 1) + step] = pose;
-                        if (j == 0 && step == 0) door.Sweep = pose.Bounds;
-                        else door.Sweep.Encapsulate(pose.Bounds);
-                    }
-                }
-                doors[i] = door;
+                Transform cracked = TryFind(model, spec.id + "_Cracked");
+                Find(model, spec.id + "_Intact").gameObject.SetActive(true);
+                Find(model, spec.id + "_Broken").gameObject.SetActive(false);
+                if (cracked != null) cracked.gameObject.SetActive(false);
+                AddBox(spec.id + " fixed Blocker", RectBounds(spec.footprintXZ, cracked != null ? .57f : 0f, spec.height));
             }
-        }
-
-        private static void AlignDoorCollider(Door door, int index)
-        {
-            Vector3 along = door.Leaves[index].position - door.Hinges[index].position;
-            along.y = 0f;
-            door.Boxes[index].transform.SetPositionAndRotation(door.Leaves[index].position,
-                Quaternion.LookRotation(Vector3.Cross(along, Vector3.up)));
+            foreach (Transform pivot in model.GetComponentsInChildren<Transform>(true))
+            {
+                if (!pivot.name.EndsWith(" / ground pivot", StringComparison.Ordinal)) continue;
+                string id = pivot.name.Substring(0, pivot.name.IndexOf(' '));
+                if (!Array.Exists(data.walls, wall => wall.id == id) && !Array.Exists(fixedWalls, wall => wall.id == id))
+                    pivot.gameObject.SetActive(false);
+            }
         }
 
         private void BuildVines(Transform environment, Transform orientation)
@@ -350,6 +336,12 @@ namespace CargoClash
             pickupReadyAt = new double[coils.Length];
             for (int i = 0; i < coils.Length; i++)
                 coils[i] = Find(environment, $"VinePickup_{i+1:00}").gameObject;
+            // Coils the layout no longer lists are not in the level at all.
+            foreach (Transform node in environment.GetComponentsInChildren<Transform>(true))
+                if (node.name.StartsWith("VinePickup_", StringComparison.Ordinal) &&
+                    Array.IndexOf(coils, node.gameObject) < 0 && node.parent != null &&
+                    !node.parent.name.StartsWith("VinePickup_", StringComparison.Ordinal))
+                    node.gameObject.SetActive(false);
             var model = SpawnModel("RuinCourtyard_Vines");
             model.transform.SetParent(orientation, false);
             patchTemplate = Find(model.transform, "Vine_SlowPatch").gameObject;
@@ -396,13 +388,15 @@ namespace CargoClash
             level.largeSpots = MakeSpots(transform, data.largeSpots);
             ConfigureDepot(level);
             level.bedHalfSize = data.bedHalfSize;
-            level.mapArea = new Rect(0, 0, data.size.x, data.size.y);
+            // The minimap reaches south to the road guardrail (make_ruin_maya.py MAP_SOUTH_EXTRA).
+            float mapSouth = GuardrailZ - .3f;
+            level.mapArea = new Rect(data.playArea.x, mapSouth, data.playArea.z - data.playArea.x, data.playArea.w - mapSouth);
             level.mapPicture = Load<Texture2D>("RuinMinimap");
             MiniMap map = FindAnyObjectByType<MiniMap>(FindObjectsInactive.Include);
             if (map != null && map.transform is RectTransform frame)
             {
                 const float height = 165f, inset = 18f;
-                Vector2 size = new Vector2(height*data.size.x/data.size.y+inset, height+inset);
+                Vector2 size = new Vector2(height*level.mapArea.width/level.mapArea.height+inset, height+inset);
                 frame.sizeDelta = size;
                 frame.anchoredPosition = new Vector2(-30f-size.x*.5f, -30f-size.y*.5f);
             }

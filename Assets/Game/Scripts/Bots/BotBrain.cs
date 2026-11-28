@@ -54,6 +54,9 @@ namespace CargoClash
             Brains.Remove(this);
         }
 
+        /// <summary>For the runtime checks: while bots stand idle, this one holds left click, that one right click.</summary>
+        internal static PlayerAvatar TestAttacker, TestSucker;
+
         public Vector2 Move => move;
         public bool LooksAround => false;
         public Vector2 Look => Vector2.zero;
@@ -72,8 +75,8 @@ namespace CargoClash
             {
                 // A test photographing someone wants nobody else moving about or hitting them.
                 move = Vector2.zero;
-                attack = false;
-                secondary = false;
+                attack = self == TestAttacker;
+                secondary = self == TestSucker;
                 return;
             }
 
@@ -82,8 +85,6 @@ namespace CargoClash
                 thinkAt = Time.time + 0.18f + Random.value * 0.14f;
                 Think();
             }
-            if (hasGoal && RuinCourtyard.Instance != null && RuinCourtyard.Instance.TryBotOpenDoor(self, goal))
-                repathAt = 0f;
             move = Steer();
         }
 

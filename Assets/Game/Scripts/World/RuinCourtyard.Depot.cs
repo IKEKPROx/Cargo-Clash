@@ -7,7 +7,6 @@ namespace CargoClash
     {
         private Transform deliveryZone;
         private Vector2 deliveryHalfSize;
-        private Material deliveryPaint;
         internal float DeliveryHeight => config.ruinDepotHeight;
 
         private void ConfigureDepot(LevelLayout level)
@@ -21,10 +20,6 @@ namespace CargoClash
             Transform previous = deliveryZone.Find("ZoneFloor");
             if (previous != null) previous.gameObject.SetActive(false);
 
-            deliveryPaint = new Material(Load<Material>("RuinSurface")) { name = "Ruin depot warm safety paint" };
-            deliveryPaint.SetTexture("_BaseMap", Texture2D.whiteTexture);
-            deliveryPaint.SetColor("_BaseColor", new Color(217f/255f, 169f/255f, 40f/255f));
-            deliveryPaint.SetFloat("_Smoothness", .18f);
             const float radius = .45f;
             var outline = new Vector3[36];
             for (int corner = 0; corner < 4; corner++)
@@ -54,20 +49,16 @@ namespace CargoClash
 
         private void DepotLine(string label, Vector3[] points, bool loop, float width)
         {
-            var node = new GameObject(label);
+            // Worn spray paint lying on the ground, not a camera-facing line.
+            var node = new GameObject(label, typeof(MeshFilter), typeof(MeshRenderer));
             node.transform.SetParent(deliveryZone, false);
-            LineRenderer line = node.AddComponent<LineRenderer>();
-            line.sharedMaterial = deliveryPaint;
-            line.useWorldSpace = false;
-            line.positionCount = points.Length;
-            line.SetPositions(points);
-            line.loop = loop;
-            line.widthMultiplier = width;
-            line.numCornerVertices = 4;
-            line.numCapVertices = 4;
-            line.alignment = LineAlignment.View;
-            line.shadowCastingMode = ShadowCastingMode.Off;
-            line.receiveShadows = false;
+            for (int i = 0; i < points.Length; i++) points[i].y = .06f;
+            Mesh mesh = Ribbon(points, width * 1.35f, PaintStrip, 1.6f, loop, Color.white, loop ? 0f : .04f);
+            node.GetComponent<MeshFilter>().sharedMesh = mesh;
+            MeshRenderer renderer = node.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial = GroundPaint;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            paintMeshes.Add(mesh);
         }
 
         /// <summary>The cargo-bed footprint plus its walking margin, with a bounded vertical catch volume.</summary>
@@ -80,7 +71,6 @@ namespace CargoClash
 
         private void DisposeDepot()
         {
-            if (deliveryPaint != null) Destroy(deliveryPaint);
         }
     }
 }
